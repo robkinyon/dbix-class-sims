@@ -531,6 +531,13 @@ The following sim types are pre-defined:
 
 =over 4
 
+=item * us_state
+
+This generates a random US state or territory (so 57 choices). The column is
+assumed to be able to take a US state as a value. If the size of the column is 2
+(the default), then the abbreviation will be returned. Otherwise, the first N
+characters of the name (where N is the size) will be returned.
+
 =item * us_zipcode
 
 This generates a reasonable-looking US zipcode. If the column is numeric, it
