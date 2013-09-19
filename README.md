@@ -278,6 +278,13 @@ The following sim types are pre-defined:
 
     Phone extensions are not supported at this time.
 
+- us\_ssntin
+
+    This generates a reasonable-looking US Social Security Number (SSN) or Tax
+    Identification Number (TIN). These are government identifiers that are often
+    usable as unique personal IDs. An SSN is a personal ID number and a TIN is a
+    corporate ID number.
+
 - us\_state
 
     This generates a random US state or territory (so 57 choices). The column is

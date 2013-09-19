@@ -567,6 +567,13 @@ places. If the column is long enough, the value will look like "(###) ###-####"
 
 Phone extensions are not supported at this time.
 
+=item * us_ssntin
+
+This generates a reasonable-looking US Social Security Number (SSN) or Tax
+Identification Number (TIN). These are government identifiers that are often
+usable as unique personal IDs. An SSN is a personal ID number and a TIN is a
+corporate ID number.
+
 =item * us_state
 
 This generates a random US state or territory (so 57 choices). The column is

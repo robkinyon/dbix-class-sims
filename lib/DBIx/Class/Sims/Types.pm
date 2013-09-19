@@ -7,7 +7,7 @@ use warnings FATAL => 'all';
 use DBIx::Class::Sims;
 DBIx::Class::Sims->set_sim_types({
   map { $_ => __PACKAGE__->can($_) } qw(
-    us_address us_county us_name us_phone us_state us_zipcode
+    us_address us_county us_name us_phone us_ssntin us_state us_zipcode
   )
 });
 
@@ -122,6 +122,17 @@ sub us_phone {
   }
   elsif ( $length >= 14 ) {
     return '(' . random_regex('\d{3}') . ') ' . random_regex('\d{3}-\d{4}');
+  }
+}
+
+sub us_ssntin {
+  # Give strong preference to a SSN
+  if ( rand() < .8 ) {
+    return random_regex('\d{3}-\d{2}-\d{4}');
+  }
+  # But still generate employer TINs to mix it up.
+  else {
+    return random_regex('\d{2}-\d{7}');
   }
 }
 

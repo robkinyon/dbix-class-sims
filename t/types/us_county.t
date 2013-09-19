@@ -18,4 +18,3 @@ foreach my $test ( @tests ) {
 }
 
 done_testing;
-
