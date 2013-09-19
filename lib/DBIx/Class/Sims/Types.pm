@@ -7,7 +7,7 @@ use warnings FATAL => 'all';
 use DBIx::Class::Sims;
 DBIx::Class::Sims->set_sim_types({
   map { $_ => __PACKAGE__->can($_) } qw(
-    us_address us_name us_phone us_state us_zipcode
+    us_address us_county us_name us_phone us_state us_zipcode
   )
 });
 
@@ -27,8 +27,6 @@ use String::Random qw( random_regex );
   );
 
   sub us_address {
-    my ($info) = @_;
-
     # Assume a varchar-like column type with enough space.
 
     if ( rand() < .7 ) {
@@ -45,6 +43,17 @@ use String::Random qw( random_regex );
       my $po = rand() < .5 ? 'PO' : 'P.O.';
       return "$po Box " . int(rand(9999));
     }
+  }
+}
+
+{
+  my @county_names = qw(
+    Adams Madison Washinton Union Clark
+  );
+
+  sub us_county {
+    # Assume a varchar-like column type with enough space.
+    return $county_names[rand @county_names];
   }
 }
 
@@ -70,8 +79,6 @@ use String::Random qw( random_regex );
   );
 
   sub us_name {
-    my ($info) = @_;
-
     # Assume a varchar-like column type with enough space.
 
     my @name = (

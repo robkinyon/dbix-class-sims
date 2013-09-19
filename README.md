@@ -257,11 +257,16 @@ The following sim types are pre-defined:
     - "PO Box \#\#\#\#", so something like "PO Box 13579"
     - "P.O. Box \#\#\#\#", so something like "P.O. Box 97531"
 
+- us\_county
+
+    This generates a reasonable-looking US county name.
+
 - us\_name
 
-    This generates a reasonable-looking US name. The name will contain a first name,
-    last name, and possibly a suffix. The first name will be randomized as to gender
-    and the last name may contain one word, two words, or an apostrophized word.
+    This generates a reasonable-looking US person name. The name will contain a
+    first name, a last name, and possibly a suffix. The first name will be
+    randomized as to gender and the last name may contain one word, two words, or an
+    apostrophized word.
 
 - us\_phone
 

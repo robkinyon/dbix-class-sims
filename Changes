@@ -6,6 +6,7 @@ Revision history for DBIx::Class::Sims (ordered by revision number).
       - The documentation in 0.01 was correct, the code was not.
    - Added the following column types:
       - us_address
+      - us_county
       - us_name
       - us_phone
       - us_state
