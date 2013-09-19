@@ -370,7 +370,9 @@ for testing purposes (though, obviously, it's not limited to just test data).
 
 =head1 METHODS
 
-=head2 $rv = $schema->load_sims( $spec, ?$constraints, ?$hooks )
+=head2 load_sims
+
+C<< $rv = $schema->load_sims( $spec, ?$constraints, ?$hooks ) >>
 
 This method will load the rows requested in C<$spec>, plus any additional rows
 necessary to make those rows work. This includes any parent rows (as defined by
@@ -428,7 +430,9 @@ You will receive back (assuming the next PK values are as below):
 Note that you do not get back the ids for any additional rows generated (such as
 for the children). 
 
-=head2 $class_or_obj->set_sim_type({ $name => $handler, ... });
+=head2 set_sim_type
+
+C<< $class_or_obj->set_sim_type({ $name => $handler, ... }); >>
 
 This method will set the handler for the C<$name> sim type. The handler must be
 a reference to a subroutine. You may pass in as many name/handler pairs as you
@@ -531,6 +535,15 @@ The following sim types are pre-defined:
 
 =over 4
 
+=item * us_phone
+
+This generates a random US phone-number, based on the size of the column being
+filled. The column is assumed to be a character-type column (varchar, etc). If
+the size of the column is less than 10, there will be no area code. If there is
+space, hyphens and parentheses will be added in the right places.
+
+Phone extensions are not supported at this time.
+
 =item * us_state
 
 This generates a random US state or territory (so 57 choices). The column is
@@ -546,6 +559,10 @@ of numbers (with a possible dash for a 5+4) that will fit within the column's
 width.
 
 =back
+
+The reason why the pre-defined sim types have the country prefixed is because
+different countries do things differently. (Shocker, I know!)
+that 
 
 =head1 DBIx::Class::Fixtures
 

@@ -5,9 +5,40 @@ use DBIx::Class::Sims;
 DBIx::Class::Sims->set_sim_type(
   us_zipcode => \&us_zipcode,
   us_state => \&us_state,
+  us_phone => \&us_phone,
 );
 
 use String::Random qw( random_regex );
+
+sub us_phone {
+  my ($info) = @_;
+
+  # Assume a varchar-like column type.
+  my $length = $info->{size} || 8;
+  if ( $length < 7 ) {
+    return '';
+  }
+  elsif ( $length == 7 ) {
+    return random_regex('\d{7}');
+  }
+  elsif ( $length < 10 ) {
+    return random_regex('\d{3}-\d{4}');
+  }
+  elsif ( $length < 12 ) {
+    return random_regex('\d{10}');
+  }
+  elsif ( $length == 12 ) {
+    return random_regex('\d{3}-\d{3}-\d{4}');
+  }
+  # random_regex() throws a warning no matter how I try to specify the parens.
+  # It does the right thing, but noisily. So, just concatenate them.
+  elsif ( $length == 13 ) {
+    return '(' . random_regex('\d{3}') . ')' . random_regex('\d{3}-\d{4}');
+  }
+  elsif ( $length >= 14 ) {
+    return '(' . random_regex('\d{3}') . ') ' . random_regex('\d{3}-\d{4}');
+  }
+}
 
 my @states = (
   [ AL => 'Alabama' ],
@@ -72,6 +103,7 @@ my @states = (
 sub us_state {
   my ($info) = @_;
 
+  # Assume a varchar-like column type.
   my $length = $info->{size} || 2;
   if ( $length == 2 ) {
     return $states[rand @states][0];
