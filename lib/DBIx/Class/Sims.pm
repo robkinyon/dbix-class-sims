@@ -17,6 +17,37 @@ our $VERSION = 0.01;
 # Guarantee that toposort is loaded.
 use base 'DBIx::Class::TopoSort';
 
+{
+  my %sim_types;
+
+  sub set_sim_type {
+    shift;
+
+    while ( @_ ) {
+      my $name = shift;
+      return unless @_;
+
+      my $meth = shift;
+      next unless ref($meth) eq 'CODE';
+
+      $sim_types{$name} = $meth;
+    }
+
+    return;
+  }
+  *set_sim_types = \&set_sim_type;
+
+  sub sim_type {
+    shift;
+
+    return if @_ == 0;
+    return $sim_types{$_[0]} if @_ == 1;
+    return map { $sim_types{$_} } @_;
+  }
+  *sim_types = \&sim_type;
+}
+use DBIx::Class::Sims::Types;
+
 sub load_sims {
   my $self = shift;
   my ($spec_proto, $req_proto, $hooks) = @_;
@@ -153,7 +184,7 @@ sub load_sims {
           $item->{$col_name} = $info->{sim}{func}->($info);
         }
         elsif ( $info->{sim}{type} ) {
-          my $meth = __PACKAGE__->can($info->{sim}{type});
+          my $meth = $self->sim_type($info->{sim}{type});
           if ( $meth ) {
             $item->{$col_name} = $meth->($info);
           }
@@ -206,32 +237,6 @@ sub load_sims {
   });
 
   return \%ids;
-}
-
-sub us_zipcode {
-  my ($info) = @_;
-
-  my $datatype = $info->{data_type};
-  my $sim_type = $info->{sim}{type};
-  if ( $datatype eq 'varchar' || $datatype eq 'char' ) {
-    my $length = $info->{size} || 9;
-    if ( $length < 5 ) {
-      return '';
-    }
-    elsif ( $length < 9 ) {
-      return random_regex('\d{5}');
-    }
-    elsif ( $length == 9 ) {
-      return random_regex('\d{9}');
-    }
-    else {
-      return random_regex('\d{5}-\d{4}');
-    }
-  }
-  # Must be an int
-  else {
-    return int(rand(99999));
-  }
 }
 
 use YAML::Any qw( LoadFile Load );
@@ -307,6 +312,20 @@ need specified.
         },
       },
     },
+    column3 => {
+      data_type => 'varchar',
+      is_nullable => 1,
+      data_length => 10,
+      sim => {
+        type => 'us_zipcode',
+      },
+    },
+    column4 => {
+      data_type => 'varchar',
+      is_nullable => 1,
+      data_length => 10,
+      default_value => 'foobar',
+    },
     ...
   );
 
@@ -315,25 +334,39 @@ Later:
   $schema->deploy({
     add_drop_table => 1,
   });
-  $schema->load_sims(
-    $specification,
-    ?$additional_constraints,
-    ?$hooks,
-  );
+
+  my $ids = $schema->load_sims({
+    Table1 => [
+      {}, # Take sims or default values for everything
+      { # Override some values, take sim values for others
+        column1 => 20,
+        column2 => 'something',
+      },
+    ],
+  });
 
 =head1 PURPOSE
 
 Generating test data for non-simplistic databases is extremely hard, especially
-as the schema grows and changes. Designing scenarios should be doable by only
+as the schema grows and changes. Designing scenarios B<should> be doable by only
 specifying the minimal elements actually used in the test with the test being
 resilient to any changes in the schema that don't affect the elements specified.
 This includes changes like adding a new parent table, new required child tables,
 and new non-NULL columns to the table being tested.
 
+With Sims, you specify only what you care about. Any required parent rows are
+automatically generated. If a row requires a certain number of child rows (all
+artists must have one or more albums), that can be set as well. If a column must
+have specific data in it (a US zipcode or a range of numbers), you can specify
+that in the table definition.
+
+And, in all cases, you can override anything.
+
 =head1 DESCRIPTION
 
-This is a L<DBIx::Class> component that adds a single method (generate_sims) to
-L<DBIx::Class::Schema>.
+This is a L<DBIx::Class> component that adds a few methods to your
+L<DBIx::Class::Schema> object. These methods make it much easier to create data
+for testing purposes (though, obviously, it's not limited to just test data).
 
 =head1 METHODS
 
@@ -384,13 +417,28 @@ requested:
     ],
   }
 
-You will receive back (assuming the next type value is 'blah'):
+You will receive back (assuming the next PK values are as below):
 
   {
     Foo => [
       { name => 'bar', type => 'blah' },
     ],
   }
+
+Note that you do not get back the ids for any additional rows generated (such as
+for the children). 
+
+=head2 $class_or_obj->set_sim_type({ $name => $handler, ... });
+
+This method will set the handler for the C<$name> sim type. The handler must be
+a reference to a subroutine. You may pass in as many name/handler pairs as you
+like.
+
+This method may be called as a class or object method.
+
+This method returns nothing.
+
+C<set_sim_types()> is an alias to this method.
 
 =head1 SPECIFICATION
 
