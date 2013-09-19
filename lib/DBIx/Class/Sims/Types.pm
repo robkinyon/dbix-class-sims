@@ -1,6 +1,9 @@
 package # Hide from PAUSE indexer
   DBIx::Class::Sims::Types;
 
+use strict;
+use warnings FATAL => 'all';
+
 use DBIx::Class::Sims;
 DBIx::Class::Sims->set_sim_types({
   map { $_ => __PACKAGE__->can($_) } qw(

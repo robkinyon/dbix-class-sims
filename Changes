@@ -1,8 +1,12 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
 0.02 Sep 19 2013 14:00:00 PDT
+   - Removed unneeded import of Data::Dumper
+   - set_sim_type() now takes a hashref, not a hash.
+      - The documentation in 0.01 was correct, the code was not.
    - Added the following column types:
       - us_address
+      - us_name
       - us_phone
       - us_state
 
