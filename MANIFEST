@@ -1,0 +1,26 @@
+inc/Module/Install.pm
+inc/Module/Install/Base.pm
+inc/Module/Install/Can.pm
+inc/Module/Install/Fetch.pm
+inc/Module/Install/Makefile.pm
+inc/Module/Install/Metadata.pm
+inc/Module/Install/Win32.pm
+inc/Module/Install/WriteAll.pm
+lib/DBIx/Class/.Sims.pm.swp
+lib/DBIx/Class/Sims.pm
+lib/DBIx/Class/Sims/Types.pm
+LICENSE
+Makefile.PL
+MANIFEST			This list of files
+META.yml
+README.md
+t/column_defaults.t
+t/etc/schema.yml
+t/expand_dots.t
+t/normalize_input.t
+t/t1.t
+t/t2.t
+t/t3.t
+t/t4.t
+t/t5.t
+t/types/us_zipcode.t
