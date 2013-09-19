@@ -31,6 +31,20 @@ need specified.
           },
         },
       },
+      column3 => {
+        data_type => 'varchar',
+        is_nullable => 1,
+        data_length => 10,
+        sim => {
+          type => 'us_zipcode',
+        },
+      },
+      column4 => {
+        data_type => 'varchar',
+        is_nullable => 1,
+        data_length => 10,
+        default_value => 'foobar',
+      },
       ...
     );
 
@@ -39,25 +53,39 @@ Later:
     $schema->deploy({
       add_drop_table => 1,
     });
-    $schema->load_sims(
-      $specification,
-      ?$additional_constraints,
-      ?$hooks,
-    );
+
+    my $ids = $schema->load_sims({
+      Table1 => [
+        {}, # Take sims or default values for everything
+        { # Override some values, take sim values for others
+          column1 => 20,
+          column2 => 'something',
+        },
+      ],
+    });
 
 # PURPOSE
 
 Generating test data for non-simplistic databases is extremely hard, especially
-as the schema grows and changes. Designing scenarios should be doable by only
+as the schema grows and changes. Designing scenarios __should__ be doable by only
 specifying the minimal elements actually used in the test with the test being
 resilient to any changes in the schema that don't affect the elements specified.
 This includes changes like adding a new parent table, new required child tables,
 and new non-NULL columns to the table being tested.
 
+With Sims, you specify only what you care about. Any required parent rows are
+automatically generated. If a row requires a certain number of child rows (all
+artists must have one or more albums), that can be set as well. If a column must
+have specific data in it (a US zipcode or a range of numbers), you can specify
+that in the table definition.
+
+And, in all cases, you can override anything.
+
 # DESCRIPTION
 
-This is a [DBIx::Class](http://search.cpan.org/perldoc?DBIx::Class) component that adds a single method (generate\_sims) to
-[DBIx::Class::Schema](http://search.cpan.org/perldoc?DBIx::Class::Schema).
+This is a [DBIx::Class](http://search.cpan.org/perldoc?DBIx::Class) component that adds a few methods to your
+[DBIx::Class::Schema](http://search.cpan.org/perldoc?DBIx::Class::Schema) object. These methods make it much easier to create data
+for testing purposes (though, obviously, it's not limited to just test data).
 
 # METHODS
 
@@ -108,13 +136,28 @@ requested:
       ],
     }
 
-You will receive back (assuming the next type value is 'blah'):
+You will receive back (assuming the next PK values are as below):
 
     {
       Foo => [
         { name => 'bar', type => 'blah' },
       ],
     }
+
+Note that you do not get back the ids for any additional rows generated (such as
+for the children). 
+
+## $class\_or\_obj->set\_sim\_type({ $name => $handler, ... });
+
+This method will set the handler for the `$name` sim type. The handler must be
+a reference to a subroutine. You may pass in as many name/handler pairs as you
+like.
+
+This method may be called as a class or object method.
+
+This method returns nothing.
+
+`set_sim_types()` is an alias to this method.
 
 # SPECIFICATION
 
@@ -206,7 +249,7 @@ of tables loaded with sims.
 
 # AUTHOR
 
-- Rob Kinyon <rob.kinyon@gmail.com>
+Rob Kinyon <rob.kinyon@gmail.com>
 
 # LICENSE
 
