@@ -10,7 +10,7 @@ use Data::Dumper;
 
 use Data::Walk qw( walk );
 use List::Util qw( shuffle );
-use String::Random qw( random_regex random_string );
+use String::Random qw( random_regex );
 
 our $VERSION = 0.01;
 
@@ -534,11 +534,7 @@ L<DBIx::Class>, L<DBIx::Class::Fixtures>
 
 =head1 AUTHOR
 
-=over 4
-
-=item * Rob Kinyon <rob.kinyon@gmail.com>
-
-=back
+Rob Kinyon <rob.kinyon@gmail.com>
 
 =head1 LICENSE
 
