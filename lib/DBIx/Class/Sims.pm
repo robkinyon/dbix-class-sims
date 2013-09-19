@@ -22,12 +22,10 @@ use base 'DBIx::Class::TopoSort';
 
   sub set_sim_type {
     shift;
+    my $types = shift;
+    return unless ref($types||'') eq 'HASH';
 
-    while ( @_ ) {
-      my $name = shift;
-      return unless @_;
-
-      my $meth = shift;
+    while ( my ($name, $meth) = each(%$types) ) {
       next unless ref($meth) eq 'CODE';
 
       $sim_types{$name} = $meth;
@@ -35,7 +33,7 @@ use base 'DBIx::Class::TopoSort';
 
     return;
   }
-  *set_sim_types = \&set_sim_type;
+  BEGIN { *set_sim_types = \&set_sim_type; }
 
   sub sim_type {
     shift;
@@ -44,7 +42,7 @@ use base 'DBIx::Class::TopoSort';
     return $sim_types{$_[0]} if @_ == 1;
     return map { $sim_types{$_} } @_;
   }
-  *sim_types = \&sim_type;
+  BEGIN { *sim_types = \&sim_type; }
 }
 use DBIx::Class::Sims::Types;
 
@@ -541,6 +539,10 @@ This generates a reasonable-looking US street address. The addresses are of the
 form "#### Name Type", so something like "123 Main Street".
 
 =item * us_name
+
+This generates a reasonable-looking US name. The name will contain a first name,
+last name, and possibly a suffix. The first name will be randomized as to gender
+and the last name may contain one word, two words, or an apostrophized word.
 
 =item * us_phone
 

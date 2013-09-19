@@ -2,11 +2,11 @@ package # Hide from PAUSE indexer
   DBIx::Class::Sims::Types;
 
 use DBIx::Class::Sims;
-DBIx::Class::Sims->set_sim_types(
-  us_zipcode => \&us_zipcode,
-  us_state => \&us_state,
-  us_phone => \&us_phone,
-);
+DBIx::Class::Sims->set_sim_types({
+  map { $_ => __PACKAGE__->can($_) } qw(
+    us_address us_name us_phone us_state us_zipcode
+  )
+});
 
 use String::Random qw( random_regex );
 
@@ -28,14 +28,59 @@ use String::Random qw( random_regex );
 
     # Assume a varchar-like column type with enough space.
 
-    # We want to change this so that distribution is by number of digits, then
-    # randomly within the numbers.
-    my $number = int(rand(99999));
+    if ( rand() < .7 ) {
+      # We want to change this so that distribution is by number of digits, then
+      # randomly within the numbers.
+      my $number = int(rand(99999));
 
-    my $street_name = $street_names[rand @street_names];
-    my $street_type = $street_types[rand @street_types];
+      my $street_name = $street_names[rand @street_names];
+      my $street_type = $street_types[rand @street_types];
 
-    return "$number $street_name $street_type";
+      return "$number $street_name $street_type";
+    }
+    else {
+      return "PO Box " . int(rand(9999));
+    }
+  }
+}
+
+{
+  my @first_names = qw(
+    Aidan Bill Charles Doug Evan Frank George Hunter Ilya Jeff Kilgore
+    Liam Michael Nathan Oscar Perry Robert Shawn Thomas Urkul Victor Xavier
+
+    Alexandra Betty Camille Debra Ellen Fatima Georgette Hettie Imay Jaime
+    Kathrine Leticia Margaret Nellie Ophelia Patsy Regina Sybil Tricia Valerie
+  );
+
+  my @last_names = qw(
+    Jones Smith Taylor Kinyon Williams Shaner Perry Raymond Moore O'Malley
+  );
+  # Some last names are two words.
+  push @last_names, (
+    "Von Trapp", "Van Kirk",
+  );
+
+  my @suffixes = (
+    'Jr', 'Sr', 'II', 'III', 'IV', 'Esq.',
+  );
+
+  sub us_name {
+    my ($info) = @_;
+
+    # Assume a varchar-like column type with enough space.
+
+    my @name = (
+      $first_names[rand @first_names],
+      $last_names[rand @last_names],
+    );
+
+    # 10% chance of adding a suffix
+    if ( rand() < 0.1 ) {
+      push @name, $suffixes[rand @suffixes];
+    }
+
+    return join ' ', @name;
   }
 }
 
