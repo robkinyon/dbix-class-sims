@@ -255,6 +255,7 @@ The following sim types are pre-defined:
 
     - "\#\#\#\# Name Type", so something like "123 Main Street"
     - "PO Box \#\#\#\#", so something like "PO Box 13579"
+    - "P.O. Box \#\#\#\#", so something like "P.O. Box 97531"
 
 - us\_name
 

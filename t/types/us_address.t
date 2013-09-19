@@ -12,7 +12,7 @@ my $info = {
   data_type => 'varchar',
   sim => { type => 'us_address' },
 };
-my $expected = qr/^(?:\d{1,5} \w+ [\w.]+)|(?:PO Box \d+)$/;
+my $expected = qr/^(?:\d{1,5} \w+ [\w.]+)|(?:P\.?O\.? Box \d+)$/;
 for ( 1 .. 1000 ) {
   like( $sub->($info), $expected );
 }

@@ -542,6 +542,8 @@ of these forms:
 
 =item * "PO Box ####", so something like "PO Box 13579"
 
+=item * "P.O. Box ####", so something like "P.O. Box 97531"
+
 =back
 
 =item * us_name

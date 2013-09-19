@@ -42,7 +42,8 @@ use String::Random qw( random_regex );
       return "$number $street_name $street_type";
     }
     else {
-      return "PO Box " . int(rand(9999));
+      my $po = rand() < .5 ? 'PO' : 'P.O.';
+      return "$po Box " . int(rand(9999));
     }
   }
 }
