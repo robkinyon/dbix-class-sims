@@ -250,8 +250,11 @@ The following sim types are pre-defined:
 
 - us\_address
 
-    This generates a reasonable-looking US street address. The addresses are of the
-    form "\#\#\#\# Name Type", so something like "123 Main Street".
+    This generates a reasonable-looking US street address. The address will be one
+    of these forms:
+
+    - "\#\#\#\# Name Type", so something like "123 Main Street"
+    - "PO Box \#\#\#\#", so something like "PO Box 13579"
 
 - us\_name
 

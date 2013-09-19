@@ -535,8 +535,16 @@ The following sim types are pre-defined:
 
 =item * us_address
 
-This generates a reasonable-looking US street address. The addresses are of the
-form "#### Name Type", so something like "123 Main Street".
+This generates a reasonable-looking US street address. The address will be one
+of these forms:
+
+=over 4
+
+=item * "#### Name Type", so something like "123 Main Street"
+
+=item * "PO Box ####", so something like "PO Box 13579"
+
+=back
 
 =item * us_name
 
