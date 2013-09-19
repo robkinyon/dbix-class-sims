@@ -2,13 +2,42 @@ package # Hide from PAUSE indexer
   DBIx::Class::Sims::Types;
 
 use DBIx::Class::Sims;
-DBIx::Class::Sims->set_sim_type(
+DBIx::Class::Sims->set_sim_types(
   us_zipcode => \&us_zipcode,
   us_state => \&us_state,
   us_phone => \&us_phone,
 );
 
 use String::Random qw( random_regex );
+
+{
+  my @street_names = qw(
+    Main Court House Mill Wood Millwood
+    First Second Third Fourth Fifth Sixth Seventh Eight Ninth
+    Magnolia Acacia Poppy Cherry Rose Daisy Daffodil
+  );
+
+  my @street_types = qw(
+    Street Drive Place Avenue Boulevard Lane
+    St Dr Pl Av Ave Blvd Ln
+    St. Dr. Pl. Av. Ave. Blvd. Ln.
+  );
+
+  sub us_address {
+    my ($info) = @_;
+
+    # Assume a varchar-like column type with enough space.
+
+    # We want to change this so that distribution is by number of digits, then
+    # randomly within the numbers.
+    my $number = int(rand(99999));
+
+    my $street_name = $street_names[rand @street_names];
+    my $street_type = $street_types[rand @street_types];
+
+    return "$number $street_name $street_type";
+  }
+}
 
 sub us_phone {
   my ($info) = @_;
@@ -40,75 +69,77 @@ sub us_phone {
   }
 }
 
-my @states = (
-  [ AL => 'Alabama' ],
-  [ AK => 'Alaska' ],
-  [ AZ => 'Arizona' ],
-  [ AR => 'Arkansas' ],
-  [ CA => 'California' ],
-  [ CO => 'Colorado' ],
-  [ CT => 'Connecticut' ],
-  [ DE => 'Delaware' ],
-  [ FL => 'Florida' ],
-  [ GA => 'Georgia' ],
-  [ HI => 'Hawaii' ],
-  [ ID => 'Idaho' ],
-  [ IL => 'Illinois' ],
-  [ IN => 'Indiana' ],
-  [ IA => 'Iowa' ],
-  [ KS => 'Kansas' ],
-  [ KY => 'Kentucky' ],
-  [ LA => 'Louisiana' ],
-  [ ME => 'Maine' ],
-  [ MD => 'Maryland' ],
-  [ MA => 'Massachusetts' ],
-  [ MI => 'Michigan' ],
-  [ MN => 'Minnesota' ],
-  [ MS => 'Mississippi' ],
-  [ MO => 'Missouri' ],
-  [ MT => 'Montana' ],
-  [ NE => 'Nebraska' ],
-  [ NJ => 'New Jersey' ],
-  [ NH => 'New Hampshire' ],
-  [ NV => 'Nevada' ],
-  [ NM => 'New Mexico' ],
-  [ NY => 'New York' ],
-  [ NC => 'North Carolina' ],
-  [ ND => 'North Dakota' ],
-  [ OH => 'Ohio' ],
-  [ OK => 'Oklahoma' ],
-  [ OR => 'Oregon' ],
-  [ PA => 'Pennsylvania' ],
-  [ RI => 'Rhode Island' ],
-  [ SC => 'South Carolina' ],
-  [ SD => 'South Dakota' ],
-  [ TN => 'Tennessee' ],
-  [ TX => 'Texas' ],
-  [ UT => 'Utah' ],
-  [ VT => 'Vermont' ],
-  [ VA => 'Virginia' ],
-  [ WA => 'Washington' ],
-  [ WV => 'West Virginia' ],
-  [ WI => 'Wisconsin' ],
-  [ WY => 'Wyoming' ],
-  # These are territories, not states, but that's okay.
-  [ AS => 'American Samoa' ],
-  [ DC => 'District Of Columbia' ],
-  [ GU => 'Guam' ],
-  [ MD => 'Midway Islands' ],
-  [ NI => 'Northern Mariana Islands' ],
-  [ PR => 'Puerto Rico' ],
-  [ VI => 'Virgin Islands' ],
-);
-sub us_state {
-  my ($info) = @_;
+{
+  my @states = (
+    [ AL => 'Alabama' ],
+    [ AK => 'Alaska' ],
+    [ AZ => 'Arizona' ],
+    [ AR => 'Arkansas' ],
+    [ CA => 'California' ],
+    [ CO => 'Colorado' ],
+    [ CT => 'Connecticut' ],
+    [ DE => 'Delaware' ],
+    [ FL => 'Florida' ],
+    [ GA => 'Georgia' ],
+    [ HI => 'Hawaii' ],
+    [ ID => 'Idaho' ],
+    [ IL => 'Illinois' ],
+    [ IN => 'Indiana' ],
+    [ IA => 'Iowa' ],
+    [ KS => 'Kansas' ],
+    [ KY => 'Kentucky' ],
+    [ LA => 'Louisiana' ],
+    [ ME => 'Maine' ],
+    [ MD => 'Maryland' ],
+    [ MA => 'Massachusetts' ],
+    [ MI => 'Michigan' ],
+    [ MN => 'Minnesota' ],
+    [ MS => 'Mississippi' ],
+    [ MO => 'Missouri' ],
+    [ MT => 'Montana' ],
+    [ NE => 'Nebraska' ],
+    [ NJ => 'New Jersey' ],
+    [ NH => 'New Hampshire' ],
+    [ NV => 'Nevada' ],
+    [ NM => 'New Mexico' ],
+    [ NY => 'New York' ],
+    [ NC => 'North Carolina' ],
+    [ ND => 'North Dakota' ],
+    [ OH => 'Ohio' ],
+    [ OK => 'Oklahoma' ],
+    [ OR => 'Oregon' ],
+    [ PA => 'Pennsylvania' ],
+    [ RI => 'Rhode Island' ],
+    [ SC => 'South Carolina' ],
+    [ SD => 'South Dakota' ],
+    [ TN => 'Tennessee' ],
+    [ TX => 'Texas' ],
+    [ UT => 'Utah' ],
+    [ VT => 'Vermont' ],
+    [ VA => 'Virginia' ],
+    [ WA => 'Washington' ],
+    [ WV => 'West Virginia' ],
+    [ WI => 'Wisconsin' ],
+    [ WY => 'Wyoming' ],
+    # These are territories, not states, but that's okay.
+    [ AS => 'American Samoa' ],
+    [ DC => 'District Of Columbia' ],
+    [ GU => 'Guam' ],
+    [ MD => 'Midway Islands' ],
+    [ NI => 'Northern Mariana Islands' ],
+    [ PR => 'Puerto Rico' ],
+    [ VI => 'Virgin Islands' ],
+  );
+  sub us_state {
+    my ($info) = @_;
 
-  # Assume a varchar-like column type.
-  my $length = $info->{size} || 2;
-  if ( $length == 2 ) {
-    return $states[rand @states][0];
+    # Assume a varchar-like column type.
+    my $length = $info->{size} || 2;
+    if ( $length == 2 ) {
+      return $states[rand @states][0];
+    }
+    return substr($states[rand @states][1], 0, $length);
   }
-  return substr($states[rand @states][1], 0, $length);
 }
 
 sub us_zipcode {

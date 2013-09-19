@@ -1,0 +1,10 @@
+Revision history for DBIx::Class::Sims (ordered by revision number).
+
+0.02 Sep 19 2013 14:00:00 PDT
+   - Added the following column types:
+      - us_address
+      - us_phone
+      - us_state
+
+0.01 Sep 18 2013 20:00:00 PDT
+   - Initial version

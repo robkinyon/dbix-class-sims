@@ -6,7 +6,7 @@ use Test::More;
 
 use_ok 'DBIx::Class::Sims::Types';
 
-my $sub = \&DBIx::Class::Sims::Types::us_phone;
+my $sub = DBIx::Class::Sims::Types->can('us_phone');
 
 my @tests = (
   [ { data_type => 'varchar', size => 6 }, qr/^$/ ],
@@ -27,4 +27,3 @@ foreach my $test ( @tests ) {
 }
 
 done_testing;
-

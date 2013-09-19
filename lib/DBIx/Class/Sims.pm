@@ -535,12 +535,20 @@ The following sim types are pre-defined:
 
 =over 4
 
+=item * us_address
+
+This generates a reasonable-looking US street address. The addresses are of the
+form "#### Name Type", so something like "123 Main Street".
+
+=item * us_name
+
 =item * us_phone
 
-This generates a random US phone-number, based on the size of the column being
-filled. The column is assumed to be a character-type column (varchar, etc). If
-the size of the column is less than 10, there will be no area code. If there is
-space, hyphens and parentheses will be added in the right places.
+This generates a reasonable-looking US phone-number, based on the size of the
+column being filled. The column is assumed to be a character-type column
+(varchar, etc). If the size of the column is less than 10, there will be no area
+code. If there is space, hyphens and parentheses will be added in the right
+places. If the column is long enough, the value will look like "(###) ###-####"
 
 Phone extensions are not supported at this time.
 
@@ -562,7 +570,20 @@ width.
 
 The reason why the pre-defined sim types have the country prefixed is because
 different countries do things differently. (Shocker, I know!)
-that 
+
+=head1 TODO
+
+=head2 Multi-column types
+
+In some applications, columns like "state" and "zipcode" are correlated. Values
+for one must be legal for the value in the other. The Sims currently has no way
+of generating correlated columns like this.
+
+=head1 BUGS/SUGGESTIONS
+
+This module is hosted on Github at
+L<https://github.com/robkinyon/dbix-class-sims>. Pull requests are strongly
+encouraged.
 
 =head1 DBIx::Class::Fixtures
 

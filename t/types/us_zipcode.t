@@ -6,7 +6,7 @@ use Test::More;
 
 use_ok 'DBIx::Class::Sims::Types';
 
-my $sub = \&DBIx::Class::Sims::Types::us_zipcode;
+my $sub = DBIx::Class::Sims::Types->can('us_zipcode');
 
 my @tests = (
   [ { data_type => 'varchar', size => 9 }, qr/^\d{9}$/ ],
