@@ -519,6 +519,27 @@ is expected to modify the newly-created row object as needed.
 
 =back
 
+=head1 SIM TYPES
+
+The handler for a sim type will receive the column info (as defined in
+L<DBIx::Class::ResultSource/add_columns>). From that, the handler returns the
+value that will be used for this column.
+
+=head2 Included
+
+The following sim types are pre-defined:
+
+=over 4
+
+=item * us_zipcode
+
+This generates a reasonable-looking US zipcode. If the column is numeric, it
+generates a number between 1 and 99999. Otherwise, it generates a legal string
+of numbers (with a possible dash for a 5+4) that will fit within the column's
+width.
+
+=back
+
 =head1 DBIx::Class::Fixtures
 
 L<DBIx::Class::Fixtures> is another way to load data into a database. Unlike

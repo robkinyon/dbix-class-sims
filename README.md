@@ -234,6 +234,23 @@ hooks:
     This receives `$name, $source, $row` and expects nothing in return. This hook
     is expected to modify the newly-created row object as needed.
 
+# SIM TYPES
+
+The handler for a sim type will receive the column info (as defined in
+["add\_columns" in DBIx::Class::ResultSource](http://search.cpan.org/perldoc?DBIx::Class::ResultSource#add\_columns)). From that, the handler returns the
+value that will be used for this column.
+
+## Included
+
+The following sim types are pre-defined:
+
+- us\_zipcode
+
+    This generates a reasonable-looking US zipcode. If the column is numeric, it
+    generates a number between 1 and 99999. Otherwise, it generates a legal string
+    of numbers (with a possible dash for a 5+4) that will fit within the column's
+    width.
+
 # DBIx::Class::Fixtures
 
 [DBIx::Class::Fixtures](http://search.cpan.org/perldoc?DBIx::Class::Fixtures) is another way to load data into a database. Unlike

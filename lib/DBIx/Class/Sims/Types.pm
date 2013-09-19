@@ -12,7 +12,6 @@ sub us_zipcode {
   my ($info) = @_;
 
   my $datatype = $info->{data_type};
-  my $sim_type = $info->{sim}{type};
   if ( $datatype eq 'varchar' || $datatype eq 'char' ) {
     my $length = $info->{size} || 9;
     if ( $length < 5 ) {
@@ -28,7 +27,7 @@ sub us_zipcode {
       return random_regex('\d{5}-\d{4}');
     }
   }
-  # Must be an int
+  # Treat it as an int.
   else {
     return int(rand(99999));
   }
