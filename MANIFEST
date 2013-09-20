@@ -26,6 +26,7 @@ t/t3.t
 t/t4.t
 t/t5.t
 t/types/email_address.t
+t/types/ip_address.t
 t/types/us_address.t
 t/types/us_city.t
 t/types/us_county.t

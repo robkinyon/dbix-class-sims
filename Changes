@@ -1,5 +1,9 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.05 Sep 20 2013 14:30:00 PDT
+   - Added the following column types:
+      - ip_address
+
 0.04 Sep 20 2013 14:30:00 PDT
    - Split out the included types documentation into its own POD
    - Added "value" as an sim option.

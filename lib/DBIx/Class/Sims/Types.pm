@@ -6,7 +6,7 @@ use warnings FATAL => 'all';
 use DBIx::Class::Sims;
 DBIx::Class::Sims->set_sim_types({
   map { $_ => __PACKAGE__->can($_) } qw(
-    email_address
+    email_address ip_address
     us_address us_city us_county us_name us_phone us_ssntin us_state us_zipcode
   )
 });
@@ -56,6 +56,10 @@ use String::Random qw( random_regex random_string );
 
     return "${acct}\@${domain}.${tld}";
   }
+}
+
+sub ip_address {
+  return join '.', map { int(rand(255)) + 1 } 1 .. 4;
 }
 
 {
@@ -346,6 +350,10 @@ checks. Some real-life (completely legal) examples are:
 =item * rob.kinyon+lists@gmail.com
 
 =back
+
+=item * ip_address
+
+This generates a reasonable-looking IP address.
 
 =item * us_address
 
