@@ -22,6 +22,12 @@ BEGIN {
         size => 128,
         is_nullable => 0,
       },
+      hat_color => {
+        data_type => 'varchar',
+        size => 128,
+        is_nullable => 0,
+        sim => { value => 'purple' },
+      },
     );
     __PACKAGE__->set_primary_key('id');
   }
@@ -102,9 +108,9 @@ use Test::DBIx::Class qw(:resultsets);
 
   my $rs = Artist;
   is Artist->count, 1, "There are now one artist loaded after load_sims is called";
-  is_fields [ 'id', 'name' ], $rs, [
-    [ 1, 'foo' ],
-  ], "Artist id and name is right";
+  is_fields [ 'id', 'name', 'hat_color' ], $rs, [
+    [ 1, 'foo', 'purple' ],
+  ], "Artist columns are right";
   
   cmp_deeply( $ids, { Artist => [ { id => 1 } ] } );
 }
@@ -119,7 +125,7 @@ use Test::DBIx::Class qw(:resultsets);
       {
         Artist => [
           { name => 'foo' },
-          { name => 'bar' },
+          { name => 'bar', hat_color => 'red' },
         ],
       },
     );
@@ -127,13 +133,12 @@ use Test::DBIx::Class qw(:resultsets);
 
   my $rs = Artist;
   is $rs->count, 2, "There are now two artists loaded after load_sims is called";
-  is_fields [ 'id', 'name' ], $rs, [
-    [ 1, 'foo' ],
-    [ 2, 'bar' ],
-  ], "Artist id and name is right";
+  is_fields [ 'id', 'name', 'hat_color' ], $rs, [
+    [ 1, 'foo', 'purple' ],
+    [ 2, 'bar', 'red' ],
+  ], "Artist columns are right";
   
   cmp_deeply( $ids, { Artist => [ { id => 1 }, { id => 2 } ] } );
 }
-
 
 done_testing;

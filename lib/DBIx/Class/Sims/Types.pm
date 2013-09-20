@@ -6,11 +6,57 @@ use warnings FATAL => 'all';
 use DBIx::Class::Sims;
 DBIx::Class::Sims->set_sim_types({
   map { $_ => __PACKAGE__->can($_) } qw(
+    email_address
     us_address us_city us_county us_name us_phone us_ssntin us_state us_zipcode
   )
 });
 
-use String::Random qw( random_regex );
+use String::Random qw( random_regex random_string );
+
+{
+  my @tlds = qw(
+    com net org gov mil co.uk co.es
+  );
+
+  sub email_address {
+    my ($info) = @_;
+
+    my $size = $info->{size} || 7;
+    if ( $size < 7 ) {
+      return '';
+    }
+
+    my $tld = $tlds[rand @tlds];
+    while ( $size - length($tld) < 4 ) {
+      $tld = $tlds[rand @tlds];
+    }
+
+    # Don't always create an address to fill the full amount.
+    if ( $size > 20 && rand() < .5 ) {
+      $size -= int(rand($size-20));
+    }
+
+    $size -= length($tld) + 1 + 1; # + . for $tld + @
+
+    # Split size evenly-ish, but with randomness
+    my $acct_size = int($size/2);
+    $size -= $acct_size;
+
+    my $acct = random_string( "0"x$acct_size, ['a'..'z','A'..'Z','0'..'9'] );
+    if ( $acct_size > 5 && rand() < 0.1 ) {
+      my $n = int(rand($acct_size - 4)) + 2;
+      substr($acct, $n, 1) = '+';
+    }
+
+    my $domain = random_string( "c"x$size );
+    if ( $size > 5 ) {
+      my $n = int(rand($size - 4)) + 2;
+      substr($domain, $n, 1) = '.';
+    }
+
+    return "${acct}\@${domain}.${tld}";
+  }
+}
 
 {
   my @street_names = qw(
@@ -286,8 +332,10 @@ The following sim types are pre-defined:
 
 =item * email_address
 
-This generates a reasonable-looking email address. The account name is randomly
-generated. The server name is selected from a group of pre-defined server names.
+This generates a reasonable-looking email address. The account and server names
+are randomly generated. The TLD is selected from a list of TLDs, including
+'co.uk' (so be warned). If the server name is large enough, a '.' will be added
+to create a 2-level name.
 
 There is a small chance that a more complex email address will be used. These
 email addresses are ones that are more likely to break poorly-written validator

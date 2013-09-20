@@ -175,9 +175,12 @@ sub load_sims {
       my $info = $source->column_info($col_name);
       next if grep { $_ eq $col_name } $source->primary_columns;
 
-      if ( $info->{sim} ) {
+      if ( ref($info->{sim} || '') eq 'HASH' ) {
         if ( ref($info->{sim}{func} || '') eq 'CODE' ) {
           $item->{$col_name} = $info->{sim}{func}->($info);
+        }
+        elsif ( exists $info->{sim}{value} ) {
+          $item->{$col_name} = $info->{sim}{value};
         }
         elsif ( $info->{sim}{type} ) {
           my $meth = $self->sim_type($info->{sim}{type});
@@ -290,6 +293,18 @@ need specified.
 
   __PACKAGE__->add_columns(
     ...
+    address => {
+      data_type => 'varchar',
+      is_nullable => 1,
+      data_length => 10,
+      sim => { type => 'us_address' },
+    },
+    zipcode => {
+      data_type => 'varchar',
+      is_nullable => 1,
+      data_length => 10,
+      sim => { type => 'us_zipcode' },
+    },
     column1 => {
       data_type => 'int',
       is_nullable => 0,
@@ -299,24 +314,6 @@ need specified.
       },
     },
     column2 => {
-      data_type => 'varchar',
-      is_nullable => 1,
-      data_length => 10,
-      sim => {
-        func => sub {
-          return String::Random::random_string('.' x 10);
-        },
-      },
-    },
-    column3 => {
-      data_type => 'varchar',
-      is_nullable => 1,
-      data_length => 10,
-      sim => {
-        type => 'us_zipcode',
-      },
-    },
-    column4 => {
       data_type => 'varchar',
       is_nullable => 1,
       data_length => 10,
