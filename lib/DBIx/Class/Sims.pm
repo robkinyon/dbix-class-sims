@@ -10,7 +10,7 @@ use Data::Walk qw( walk );
 use List::Util qw( shuffle );
 use String::Random qw( random_regex );
 
-our $VERSION = 0.02;
+our $VERSION = 0.03;
 
 # Guarantee that toposort is loaded.
 use base 'DBIx::Class::TopoSort';
