@@ -1,8 +1,10 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
-0.03 Sep 19 2013 18:00:00 PDT
+0.03 Sep 20 2013 08:00:00 PDT
    - Added missing files to the MANIFEST
       - Which included this file
+   - Added the following column types:
+      - us_city
 
 0.02 Sep 19 2013 17:30:00 PDT
    - Removed unneeded import of Data::Dumper

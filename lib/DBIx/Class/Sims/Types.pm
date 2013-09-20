@@ -7,7 +7,7 @@ use warnings FATAL => 'all';
 use DBIx::Class::Sims;
 DBIx::Class::Sims->set_sim_types({
   map { $_ => __PACKAGE__->can($_) } qw(
-    us_address us_county us_name us_phone us_ssntin us_state us_zipcode
+    us_address us_city us_county us_name us_phone us_ssntin us_state us_zipcode
   )
 });
 
@@ -43,6 +43,20 @@ use String::Random qw( random_regex );
       my $po = rand() < .5 ? 'PO' : 'P.O.';
       return "$po Box " . int(rand(9999));
     }
+  }
+}
+
+{
+  my @city_names = qw(
+    Ithaca Jonestown Marysville Ripon Minneapolis Miami Paris London Columbus
+  );
+  push @city_names, (
+    'New York', 'Los Angeles', 'Montego By The Bay',
+  );
+
+  sub us_city {
+    # Assume a varchar-like column type with enough space.
+    return $city_names[rand @city_names];
   }
 }
 

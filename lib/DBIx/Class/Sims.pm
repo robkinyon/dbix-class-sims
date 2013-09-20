@@ -546,6 +546,10 @@ of these forms:
 
 =back
 
+=item * us_city
+
+This generates a reasonable-looking US city name.
+
 =item * us_county
 
 This generates a reasonable-looking US county name.

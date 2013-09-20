@@ -24,6 +24,7 @@ t/t3.t
 t/t4.t
 t/t5.t
 t/types/us_address.t
+t/types/us_city.t
 t/types/us_county.t
 t/types/us_name.t
 t/types/us_phone.t

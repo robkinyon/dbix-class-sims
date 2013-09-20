@@ -257,6 +257,10 @@ The following sim types are pre-defined:
     - "PO Box \#\#\#\#", so something like "PO Box 13579"
     - "P.O. Box \#\#\#\#", so something like "P.O. Box 97531"
 
+- us\_city
+
+    This generates a reasonable-looking US city name.
+
 - us\_county
 
     This generates a reasonable-looking US county name.
