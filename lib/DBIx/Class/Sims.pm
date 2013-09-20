@@ -10,7 +10,7 @@ use Data::Walk qw( walk );
 use List::Util qw( shuffle );
 use String::Random qw( random_regex );
 
-our $VERSION = 0.03;
+our $VERSION = 0.04;
 
 # Guarantee that toposort is loaded.
 use base 'DBIx::Class::TopoSort';
@@ -525,77 +525,7 @@ The handler for a sim type will receive the column info (as defined in
 L<DBIx::Class::ResultSource/add_columns>). From that, the handler returns the
 value that will be used for this column.
 
-=head2 Included
-
-The following sim types are pre-defined:
-
-=over 4
-
-=item * us_address
-
-This generates a reasonable-looking US street address. The address will be one
-of these forms:
-
-=over 4
-
-=item * "#### Name Type", so something like "123 Main Street"
-
-=item * "PO Box ####", so something like "PO Box 13579"
-
-=item * "P.O. Box ####", so something like "P.O. Box 97531"
-
-=back
-
-=item * us_city
-
-This generates a reasonable-looking US city name.
-
-=item * us_county
-
-This generates a reasonable-looking US county name.
-
-=item * us_name
-
-This generates a reasonable-looking US person name. The name will contain a
-first name, a last name, and possibly a suffix. The first name will be
-randomized as to gender and the last name may contain one word, two words, or an
-apostrophized word.
-
-=item * us_phone
-
-This generates a reasonable-looking US phone-number, based on the size of the
-column being filled. The column is assumed to be a character-type column
-(varchar, etc). If the size of the column is less than 10, there will be no area
-code. If there is space, hyphens and parentheses will be added in the right
-places. If the column is long enough, the value will look like "(###) ###-####"
-
-Phone extensions are not supported at this time.
-
-=item * us_ssntin
-
-This generates a reasonable-looking US Social Security Number (SSN) or Tax
-Identification Number (TIN). These are government identifiers that are often
-usable as unique personal IDs. An SSN is a personal ID number and a TIN is a
-corporate ID number.
-
-=item * us_state
-
-This generates a random US state or territory (so 57 choices). The column is
-assumed to be able to take a US state as a value. If the size of the column is 2
-(the default), then the abbreviation will be returned. Otherwise, the first N
-characters of the name (where N is the size) will be returned.
-
-=item * us_zipcode
-
-This generates a reasonable-looking US zipcode. If the column is numeric, it
-generates a number between 1 and 99999. Otherwise, it generates a legal string
-of numbers (with a possible dash for a 5+4) that will fit within the column's
-width.
-
-=back
-
-The reason why the pre-defined sim types have the country prefixed is because
-different countries do things differently. (Shocker, I know!)
+Please see L<DBIx::Class::Sims::Types> for the list of included sim types.
 
 =head1 TODO
 
@@ -604,6 +534,15 @@ different countries do things differently. (Shocker, I know!)
 In some applications, columns like "state" and "zipcode" are correlated. Values
 for one must be legal for the value in the other. The Sims currently has no way
 of generating correlated columns like this.
+
+This is most useful for saying "These 6 columns should be a coherent address".
+
+=head2 Allow a column to reference other columns
+
+Sometimes, a column should alter its behavior based on other columns. A fullname
+column may have the firstname and lastname columns concatenated, with other
+things thrown in. Or, a zipcode column should only generate a zipcode that's
+legal for the state.
 
 =head1 BUGS/SUGGESTIONS
 

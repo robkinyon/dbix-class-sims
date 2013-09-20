@@ -7,13 +7,15 @@ inc/Module/Install/Makefile.pm
 inc/Module/Install/Metadata.pm
 inc/Module/Install/Win32.pm
 inc/Module/Install/WriteAll.pm
-lib/DBIx/Class/.Sims.pm.swp
 lib/DBIx/Class/Sims.pm
 lib/DBIx/Class/Sims/Types.pm
 LICENSE
 Makefile.PL
-MANIFEST			This list of files
+MANIFEST
+MANIFEST.SKIP
 META.yml
+MYMETA.json
+MYMETA.yml
 t/column_defaults.t
 t/etc/schema.yml
 t/expand_dots.t
@@ -26,6 +28,8 @@ t/t5.t
 t/types/us_address.t
 t/types/us_city.t
 t/types/us_county.t
+t/types/us_firstname.t
+t/types/us_lastname.t
 t/types/us_name.t
 t/types/us_phone.t
 t/types/us_ssntin.t

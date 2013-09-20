@@ -6,13 +6,13 @@ use Test::More;
 
 use_ok 'DBIx::Class::Sims::Types';
 
-my $sub = DBIx::Class::Sims::Types->can('us_name');
+my $sub = DBIx::Class::Sims::Types->can('us_firstname');
 
 my $info = {
   data_type => 'varchar',
-  sim => { type => 'us_name' },
+  sim => { type => 'us_firstname' },
 };
-my $expected = qr/^\w+ (?:\w\. )?[\w']+(?: \w+)?(?: .+)?$/;
+my $expected = qr/^\w+$/;
 for ( 1 .. 1000 ) {
   like( $sub->($info), $expected );
 }

@@ -1,0 +1,7 @@
+.md
+pm_to_blib
+.git
+.*.swp
+blib
+Makefile$
+.bak

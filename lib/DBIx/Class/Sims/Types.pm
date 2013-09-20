@@ -1,5 +1,4 @@
-package # Hide from PAUSE indexer
-  DBIx::Class::Sims::Types;
+package DBIx::Class::Sims::Types;
 
 use strict;
 use warnings FATAL => 'all';
@@ -80,6 +79,13 @@ use String::Random qw( random_regex );
     Kathrine Leticia Margaret Nellie Ophelia Patsy Regina Sybil Tricia Valerie
   );
 
+  sub us_firstname {
+    # Assume a varchar-like column type with enough space.
+    return $first_names[rand @first_names],
+  }
+}
+
+{
   my @last_names = qw(
     Jones Smith Taylor Kinyon Williams Shaner Perry Raymond Moore O'Malley
   );
@@ -88,6 +94,15 @@ use String::Random qw( random_regex );
     "Von Trapp", "Van Kirk",
   );
 
+  sub us_lastname {
+    # Assume a varchar-like column type with enough space.
+    return $last_names[rand @last_names],
+  }
+}
+
+{
+  my @letters = ( 'A' .. 'Z' );
+
   my @suffixes = (
     'Jr', 'Sr', 'II', 'III', 'IV', 'Esq.',
   );
@@ -95,10 +110,14 @@ use String::Random qw( random_regex );
   sub us_name {
     # Assume a varchar-like column type with enough space.
 
-    my @name = (
-      $first_names[rand @first_names],
-      $last_names[rand @last_names],
-    );
+    my @name = us_firstname(@_);
+
+    # 10% chance of adding a middle initial
+    if ( rand() < 0.1 ) {
+      push @name, $letters[rand @letters] . '.';
+    }
+
+    push @name, us_lastname(@_);
 
     # 10% chance of adding a suffix
     if ( rand() < 0.1 ) {
@@ -250,3 +269,119 @@ sub us_zipcode {
 
 1;
 __END__
+
+=head1 NAME
+
+DBIx::Class::Sims::Types
+
+=head1 PURPOSE
+
+These are pre-defined sim types for using with L<DBIx::Class::Sims>.
+
+=head2 TYPES
+
+The following sim types are pre-defined:
+
+=over 4
+
+=item * email_address
+
+This generates a reasonable-looking email address. The account name is randomly
+generated. The server name is selected from a group of pre-defined server names.
+
+There is a small chance that a more complex email address will be used. These
+email addresses are ones that are more likely to break poorly-written validator
+checks. Some real-life (completely legal) examples are:
+
+=over 4
+
+=item * rob.kinyon+lists@gmail.com
+
+=back
+
+=item * us_address
+
+This generates a reasonable-looking US street address. The address will be one
+of these forms:
+
+=over 4
+
+=item * "#### Name Type", so something like "123 Main Street"
+
+=item * "PO Box ####", so something like "PO Box 13579"
+
+=item * "P.O. Box ####", so something like "P.O. Box 97531"
+
+=back
+
+=item * us_city
+
+This generates a reasonable-looking US city name.
+
+=item * us_county
+
+This generates a reasonable-looking US county name.
+
+=item * us_firstname
+
+This generates a reasonable-looking US person first name. It will be randomized
+as to gender.
+
+=item * us_lastname
+
+This generates a reasonable-looking US person last name. It may contain one
+word, two words, or an apostrophized word.
+
+=item * us_name
+
+This generates a reasonable-looking US person name. The first and last names
+will be generated from us_firstname and us_lastname, respectively. There is a
+small chance a suffix will be appended.
+
+=item * us_phone
+
+This generates a reasonable-looking US phone-number, based on the size of the
+column being filled. The column is assumed to be a character-type column
+(varchar, etc). If the size of the column is less than 10, there will be no area
+code. If there is space, hyphens and parentheses will be added in the right
+places. If the column is long enough, the value will look like "(###) ###-####"
+
+Phone extensions are not supported at this time.
+
+=item * us_ssntin
+
+This generates a reasonable-looking US Social Security Number (SSN) or Tax
+Identification Number (TIN). These are government identifiers that are often
+usable as unique personal IDs. An SSN is a personal ID number and a TIN is a
+corporate ID number.
+
+=item * us_state
+
+This generates a random US state or territory (so 57 choices). The column is
+assumed to be able to take a US state as a value. If the size of the column is 2
+(the default), then the abbreviation will be returned. Otherwise, the first N
+characters of the name (where N is the size) will be returned.
+
+=item * us_zipcode
+
+This generates a reasonable-looking US zipcode. If the column is numeric, it
+generates a number between 1 and 99999. Otherwise, it generates a legal string
+of numbers (with a possible dash for a 5+4) that will fit within the column's
+width.
+
+=back
+
+The reason why several of the pre-defined sim types have the country prefixed is
+because different countries do things differently. (Shocker, I know!)
+
+=head1 AUTHOR
+
+Rob Kinyon <rob.kinyon@gmail.com>
+
+=head1 LICENSE
+
+Copyright (c) 2013 Rob Kinyon. All Rights Reserved.
+This is free software, you may use it and distribute it under the same terms
+as Perl itself.
+
+=cut

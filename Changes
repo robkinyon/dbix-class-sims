@@ -1,5 +1,15 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.04 Sep 20 2013 08:00:00 PDT
+   - Split out the included types documentation into its own POD
+   - Added "value" as an sim option.
+      - This behaves like default_value without requiring a default_value on
+        the column.
+   - Added the following column types:
+      - us_first_name
+      - us_last_name
+      - email_address
+
 0.03 Sep 20 2013 08:00:00 PDT
    - Added missing files to the MANIFEST
       - Which included this file
