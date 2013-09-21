@@ -176,6 +176,14 @@ sub load_sims {
       next if grep { $_ eq $col_name } $source->primary_columns;
 
       if ( ref($info->{sim} || '') eq 'HASH' ) {
+        if ( exists $info->{sim}{null_chance} && !$info->{nullable} ) {
+          # Add check for not a number
+          if ( rand() < $info->{sim}{null_chance} ) {
+            $item->{$col_name} = undef;
+            next;
+          }
+        }
+
         if ( ref($info->{sim}{func} || '') eq 'CODE' ) {
           $item->{$col_name} = $info->{sim}{func}->($info);
         }
@@ -466,9 +474,9 @@ as far as necessary.
 Columns that have not been specified will be populated in one of two ways. The
 first is if the database has a default value for it. Otherwise, you can specify
 the C<sim> key in the column_info for that column. This is a new key that is not
-used by any other component.
+used by any other component. See L</SIM ENTRY> for more information.
 
-(Please see L<DBIx::Class::ResultSource/add_columns> for more info.) 
+(Please see L<DBIx::Class::ResultSource/add_columns> for details on column_info)
 
 B<NOTE>: The keys of the outermost hash are resultsource names. The keys within
 the row-specific hashes are either columns or relationships. Not resultsources.
@@ -516,7 +524,52 @@ is expected to modify the newly-created row object as needed.
 
 =back
 
-=head1 SIM TYPES
+=head1 SIM ENTRY
+
+To control how a column's values are simulated, add a "sim" entry in the
+column_info for that column. The sim entry is a hash that can have the followingkeys:
+
+=over 4
+
+=item * value
+
+This behaves just like default_value would behave, but doesn't require setting a
+default value on the column.
+
+  sim => {
+      value => 'The value to always use',
+  },
+
+=item * type
+
+This labels the column as having a certain type. A type is registered using
+L</set_sim_type>. The type acts as a name for a function that's used to generate
+the value. See L</Types> for more information.
+
+=item * min / max
+
+If the column is numeric, then the min and max bound the random value generated.
+If the column is a string, then the min and max are the length of the random
+value generated.
+
+=item * func
+
+This is a function that is provided the column info. Its return value is used to
+populate the column.
+
+=item * null_chance
+
+If the column is nullable I<and> this is set I<and> it is a number between 0 and
+1, then if C<rand()> is less than that number, the column will be set to null.
+Otherwise, the standard behaviors will apply.
+
+If the column is B<not> nullable, this setting is ignored.
+
+=back
+
+(Please see L<DBIx::Class::ResultSource/add_columns> for details on column_info)
+
+=head2 Types
 
 The handler for a sim type will receive the column info (as defined in
 L<DBIx::Class::ResultSource/add_columns>). From that, the handler returns the

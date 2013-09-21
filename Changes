@@ -1,6 +1,8 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
 0.05 Sep 20 2013 14:30:00 PDT
+   - Added nullable frequency.
+      - This allows control over when a nullable column is null vs. populated.
    - Added the following column types:
       - ip_address
 

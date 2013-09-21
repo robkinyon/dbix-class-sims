@@ -25,7 +25,7 @@ BEGIN {
       hat_color => {
         data_type => 'varchar',
         size => 128,
-        is_nullable => 0,
+        is_nullable => 1,
         sim => { value => 'purple' },
       },
     );
@@ -140,5 +140,19 @@ use Test::DBIx::Class qw(:resultsets);
   
   cmp_deeply( $ids, { Artist => [ { id => 1 }, { id => 2 } ] } );
 }
+
+# Test the null_chance setting.
+Schema->source('Artist')->column_info('name')->{sim}{value} = 'george';
+Schema->source('Artist')->column_info('hat_color')->{sim}{null_chance} = 0.3;
+my $null_count = 0;
+for (1..1000) {
+  Schema->deploy({ add_drop_table => 1 });
+
+  Schema->load_sims({ Artist => [ {} ] });
+
+  my ($row) = Artist->all;
+  $null_count++ if !defined $row->hat_color;
+}
+ok( 250 < $null_count && $null_count < 350, "null_chance worked properly ($null_count out of 1000)" );
 
 done_testing;
