@@ -13,6 +13,18 @@ need specified.
 
     __PACKAGE__->add_columns(
       ...
+      address => {
+        data_type => 'varchar',
+        is_nullable => 1,
+        data_length => 10,
+        sim => { type => 'us_address' },
+      },
+      zipcode => {
+        data_type => 'varchar',
+        is_nullable => 1,
+        data_length => 10,
+        sim => { type => 'us_zipcode' },
+      },
       column1 => {
         data_type => 'int',
         is_nullable => 0,
@@ -22,24 +34,6 @@ need specified.
         },
       },
       column2 => {
-        data_type => 'varchar',
-        is_nullable => 1,
-        data_length => 10,
-        sim => {
-          func => sub {
-            return String::Random::random_string('.' x 10);
-          },
-        },
-      },
-      column3 => {
-        data_type => 'varchar',
-        is_nullable => 1,
-        data_length => 10,
-        sim => {
-          type => 'us_zipcode',
-        },
-      },
-      column4 => {
         data_type => 'varchar',
         is_nullable => 1,
         data_length => 10,
@@ -192,9 +186,9 @@ as far as necessary.
 Columns that have not been specified will be populated in one of two ways. The
 first is if the database has a default value for it. Otherwise, you can specify
 the `sim` key in the column\_info for that column. This is a new key that is not
-used by any other component.
+used by any other component. See ["SIM ENTRY"](#SIM ENTRY) for more information.
 
-(Please see ["add\_columns" in DBIx::Class::ResultSource](http://search.cpan.org/perldoc?DBIx::Class::ResultSource#add\_columns) for more info.) 
+(Please see ["add\_columns" in DBIx::Class::ResultSource](http://search.cpan.org/perldoc?DBIx::Class::ResultSource#add\_columns) for details on column\_info)
 
 __NOTE__: The keys of the outermost hash are resultsource names. The keys within
 the row-specific hashes are either columns or relationships. Not resultsources.
@@ -238,7 +232,48 @@ hooks:
     This receives `$name, $source, $row` and expects nothing in return. This hook
     is expected to modify the newly-created row object as needed.
 
-# SIM TYPES
+# SIM ENTRY
+
+To control how a column's values are simulated, add a "sim" entry in the
+column\_info for that column. The sim entry is a hash that can have the followingkeys:
+
+- value
+
+    This behaves just like default\_value would behave, but doesn't require setting a
+    default value on the column.
+
+        sim => {
+            value => 'The value to always use',
+        },
+
+- type
+
+    This labels the column as having a certain type. A type is registered using
+    ["set\_sim\_type"](#set\_sim\_type). The type acts as a name for a function that's used to generate
+    the value. See ["Types"](#Types) for more information.
+
+- min / max
+
+    If the column is numeric, then the min and max bound the random value generated.
+    If the column is a string, then the min and max are the length of the random
+    value generated.
+
+- func
+
+    This is a function that is provided the column info. Its return value is used to
+    populate the column.
+
+- null\_chance
+
+    If the column is nullable _and_ this is set _and_ it is a number between 0 and
+    1, then if `rand()` is less than that number, the column will be set to null.
+    Otherwise, the standard behaviors will apply.
+
+    If the column is __not__ nullable, this setting is ignored.
+
+(Please see ["add\_columns" in DBIx::Class::ResultSource](http://search.cpan.org/perldoc?DBIx::Class::ResultSource#add\_columns) for details on column\_info)
+
+## Types
 
 The handler for a sim type will receive the column info (as defined in
 ["add\_columns" in DBIx::Class::ResultSource](http://search.cpan.org/perldoc?DBIx::Class::ResultSource#add\_columns)). From that, the handler returns the
