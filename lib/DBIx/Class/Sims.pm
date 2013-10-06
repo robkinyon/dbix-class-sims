@@ -1,4 +1,4 @@
-# vi:sw=2;ft=perl
+# vim: set sw=2 ft=perl:
 package DBIx::Class::Sims;
 
 use 5.008_004;
@@ -10,7 +10,7 @@ use Data::Walk qw( walk );
 use List::Util qw( shuffle );
 use String::Random qw( random_regex );
 
-our $VERSION = 0.05;
+our $VERSION = 0.06;
 
 # Guarantee that toposort is loaded.
 use base 'DBIx::Class::TopoSort';
@@ -116,20 +116,25 @@ sub load_sims {
       my $fk_src = $short_source->($rel_info);
       my $rs = $self->resultset($fk_src);
 
+      my $cond;
       if ( $item->{$rel_name} ) {
-        my $cond = delete $item->{$rel_name};
-        if ( ref($cond) ) {
-          $rs = $rs->search($cond);
-        }
-        else {
-          $rs = $rs->search({ $fkcol => $cond });
+        $cond = delete $item->{$rel_name};
+        if ( !ref($cond) ) {
+          $cond = { $fkcol => $cond };
         }
       }
       elsif ( $item->{$col} ) {
-        $rs = $rs->search({ $fkcol => $item->{$col} });
+        $cond = { $fkcol => $item->{$col} };
       }
 
-      my $parent = $rs->first || $subs{create_item}->($fk_src, {});
+      if ( $cond ) {
+        $rs = $rs->search($cond);
+      }
+      else {
+        $cond = {};
+      }
+
+      my $parent = $rs->first || $subs{create_item}->($fk_src, $cond);
       $item->{$col} = $parent->get_column($fkcol);
     }
 

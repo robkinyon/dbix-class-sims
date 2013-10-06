@@ -174,6 +174,41 @@ use Test::DBIx::Class qw(:resultsets);
   });
 }
 
+# Auto-generate a parent with a name
+{
+  Schema->deploy({ add_drop_table => 1 });
+
+  {
+    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
+    is $count, 0, "There are no tables loaded at first";
+  }
+
+  my $ids;
+  lives_ok {
+    $ids = Schema->load_sims(
+      {
+        Album => [
+          { name => 'bar1', 'artist.name' => 'foo3' },
+          { name => 'bar2', 'artist.name' => 'foo1' },
+        ],
+      },
+    );
+  } "load_sims runs to completion";
+
+  is_fields [ 'id', 'name' ], Artist, [
+    [ 1, 'foo3' ],
+    [ 2, 'foo1' ],
+  ], "Artist fields are right";
+  is_fields [ 'id', 'name', 'artist_id' ], Album, [
+    [ 1, 'bar1', 1 ],
+    [ 2, 'bar2', 2 ],
+  ], "Album fields are right";
+
+  cmp_deeply( $ids, {
+    Album => [ { id => 1 }, { id => 2 } ],
+  });
+}
+
 # Connect to a random parent
 {
   Schema->deploy({ add_drop_table => 1 });
@@ -475,6 +510,41 @@ Schema->source('Album')->column_info('name')->{sim} = {
 
   cmp_deeply( $ids, {
     Artist => [ { id => 20 } ],
+  });
+}
+
+# Auto-generate a parent with a name
+{
+  Schema->deploy({ add_drop_table => 1 });
+
+  {
+    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
+    is $count, 0, "There are no tables loaded at first";
+  }
+
+  my $ids;
+  lives_ok {
+    $ids = Schema->load_sims(
+      {
+        Album => [
+          { name => 'bar1', 'artist.name' => 'foo3' },
+          { name => 'bar2', 'artist.name' => 'foo1' },
+        ],
+      },
+    );
+  } "load_sims runs to completion";
+
+  is_fields [ 'id', 'name' ], Artist, [
+    [ 1, 'foo3' ],
+    [ 2, 'foo1' ],
+  ], "Artist fields are right";
+  is_fields [ 'id', 'name', 'artist_id' ], Album, [
+    [ 1, 'bar1', 1 ],
+    [ 2, 'bar2', 2 ],
+  ], "Album fields are right";
+
+  cmp_deeply( $ids, {
+    Album => [ { id => 1 }, { id => 2 } ],
   });
 }
 
