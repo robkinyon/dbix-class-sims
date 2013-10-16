@@ -9,7 +9,7 @@ load_sims({
     Artist => [
         {
             name => 'Joe',
-            birth_date => {
+            birth_date => \{
                 type => 'time',
                 value => 'yesterday',
             },
@@ -23,3 +23,5 @@ load_sims({
    * deploy => 1 to call `$schema->deploy({ add_drop_tables => 1 })`
 * Create a way to randomize over a list of arrays of values.
    * This seems to be the most common use for 'func'
+* Find a way to randomize a sprintf formatting string.
+   * Useful for things like SSN, EIN, etc. - `%03d-%02d-%04d`
