@@ -262,10 +262,9 @@ sub load_sims {
         }
       }
 
-      foreach my $item ( @{$spec->{$name}} ) {
-        my $row = $subs{create_item}->($name, $item);
-        push @{ $rv{$name} ||= [] }, $row;
-      }
+      @{ $rv{$name} ||= [] } = map {
+        $subs{create_item}->($name, $_)
+      } @{$spec->{$name}};
     }
 
     return \%rv;
