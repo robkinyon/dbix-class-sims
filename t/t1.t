@@ -95,9 +95,9 @@ use Test::DBIx::Class qw(:resultsets);
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => [
           { name => 'foo' },
@@ -112,16 +112,16 @@ use Test::DBIx::Class qw(:resultsets);
     [ 1, 'foo', 'purple' ],
   ], "Artist columns are right";
   
-  cmp_deeply( $ids, { Artist => [ { id => 1 } ] } );
+  cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
 }
 
 {
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => [
           { name => 'foo' },
@@ -138,7 +138,7 @@ use Test::DBIx::Class qw(:resultsets);
     [ 2, 'bar', 'red' ],
   ], "Artist columns are right";
   
-  cmp_deeply( $ids, { Artist => [ { id => 1 }, { id => 2 } ] } );
+  cmp_deeply( $rv, { Artist => [ methods(id => 1), methods(id => 2) ] } );
 }
 
 Schema->source('Artist')->column_info('name')->{sim}{value} = 'george';
@@ -148,9 +148,9 @@ Schema->source('Artist')->column_info('name')->{sim}{value} = 'george';
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => 1,
       },
@@ -163,16 +163,16 @@ Schema->source('Artist')->column_info('name')->{sim}{value} = 'george';
     [ 1, 'george', 'purple' ],
   ], "Artist columns are right";
   
-  cmp_deeply( $ids, { Artist => [ { id => 1 } ] } );
+  cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
 }
 
 {
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => 2,
       },
@@ -186,16 +186,16 @@ Schema->source('Artist')->column_info('name')->{sim}{value} = 'george';
     [ 2, 'george', 'purple' ],
   ], "Artist columns are right";
   
-  cmp_deeply( $ids, { Artist => [ { id => 1 }, { id => 2 } ] } );
+  cmp_deeply( $rv, { Artist => [ methods(id => 1), methods(id => 2) ] } );
 }
 
 {
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => {},
       },
@@ -208,16 +208,16 @@ Schema->source('Artist')->column_info('name')->{sim}{value} = 'george';
     [ 1, 'george', 'purple' ],
   ], "Artist columns are right";
   
-  cmp_deeply( $ids, { Artist => [ { id => 1 } ] } );
+  cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
 }
 
 {
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => \"",
       },
@@ -227,7 +227,7 @@ Schema->source('Artist')->column_info('name')->{sim}{value} = 'george';
   my $rs = Artist;
   is $rs->count, 0, "There are no artists loaded after load_sims is called";
   
-  cmp_deeply( $ids, {} );
+  cmp_deeply( $rv, {} );
 }
 
 # Test the null_chance setting.

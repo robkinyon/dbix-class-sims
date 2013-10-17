@@ -239,7 +239,7 @@ sub load_sims {
   };
 
   return $self->txn_do(sub {
-    my %ids;
+    my %rv;
     foreach my $name ( grep { $spec->{$_} } $self->toposort() ) {
       # Allow a number to be passed in
       if ( (reftype($spec->{$name})||'') ne 'ARRAY' ) {
@@ -262,15 +262,13 @@ sub load_sims {
         }
       }
 
-      my @pk_cols = $self->source($name)->primary_columns;
-
       foreach my $item ( @{$spec->{$name}} ) {
         my $row = $subs{create_item}->($name, $item);
-        push @{ $ids{$name} ||= [] }, {( map { $_ => $row->$_ } @pk_cols )};
+        push @{ $rv{$name} ||= [] }, $row;
       }
     }
 
-    return \%ids;
+    return \%rv;
   });
 }
 
@@ -419,45 +417,10 @@ transactions. (I'm looking at you, MyISAM!) If they do not, that is on you.
 
 This will return a hash of arrays of hashes. This will match the C<$spec>,
 except that where the C<$spec> has a requested set of things to make, the return
-will have the primary columns.
+will have the DBIx::Class::Row objects that were created.
 
-Examples:
-
-If you have a table foo with "id" as the primary column and you requested:
-
-  {
-    Foo => [
-      { name => 'bar' },
-    ],
-  }
-
-You will receive back (assuming the next id value is 1):
-
-  {
-    Foo => [
-      { id => 1 },
-    ],
-  }
-
-If you have a table foo with "name" and "type" as the primary columns and you
-requested:
-
-  {
-    Foo => [
-      { children => [ {} ] },
-    ],
-  }
-
-You will receive back (assuming the next PK values are as below):
-
-  {
-    Foo => [
-      { name => 'bar', type => 'blah' },
-    ],
-  }
-
-Note that you do not get back the ids for any additional rows generated (such as
-for the children). 
+Note that you do not get back the objects for anything other than the objects
+specified at the top level.
 
 =head2 set_sim_type
 

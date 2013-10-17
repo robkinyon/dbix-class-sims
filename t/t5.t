@@ -147,9 +147,9 @@ use Test::DBIx::Class qw(:resultsets);
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Track => [
           {},
@@ -171,8 +171,8 @@ use Test::DBIx::Class qw(:resultsets);
     [ 1, 'ijkl', 1 ],
   ], "Track fields are right";
 
-  cmp_deeply( $ids, {
-    Track => [ { track_id => 1 } ],
+  cmp_deeply( $rv, {
+    Track => [ methods(track_id => 1) ],
   });
 }
 
@@ -185,9 +185,9 @@ use Test::DBIx::Class qw(:resultsets);
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => [
           {
@@ -210,8 +210,8 @@ use Test::DBIx::Class qw(:resultsets);
   is_fields [ 'track_id', 'name', 'album_id' ], Track, [
   ], "Track fields are right";
 
-  cmp_deeply( $ids, {
-    Artist => [ { id => 1 } ],
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 1) ],
   });
 }
 

@@ -103,9 +103,9 @@ use Test::DBIx::Class qw(:resultsets);
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => [
           { name => 'foo' },
@@ -124,9 +124,9 @@ use Test::DBIx::Class qw(:resultsets);
     [ 1, 'bar', 1 ],
   ], "Album fields are right";
 
-  cmp_deeply( $ids, {
-    Artist => [ { id => 1 } ],
-    Album => [ { id => 1 } ],
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 1) ],
+    Album => [ methods(id => 1) ],
   });
 }
 
@@ -139,9 +139,9 @@ use Test::DBIx::Class qw(:resultsets);
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => [
           { name => 'foo1' },
@@ -168,9 +168,9 @@ use Test::DBIx::Class qw(:resultsets);
     [ 2, 'bar2', 1 ],
   ], "Album fields are right";
 
-  cmp_deeply( $ids, {
-    Artist => [ { id => 1 }, { id => 2 }, { id => 3 }, { id => 4 } ],
-    Album => [ { id => 1 }, { id => 2 } ],
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 1), methods(id => 2), methods(id => 3), methods(id => 4) ],
+    Album => [ methods(id => 1), methods(id => 2) ],
   });
 }
 
@@ -183,9 +183,9 @@ use Test::DBIx::Class qw(:resultsets);
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Album => [
           { name => 'bar1', 'artist.name' => 'foo3' },
@@ -204,8 +204,8 @@ use Test::DBIx::Class qw(:resultsets);
     [ 2, 'bar2', 2 ],
   ], "Album fields are right";
 
-  cmp_deeply( $ids, {
-    Album => [ { id => 1 }, { id => 2 } ],
+  cmp_deeply( $rv, {
+    Album => [ methods(id => 1), methods(id => 2) ],
   });
 }
 
@@ -218,9 +218,9 @@ use Test::DBIx::Class qw(:resultsets);
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => [
           { name => 'foo' },
@@ -239,9 +239,9 @@ use Test::DBIx::Class qw(:resultsets);
     [ 1, 'bar', 1 ],
   ], "Album fields are right";
 
-  cmp_deeply( $ids, {
-    Artist => [ { id => 1 } ],
-    Album => [ { id => 1 } ],
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 1) ],
+    Album => [ methods(id => 1) ],
   });
 }
 
@@ -254,9 +254,9 @@ use Test::DBIx::Class qw(:resultsets);
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => [
           { name => 'foo' },
@@ -285,9 +285,9 @@ use Test::DBIx::Class qw(:resultsets);
   is($row->name, 'bar', "Album name is right");
   like($row->artist_id, qr/^[12]$/, "Album artist_id is in the right range");
 
-  cmp_deeply( $ids, {
-    Artist => [ { id => 1 }, { id => 2 } ],
-    Album => [ { id => 1 } ],
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 1), methods(id => 2) ],
+    Album => [ methods(id => 1) ],
   });
 }
 
@@ -300,9 +300,9 @@ use Test::DBIx::Class qw(:resultsets);
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => [
           { name => 'foo' },
@@ -323,9 +323,9 @@ use Test::DBIx::Class qw(:resultsets);
     [ 2, 'baz', 1 ],
   ], "Album fields are right";
 
-  cmp_deeply( $ids, {
-    Artist => [ { id => 1 } ],
-    Album => [ { id => 1 }, { id => 2 } ],
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 1) ],
+    Album => [ methods(id => 1), methods(id => 2) ],
   });
 }
 
@@ -338,9 +338,9 @@ use Test::DBIx::Class qw(:resultsets);
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => [
           {
@@ -361,8 +361,8 @@ use Test::DBIx::Class qw(:resultsets);
     [ 1, 'bar', 1 ],
   ], "Album fields are right";
 
-  cmp_deeply( $ids, {
-    Artist => [ { id => 1 } ],
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 1) ],
   });
 }
 
@@ -383,9 +383,9 @@ Schema->source('Album')->column_info('name')->{sim} = {
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Album => [
           {},
@@ -401,8 +401,8 @@ Schema->source('Album')->column_info('name')->{sim} = {
     [ 1, 'efgh', 1 ],
   ], "Album fields are right";
 
-  cmp_deeply( $ids, {
-    Album => [ { id => 1 } ],
+  cmp_deeply( $rv, {
+    Album => [ methods(id => 1) ],
   });
 }
 
@@ -415,9 +415,9 @@ Schema->source('Album')->column_info('name')->{sim} = {
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => [
           {},
@@ -436,8 +436,8 @@ Schema->source('Album')->column_info('name')->{sim} = {
     [ 1, 'efgh', 1 ],
   ], "Album fields are right";
 
-  cmp_deeply( $ids, {
-    Artist => [ { id => 1 } ],
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 1) ],
   });
 }
 
@@ -450,9 +450,9 @@ Schema->source('Album')->column_info('name')->{sim} = {
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => [
           {}, {},
@@ -473,8 +473,8 @@ Schema->source('Album')->column_info('name')->{sim} = {
     [ 2, 'efgh', 2 ],
   ], "Album fields are right";
 
-  cmp_deeply( $ids, {
-    Artist => [ { id => 1 }, { id => 2 } ],
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 1), methods(id => 2) ],
   });
 }
 
@@ -487,9 +487,9 @@ Schema->source('Album')->column_info('name')->{sim} = {
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => [
           { id => 20 },
@@ -508,8 +508,8 @@ Schema->source('Album')->column_info('name')->{sim} = {
     [ 1, 'efgh', 20 ],
   ], "Album fields are right";
 
-  cmp_deeply( $ids, {
-    Artist => [ { id => 20 } ],
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 20) ],
   });
 }
 
@@ -522,9 +522,9 @@ Schema->source('Album')->column_info('name')->{sim} = {
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Album => [
           { name => 'bar1', 'artist.name' => 'foo3' },
@@ -543,8 +543,8 @@ Schema->source('Album')->column_info('name')->{sim} = {
     [ 2, 'bar2', 2 ],
   ], "Album fields are right";
 
-  cmp_deeply( $ids, {
-    Album => [ { id => 1 }, { id => 2 } ],
+  cmp_deeply( $rv, {
+    Album => [ methods(id => 1), methods(id => 2) ],
   });
 }
 
@@ -557,9 +557,9 @@ Schema->source('Album')->column_info('name')->{sim} = {
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => [
           { albums => [ { name => 'ijkl' } ] },
@@ -578,8 +578,8 @@ Schema->source('Album')->column_info('name')->{sim} = {
     [ 1, 'ijkl', 1 ],
   ], "Album fields are right";
 
-  cmp_deeply( $ids, {
-    Artist => [ { id => 1 } ],
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 1) ],
   });
 }
 
@@ -592,9 +592,9 @@ Schema->source('Album')->column_info('name')->{sim} = {
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => [
           {
@@ -617,8 +617,8 @@ Schema->source('Album')->column_info('name')->{sim} = {
     [ 2, 'mnop', 10 ],
   ], "Album fields are right";
 
-  cmp_deeply( $ids, {
-    Artist => [ { id => 10 } ],
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 10) ],
   });
 }
 
@@ -631,9 +631,9 @@ Schema->source('Album')->column_info('name')->{sim} = {
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => [
           {
@@ -661,8 +661,8 @@ Schema->source('Album')->column_info('name')->{sim} = {
     [ 4, 'j10', 10 ],
   ], "Album fields are right";
 
-  cmp_deeply( $ids, {
-    Artist => [ { id => 20 }, { id => 10 } ],
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 20), methods(id => 10) ],
   });
 }
 
@@ -675,9 +675,9 @@ Schema->source('Album')->column_info('name')->{sim} = {
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => [
           {},
@@ -697,8 +697,8 @@ Schema->source('Album')->column_info('name')->{sim} = {
     [ 2, 'efgh', 1 ],
   ], "Album fields are right";
 
-  cmp_deeply( $ids, {
-    Artist => [ { id => 1 } ],
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 1) ],
   });
 }
 

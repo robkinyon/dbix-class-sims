@@ -139,9 +139,9 @@ use Test::DBIx::Class qw(:resultsets);
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $ids;
+  my $rv;
   lives_ok {
-    $ids = Schema->load_sims(
+    $rv = Schema->load_sims(
       {
         Artist => [
           { name => 'Joe' },
@@ -163,9 +163,9 @@ use Test::DBIx::Class qw(:resultsets);
     [ 1, 'foo' ],
   ], "Studio id and name is right";
 
-  cmp_deeply( $ids, {
-    Artist => [ { id => 1 } ],
-    Studio => [ { id => 1 } ],
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 1) ],
+    Studio => [ methods(id => 1) ],
   });
 }
 
