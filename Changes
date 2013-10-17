@@ -1,5 +1,17 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.10 Oct 17 2013 19:00:00 PDT
+   - THIS RELEASE CONTAINS A BREAKING API CHANGE.
+   - The return value from load_sims() now contains the whole $row object, not
+     just a hashref of the primary keys.
+   - You can now pass in things other than an array of hashes for a resultsource
+     in the sim specification.
+       - A number, if all you're willing to accept the defaults and sims.
+       - A hashref, if you just want one thing.
+       - An arrayref (this was the previous API)
+       - If you pass in anything else, that resultsource will be skipped.
+   - You can now pass in a sim entry instead of a value for a given column.
+
 0.06 Oct 06 2013 08:15:00 PDT
    - Fixed a bug where specifying an auto-generated parent's columns didn't
      actually set the values on the parent.

@@ -176,44 +176,55 @@ sub load_sims {
     my ($name, $item) = @_;
     my $source = $self->source($name);
     foreach my $col_name ( $source->columns ) {
-      next if exists $item->{$col_name};
+      my $sim_spec;
+      if ( exists $item->{$col_name} ) {
+        if ((reftype($item->{$col_name}) || '') eq 'REF' &&
+          reftype(${$item->{$col_name}}) eq 'HASH' ) {
+          $sim_spec = ${ delete $item->{$col_name} };
+        }
+        # Pass the value along to DBIC - we don't know how to deal with it.
+        else {
+          next;
+        }
+      }
 
       my $info = $source->column_info($col_name);
       next if grep { $_ eq $col_name } $source->primary_columns;
 
-      if ( ref($info->{sim} || '') eq 'HASH' ) {
-        if ( exists $info->{sim}{null_chance} && !$info->{nullable} ) {
+      $sim_spec ||= $info->{sim};
+      if ( ref($sim_spec || '') eq 'HASH' ) {
+        if ( exists $sim_spec->{null_chance} && !$info->{nullable} ) {
           # Add check for not a number
-          if ( rand() < $info->{sim}{null_chance} ) {
+          if ( rand() < $sim_spec->{null_chance} ) {
             $item->{$col_name} = undef;
             next;
           }
         }
 
-        if ( ref($info->{sim}{func} || '') eq 'CODE' ) {
-          $item->{$col_name} = $info->{sim}{func}->($info);
+        if ( ref($sim_spec->{func} || '') eq 'CODE' ) {
+          $item->{$col_name} = $sim_spec->{func}->($info);
         }
-        elsif ( exists $info->{sim}{value} ) {
-          $item->{$col_name} = $info->{sim}{value};
+        elsif ( exists $sim_spec->{value} ) {
+          $item->{$col_name} = $sim_spec->{value};
         }
-        elsif ( $info->{sim}{type} ) {
-          my $meth = $self->sim_type($info->{sim}{type});
+        elsif ( $sim_spec->{type} ) {
+          my $meth = $self->sim_type($sim_spec->{type});
           if ( $meth ) {
             $item->{$col_name} = $meth->($info);
           }
           else {
-            warn "Type '$info->{sim}{type}' is not loaded";
+            warn "Type '$sim_spec->{type}' is not loaded";
           }
         }
         else {
           if ( $info->{data_type} eq 'int' ) {
-            my $min = $info->{sim}{min} || 0;
-            my $max = $info->{sim}{max} || 100;
+            my $min = $sim_spec->{min} || 0;
+            my $max = $sim_spec->{max} || 100;
             $item->{$col_name} = int(rand($max-$min))+$min;
           }
           elsif ( $info->{data_type} eq 'varchar' ) {
-            my $min = $info->{sim}{min} || 1;
-            my $max = $info->{sim}{max} || $info->{data_length} || 255;
+            my $min = $sim_spec->{min} || 1;
+            my $max = $sim_spec->{max} || $info->{data_length} || 255;
             $item->{$col_name} = random_regex(
               '\w' . "{$min,$max}"
             );
@@ -249,6 +260,7 @@ sub load_sims {
           }
           # I don't know what to do with it.
           else {
+            warn "Skipping $name - I don't know what to do!\n";
             next;
           }
         }
@@ -258,6 +270,7 @@ sub load_sims {
         }
         # I don't know what to do with it.
         else {
+          warn "Skipping $name - I don't know what to do!\n";
           next;
         }
       }
@@ -460,6 +473,20 @@ relationship specifier will be used. This is how you would specify a specific
 parent-child relationship. (Otherwise, a random choice will be made as to which
 parent to use, creating one as necessary if possible.) The dots will be followed
 as far as necessary.
+
+If a column's value is a reference to a hashref, then that will be treated as a
+sim entry. Example:
+
+  {
+    Artist => [
+      {
+        name => \{ type => 'us_name' },
+      },
+    ],
+  }
+
+That will use the provided sim type 'us_name'. This will override any sim entry
+specified on the column. See L</SIM ENTRY> for more information.
 
 Columns that have not been specified will be populated in one of two ways. The
 first is if the database has a default value for it. Otherwise, you can specify

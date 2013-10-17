@@ -5,6 +5,7 @@ use warnings FATAL => 'all';
 use Test::More;
 use Test::Deep;
 use Test::Exception;
+use Test::Warn;
 
 BEGIN {
   {
@@ -141,7 +142,57 @@ use Test::DBIx::Class qw(:resultsets);
   cmp_deeply( $rv, { Artist => [ methods(id => 1), methods(id => 2) ] } );
 }
 
+# Test passing in a sim type
+{
+  Schema->deploy({ add_drop_table => 1 });
+
+  is Artist->count, 0, "There are no artists loaded at first";
+  my $rv;
+  lives_ok {
+    $rv = Schema->load_sims(
+      {
+        Artist => [
+          { name => \{ value => 'george' } },
+        ],
+      },
+    );
+  } "Everything loads ok";
+
+  my $rs = Artist;
+  is Artist->count, 1, "There are now one artist loaded after load_sims is called";
+  is_fields [ 'id', 'name', 'hat_color' ], $rs, [
+    [ 1, 'george', 'purple' ],
+  ], "Artist columns are right";
+  
+  cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
+}
+
 Schema->source('Artist')->column_info('name')->{sim}{value} = 'george';
+
+# Verify that passing in a sim spec overrides the existing one.
+{
+  Schema->deploy({ add_drop_table => 1 });
+
+  is Artist->count, 0, "There are no artists loaded at first";
+  my $rv;
+  lives_ok {
+    $rv = Schema->load_sims(
+      {
+        Artist => [
+          { name => \{ value => 'bill' } },
+        ],
+      },
+    );
+  } "Everything loads ok";
+
+  my $rs = Artist;
+  is Artist->count, 1, "There are now one artist loaded after load_sims is called";
+  is_fields [ 'id', 'name', 'hat_color' ], $rs, [
+    [ 1, 'bill', 'purple' ],
+  ], "Artist columns are right";
+  
+  cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
+}
 
 # Test the ability to pass in a number instead of a specification for a source
 {
@@ -216,13 +267,13 @@ Schema->source('Artist')->column_info('name')->{sim}{value} = 'george';
 
   is Artist->count, 0, "There are no artists loaded at first";
   my $rv;
-  lives_ok {
+  warning_like {
     $rv = Schema->load_sims(
       {
         Artist => \"",
       },
     );
-  } "Everything loads ok";
+  } qr/^Skipping Artist - I don't know what to do!/;
 
   my $rs = Artist;
   is $rs->count, 0, "There are no artists loaded after load_sims is called";
