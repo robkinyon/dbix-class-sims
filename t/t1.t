@@ -141,8 +141,96 @@ use Test::DBIx::Class qw(:resultsets);
   cmp_deeply( $ids, { Artist => [ { id => 1 }, { id => 2 } ] } );
 }
 
-# Test the null_chance setting.
 Schema->source('Artist')->column_info('name')->{sim}{value} = 'george';
+
+# Test the ability to pass in a number instead of a specification for a source
+{
+  Schema->deploy({ add_drop_table => 1 });
+
+  is Artist->count, 0, "There are no artists loaded at first";
+  my $ids;
+  lives_ok {
+    $ids = Schema->load_sims(
+      {
+        Artist => 1,
+      },
+    );
+  } "Everything loads ok";
+
+  my $rs = Artist;
+  is $rs->count, 1, "There are now one artist loaded after load_sims is called";
+  is_fields [ 'id', 'name', 'hat_color' ], $rs, [
+    [ 1, 'george', 'purple' ],
+  ], "Artist columns are right";
+  
+  cmp_deeply( $ids, { Artist => [ { id => 1 } ] } );
+}
+
+{
+  Schema->deploy({ add_drop_table => 1 });
+
+  is Artist->count, 0, "There are no artists loaded at first";
+  my $ids;
+  lives_ok {
+    $ids = Schema->load_sims(
+      {
+        Artist => 2,
+      },
+    );
+  } "Everything loads ok";
+
+  my $rs = Artist;
+  is $rs->count, 2, "There are now two artists loaded after load_sims is called";
+  is_fields [ 'id', 'name', 'hat_color' ], $rs, [
+    [ 1, 'george', 'purple' ],
+    [ 2, 'george', 'purple' ],
+  ], "Artist columns are right";
+  
+  cmp_deeply( $ids, { Artist => [ { id => 1 }, { id => 2 } ] } );
+}
+
+{
+  Schema->deploy({ add_drop_table => 1 });
+
+  is Artist->count, 0, "There are no artists loaded at first";
+  my $ids;
+  lives_ok {
+    $ids = Schema->load_sims(
+      {
+        Artist => {},
+      },
+    );
+  } "Everything loads ok";
+
+  my $rs = Artist;
+  is $rs->count, 1, "There are now one artist loaded after load_sims is called";
+  is_fields [ 'id', 'name', 'hat_color' ], $rs, [
+    [ 1, 'george', 'purple' ],
+  ], "Artist columns are right";
+  
+  cmp_deeply( $ids, { Artist => [ { id => 1 } ] } );
+}
+
+{
+  Schema->deploy({ add_drop_table => 1 });
+
+  is Artist->count, 0, "There are no artists loaded at first";
+  my $ids;
+  lives_ok {
+    $ids = Schema->load_sims(
+      {
+        Artist => \"",
+      },
+    );
+  } "Everything loads ok";
+
+  my $rs = Artist;
+  is $rs->count, 0, "There are no artists loaded after load_sims is called";
+  
+  cmp_deeply( $ids, {} );
+}
+
+# Test the null_chance setting.
 Schema->source('Artist')->column_info('hat_color')->{sim}{null_chance} = 0.3;
 my $null_count = 0;
 for (1..1000) {

@@ -1,5 +1,4 @@
 * Return back the whole object, not just the primary keys
-* Allow `{ Artist => 2 }` as a synonym for `{ Artist => [ {}, {} ] }`
 * Add a time sim\_type which takes the following values:
    * yesterday, today, tomorrow
    * Date::Calc-parsable datetimes
@@ -25,3 +24,4 @@ load_sims({
    * This seems to be the most common use for 'func'
 * Find a way to randomize a sprintf formatting string.
    * Useful for things like SSN, EIN, etc. - `%03d-%02d-%04d`
+* Add rand() seeding and make the seed available for future runs.

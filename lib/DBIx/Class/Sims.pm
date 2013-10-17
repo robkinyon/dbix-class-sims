@@ -8,6 +8,7 @@ use warnings FATAL => 'all';
 
 use Data::Walk qw( walk );
 use List::Util qw( shuffle );
+use Scalar::Util qw( reftype );
 use String::Random qw( random_regex );
 
 our $VERSION = 0.06;
@@ -237,18 +238,40 @@ sub load_sims {
     return $row;
   };
 
-  my %ids;
-  $self->txn_do(sub {
+  return $self->txn_do(sub {
+    my %ids;
     foreach my $name ( grep { $spec->{$_} } $self->toposort() ) {
+      # Allow a number to be passed in
+      if ( (reftype($spec->{$name})||'') ne 'ARRAY' ) {
+        if ( !ref($spec->{$name}) ) {
+          if ( $spec->{$name} =~ /^\d+$/ ) {
+            $spec->{$name} = [ map { {} } 1 .. $spec->{$name} ];
+          }
+          # I don't know what to do with it.
+          else {
+            next;
+          }
+        }
+        # If they pass a hashref, wrap it in an arrayref.
+        elsif ( reftype($spec->{$name}) eq 'HASH' ) {
+          $spec->{$name} = [ $spec->{$name} ];
+        }
+        # I don't know what to do with it.
+        else {
+          next;
+        }
+      }
+
       my @pk_cols = $self->source($name)->primary_columns;
+
       foreach my $item ( @{$spec->{$name}} ) {
         my $row = $subs{create_item}->($name, $item);
         push @{ $ids{$name} ||= [] }, {( map { $_ => $row->$_ } @pk_cols )};
       }
     }
-  });
 
-  return \%ids;
+    return \%ids;
+  });
 }
 
 use YAML::Any qw( LoadFile Load );
@@ -485,6 +508,39 @@ used by any other component. See L</SIM ENTRY> for more information.
 
 B<NOTE>: The keys of the outermost hash are resultsource names. The keys within
 the row-specific hashes are either columns or relationships. Not resultsources.
+
+=head2 Alternatives
+
+=head3 Hard-coded number of things
+
+If you only want N of a thing, not really caring just what the column values end
+up being, you can take a shortcut:
+
+  {
+    ResultSourceName => 3,
+  }
+
+That will create 3 of that thing, taking all the defaults and sim'ed options as
+exist.
+
+=head3 Just one thing
+
+If you are creating one of a thing and setting some of the values, you can skip
+the arrayref and pass the hashref directly.
+
+  {
+    ResultSourceName => {
+      column => $value,
+      column => $value,
+      relationship => {
+        column => $value,
+      },
+      'relationship.column' => $value,
+      'rel1.rel2.rel3.column' => $value,
+    },
+  }
+
+And that will work exactly as expected.
 
 =head1 CONSTRAINTS
 
