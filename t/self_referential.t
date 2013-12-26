@@ -82,4 +82,50 @@ use Test::DBIx::Class qw(:resultsets);
   is Company->count, 1, "One company was added";
 }
 
+{
+  Schema->deploy({ add_drop_table => 1 });
+
+  is Company->count, 0, "There are no companies loaded at first";
+  lives_ok {
+    Schema->load_sims(
+      {
+        Company => [
+          { parent => {} },
+        ],
+      }, {
+        toposort => {
+          skip => {
+            Company => [ 'parent' ],
+          },
+        },
+      },
+    );
+  } "Everything loads ok";
+
+  is Company->count, 2, "Two companies were added";
+}
+
+{
+  Schema->deploy({ add_drop_table => 1 });
+
+  is Company->count, 0, "There are no companies loaded at first";
+  lives_ok {
+    Schema->load_sims(
+      {
+        Company => [
+          { children => [ {}, {} ] },
+        ],
+      }, {
+        toposort => {
+          skip => {
+            Company => [ 'parent' ],
+          },
+        },
+      },
+    );
+  } "Everything loads ok";
+
+  is Company->count, 3, "Three companies were added";
+}
+
 done_testing;
