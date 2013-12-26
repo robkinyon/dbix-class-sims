@@ -189,7 +189,6 @@ sub load_sims {
       }
 
       my $info = $source->column_info($col_name);
-      next if grep { $_ eq $col_name } $source->primary_columns;
 
       $sim_spec ||= $info->{sim};
       if ( ref($sim_spec || '') eq 'HASH' ) {
