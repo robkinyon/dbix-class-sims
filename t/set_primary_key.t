@@ -51,4 +51,22 @@ use Test::DBIx::Class qw(:resultsets);
   is Country->first->code, 'US', 'Country code is US';
 }
 
+{
+  Schema->deploy({ add_drop_table => 1 });
+
+  is Country->count, 0, "There are no countries loaded at first";
+  lives_ok {
+    Schema->load_sims(
+      {
+        Country => [
+          { code => 'UK' },
+        ],
+      },
+    );
+  } "Everything loads ok";
+
+  is Country->count, 1, "Country was added";
+  is Country->first->code, 'UK', 'Country code is UK';
+}
+
 done_testing;

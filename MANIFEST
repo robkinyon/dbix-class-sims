@@ -20,6 +20,7 @@ t/column_defaults.t
 t/etc/schema.yml
 t/expand_dots.t
 t/normalize_input.t
+t/set_primary_key.t
 t/t1.t
 t/t2.t
 t/t3.t
