@@ -1,5 +1,17 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.20 Dec 25 2013 20:00:00 PDT
+   - THIS RELEASE CONTAINS A BREAKING API CHANGE.
+   - All of these changes are due bug reports from moltar on github.
+   - You can now specify the values of the primary key. (Issue #1)
+   - The second and third options to load_sims() have been merged into a single
+     second option of "options".
+     - The constraints parameter is now $options->{constraints}
+     - The hooks parameter is now $options->{hooks}
+   - There is now a new $options->{toposort} which allows passing options to the
+     underlying TopoSort implementation. This is primarily useful for self-
+     referential tables.
+
 0.10 Oct 17 2013 19:00:00 PDT
    - THIS RELEASE CONTAINS A BREAKING API CHANGE.
    - The return value from load_sims() now contains the whole $row object, not

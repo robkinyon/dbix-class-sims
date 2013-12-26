@@ -11,7 +11,7 @@ use List::Util qw( shuffle );
 use Scalar::Util qw( reftype );
 use String::Random qw( random_regex );
 
-our $VERSION = '0.10';
+our $VERSION = '0.20';
 
 # Guarantee that toposort is loaded.
 use base 'DBIx::Class::TopoSort';
@@ -47,10 +47,10 @@ use DBIx::Class::Sims::Types;
 
 sub load_sims {
   my $self = shift;
-  my ($spec_proto, $req_proto, $hooks) = @_;
+  my ($spec_proto, $opts_proto) = @_;
 
   my $spec = expand_dots( normalize_input($spec_proto) );
-  my $reqs = normalize_input($req_proto || {});
+  my $opts = normalize_input($opts_proto || {});
 
   ###### FROM HERE ######
   # These are utility methods to help navigate the rel_info hash.
@@ -68,6 +68,7 @@ sub load_sims {
 
   # 1. Ensure the belongs_to relationships are in $reqs
   # 2. Set the rel_info as the leaf in $reqs
+  my $reqs = normalize_input($opts->{constraints} || {});
   foreach my $name ( $self->sources ) {
     my $source = $self->source($name);
 
@@ -82,7 +83,7 @@ sub load_sims {
   }
 
   # 2: Create the rows in toposorted order
-  $hooks ||= {};
+  my $hooks = $opts->{hooks} || {};
   $hooks->{preprocess}  ||= sub {};
   $hooks->{postprocess} ||= sub {};
 
@@ -95,7 +96,7 @@ sub load_sims {
     #   a. If it's a scalar, then, COND = { $fk => scalar }
     #   b. Look up the row by COND
     #   c. If the row is not there, then $create_item->($fksrc, COND)
-    # 2. If we don't have something, then:
+    # 2. If we don't have something and the column is non-nullable, then:
     #   a. If rows exists, pick a random one.
     #   b. If rows don't exist, $create_item->($fksrc, {})
     my %child_deps;
@@ -128,8 +129,12 @@ sub load_sims {
         $cond = { $fkcol => $item->{$col} };
       }
 
+      my $col_info = $source->column_info($col);
       if ( $cond ) {
         $rs = $rs->search($cond);
+      }
+      elsif ( $col_info->{is_nullable} ) {
+        next;
       }
       else {
         $cond = {};
@@ -250,7 +255,7 @@ sub load_sims {
 
   return $self->txn_do(sub {
     my %rv;
-    foreach my $name ( grep { $spec->{$_} } $self->toposort() ) {
+    foreach my $name ( grep { $spec->{$_} } $self->toposort(%{$opts->{toposort} || {}}) ) {
       # Allow a number to be passed in
       if ( (reftype($spec->{$name})||'') ne 'ARRAY' ) {
         if ( !ref($spec->{$name}) ) {
@@ -410,12 +415,12 @@ for testing purposes (though, obviously, it's not limited to just test data).
 
 =head2 load_sims
 
-C<< $rv = $schema->load_sims( $spec, ?$constraints, ?$hooks ) >>
+C<< $rv = $schema->load_sims( $spec, ?$opts ) >>
 
 This method will load the rows requested in C<$spec>, plus any additional rows
 necessary to make those rows work. This includes any parent rows (as defined by
-C<belongs_to>) and per any constraints defined in C<$constraints>. If need-be,
-you can pass in hooks (as described below) to manipulate the data.
+C<belongs_to>) and per any constraints defined in C<$opts->{constraints}>. If
+need-be, you can pass in hooks (as described below) to manipulate the data.
 
 load_sims does all of its work within a call to L<DBIx::Class::Schema/txn_do>.
 If anything goes wrong, load_sims will rethrow the error after the transaction
@@ -530,7 +535,11 @@ the arrayref and pass the hashref directly.
 
 And that will work exactly as expected.
 
-=head1 CONSTRAINTS
+=head1 OPTS
+
+There are several possible options.
+
+=head2 constraints
 
 The constraints can be passed along as a filename that contains YAML or JSON, a
 string that contains YAML or JSON, or as a hash of arrays of hashes. The
@@ -551,7 +560,9 @@ at least 2 addresses." Now, whenever a Person is created, two Addresses will be
 added along as well, if they weren't already created through some other
 specification.
 
-=head1 HOOKS
+=head2 toposort
+
+=head2 hooks
 
 Most people will never need to use this. But, some schema definitions may have
 reasons that prevent a clean simulating with this module. For example, there may
@@ -640,7 +651,7 @@ This is most useful for saying "These 6 columns should be a coherent address".
 
 Sometimes, a column should alter its behavior based on other columns. A fullname
 column may have the firstname and lastname columns concatenated, with other
-things thrown in. Or, a zipcode column should only generate a zipcode that's
+things thrown in. Or, a zipcode column should only generate a zipcode that're
 legal for the state.
 
 =head1 BUGS/SUGGESTIONS

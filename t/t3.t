@@ -424,7 +424,9 @@ Schema->source('Album')->column_info('name')->{sim} = {
         ],
       },
       {
-        Artist => { albums => 1 },
+        constraints => {
+          Artist => { albums => 1 },
+        },
       }
     );
   } "load_sims runs to completion";
@@ -459,7 +461,9 @@ Schema->source('Album')->column_info('name')->{sim} = {
         ],
       },
       {
-        Artist => { albums => 1 },
+        constraints => {
+          Artist => { albums => 1 },
+        },
       }
     );
   } "load_sims runs to completion";
@@ -496,7 +500,9 @@ Schema->source('Album')->column_info('name')->{sim} = {
         ],
       },
       {
-        Artist => { albums => 1 },
+        constraints => {
+          Artist => { albums => 1 },
+        },
       }
     );
   } "load_sims runs to completion";
@@ -566,7 +572,9 @@ Schema->source('Album')->column_info('name')->{sim} = {
         ],
       },
       {
-        Artist => { albums => 1 },
+        constraints => {
+          Artist => { albums => 1 },
+        },
       }
     );
   } "load_sims runs to completion";
@@ -604,7 +612,9 @@ Schema->source('Album')->column_info('name')->{sim} = {
         ],
       },
       {
-        Artist => { albums => 1 },
+        constraints => {
+          Artist => { albums => 1 },
+        },
       }
     );
   } "load_sims runs to completion";
@@ -684,7 +694,9 @@ Schema->source('Album')->column_info('name')->{sim} = {
         ],
       },
       {
-        Artist => { albums => 2 },
+        constraints => {
+          Artist => { albums => 2 },
+        },
       }
     );
   } "load_sims runs to completion";
