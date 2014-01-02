@@ -7,7 +7,8 @@ use DBIx::Class::Sims;
 DBIx::Class::Sims->set_sim_types({
   map { $_ => __PACKAGE__->can($_) } qw(
     email_address ip_address
-    us_address us_city us_county us_name us_phone us_ssntin us_state us_zipcode
+    us_firstname us_lastname us_name
+    us_address us_city us_county us_phone us_ssntin us_state us_zipcode
   )
 });
 
