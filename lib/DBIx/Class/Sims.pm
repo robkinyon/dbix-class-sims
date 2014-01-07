@@ -11,7 +11,7 @@ use List::Util qw( shuffle );
 use Scalar::Util qw( reftype );
 use String::Random qw( random_regex );
 
-our $VERSION = '0.20';
+our $VERSION = '0.200001';
 
 # Guarantee that toposort is loaded.
 use base 'DBIx::Class::TopoSort';
