@@ -49,7 +49,7 @@ sub load_sims {
   my $self = shift;
   my ($spec_proto, $opts_proto) = @_;
 
-  my $spec = expand_dots( normalize_input($spec_proto) );
+  my $spec = expand_dots(normalize_input($spec_proto));
   my $opts = normalize_input($opts_proto || {});
 
   ###### FROM HERE ######
@@ -146,6 +146,10 @@ sub load_sims {
 
     return \%child_deps;
   };
+  $subs{add_child} = sub {
+    my ($src, $row) = @_;
+    push @{$spec->{$src}}, $row;
+  };
   $subs{fix_child_dependencies} = sub {
     my ($name, $row, $child_deps) = @_;
 
@@ -173,7 +177,7 @@ sub load_sims {
       @children = ( ({}) x $reqs->{$name}{$rel_name} ) unless @children;
       foreach my $child (@children) {
         $child->{$fkcol} = $row->get_column($col);
-        $subs{create_item}->($fk_src, $child);
+        $subs{add_child}->($fk_src, $child);
       }
     }
   };
@@ -253,37 +257,49 @@ sub load_sims {
     return $row;
   };
 
+  # Create a lookup of the items passed in so we can return them back.
+  my $initial_spec = {};
+  foreach my $name (keys %$spec) {
+    # Allow a number to be passed in
+    if ( (reftype($spec->{$name})||'') ne 'ARRAY' ) {
+      if ( !ref($spec->{$name}) ) {
+        if ( $spec->{$name} =~ /^\d+$/ ) {
+          $spec->{$name} = [ map { {} } 1 .. $spec->{$name} ];
+        }
+        # I don't know what to do with it.
+        else {
+          warn "Skipping $name - I don't know what to do!\n";
+          delete $spec->{$name};
+          next;
+        }
+      }
+      # If they pass a hashref, wrap it in an arrayref.
+      elsif ( reftype($spec->{$name}) eq 'HASH' ) {
+        $spec->{$name} = [ $spec->{$name} ];
+      }
+      # I don't know what to do with it.
+      else {
+        warn "Skipping $name - I don't know what to do!\n";
+        delete $spec->{$name};
+        next;
+      }
+    }
+
+    foreach my $item (@{$spec->{$name}}) {
+      $initial_spec->{$name}{$item} = 1;
+    }
+  }
+
+  return {} unless keys %{$spec};
   return $self->txn_do(sub {
     my %rv;
     foreach my $name ( $self->toposort(%{$opts->{toposort} || {}}) ) {
       next unless $spec->{$name};
 
-      # Allow a number to be passed in
-      if ( (reftype($spec->{$name})||'') ne 'ARRAY' ) {
-        if ( !ref($spec->{$name}) ) {
-          if ( $spec->{$name} =~ /^\d+$/ ) {
-            $spec->{$name} = [ map { {} } 1 .. $spec->{$name} ];
-          }
-          # I don't know what to do with it.
-          else {
-            warn "Skipping $name - I don't know what to do!\n";
-            next;
-          }
-        }
-        # If they pass a hashref, wrap it in an arrayref.
-        elsif ( reftype($spec->{$name}) eq 'HASH' ) {
-          $spec->{$name} = [ $spec->{$name} ];
-        }
-        # I don't know what to do with it.
-        else {
-          warn "Skipping $name - I don't know what to do!\n";
-          next;
-        }
+      while ( my $item = shift @{$spec->{$name}} ) {
+        my $x = $subs{create_item}->($name, $item);
+        push @{$rv{$name} ||= []}, $x if $initial_spec->{$name}{$item};
       }
-
-      @{ $rv{$name} ||= [] } = map {
-        $subs{create_item}->($name, $_)
-      } @{$spec->{$name}};
     }
 
     return \%rv;
