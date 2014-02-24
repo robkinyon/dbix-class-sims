@@ -255,7 +255,9 @@ sub load_sims {
 
   return $self->txn_do(sub {
     my %rv;
-    foreach my $name ( grep { $spec->{$_} } $self->toposort(%{$opts->{toposort} || {}}) ) {
+    foreach my $name ( $self->toposort(%{$opts->{toposort} || {}}) ) {
+      next unless $spec->{$name};
+
       # Allow a number to be passed in
       if ( (reftype($spec->{$name})||'') ne 'ARRAY' ) {
         if ( !ref($spec->{$name}) ) {

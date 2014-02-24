@@ -215,4 +215,41 @@ use Test::DBIx::Class qw(:resultsets);
   });
 }
 
+# Create two parents, each specifying the same child, and only one child created
+if(0){
+  Schema->deploy({ add_drop_table => 1 });
+
+  {
+    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
+    is $count, 0, "There are no tables loaded at first";
+  }
+
+  my $rv;
+  lives_ok {
+    $rv = Schema->load_sims(
+      {
+        Artist => [ { albums => [ { name => 'child1' } ] } ],
+        Studio => [ { albums => [ { name => 'child1' } ] } ],
+      },
+    );
+  } "load_sims runs to completion";
+
+  is_fields [ 'id', 'name' ], Artist, [
+    [ 1, 'abcd' ],
+  ], "Artist fields are right";
+  is_fields [ 'id', 'name' ], Studio, [
+    [ 1, 'bcde' ],
+  ], "Studio fields are right";
+  is_fields [ 'id', 'name', 'artist_id', 'studio_id' ], Album, [
+    [ 1, 'child1', 1, 1 ],
+  ], "Album fields are right";
+  is_fields [ 'track_id', 'name', 'album_id' ], Track, [
+  ], "Track fields are right";
+
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 1) ],
+    Studio => [ methods(id => 1) ],
+  });
+}
+
 done_testing;
