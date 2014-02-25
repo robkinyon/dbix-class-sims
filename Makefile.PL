@@ -17,9 +17,10 @@ perl_version '5.008_004';
 all_from 'lib/DBIx/Class/Sims.pm';
 
 requires 'Data::Walk';
-requires 'DBIx::Class::TopoSort';
+requires 'DBIx::Class::TopoSort' => '0.050001';
 requires 'Hash::Merge';
 requires 'List::Util';
+requires 'List::MoreUtils';
 requires 'Scalar::Util';
 requires 'String::Random';
 requires 'YAML::XS'; # Removes a warning.

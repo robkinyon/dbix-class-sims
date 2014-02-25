@@ -50,11 +50,11 @@ BEGIN {
     use base 'DBIx::Class::Schema';
     __PACKAGE__->register_class(Artist => 'MyApp::Schema::Result::Artist');
     __PACKAGE__->register_class(Studio => 'MyApp::Schema::Result::Studio');
-    __PACKAGE__->load_components('Sims');
   }
 }
 
 use Test::DBIx::Class qw(:resultsets);
+use DBIx::Class::Sims;
 
 {
   Schema->deploy({ add_drop_table => 1 });
@@ -65,7 +65,7 @@ use Test::DBIx::Class qw(:resultsets);
   }
 
   throws_ok {
-    Schema->load_sims(
+    DBIx::Class::Sims->load_sims(Schema,
       {
         Artist => [
           {},
@@ -90,7 +90,7 @@ use Test::DBIx::Class qw(:resultsets);
   }
 
   throws_ok {
-    Schema->load_sims(
+    DBIx::Class::Sims->load_sims(Schema,
       {
         Artist => [
           { name => 'foo' },
@@ -115,7 +115,7 @@ use Test::DBIx::Class qw(:resultsets);
   }
 
   throws_ok {
-    Schema->load_sims(
+    DBIx::Class::Sims->load_sims(Schema,
       {
         Artist => [
           {},
@@ -141,7 +141,7 @@ use Test::DBIx::Class qw(:resultsets);
 
   my $rv;
   lives_ok {
-    $rv = Schema->load_sims(
+    $rv = DBIx::Class::Sims->load_sims(Schema,
       {
         Artist => [
           { name => 'Joe' },

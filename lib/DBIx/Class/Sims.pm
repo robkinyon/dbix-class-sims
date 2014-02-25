@@ -7,15 +7,14 @@ use strict;
 use warnings FATAL => 'all';
 
 use Data::Walk qw( walk );
+use DBIx::Class::TopoSort ();
 use Hash::Merge qw( merge );
 use List::Util qw( shuffle );
+use List::MoreUtils qw( natatime );
 use Scalar::Util qw( reftype );
 use String::Random qw( random_regex );
 
-our $VERSION = '0.200020';
-
-# Guarantee that toposort is loaded.
-use base 'DBIx::Class::TopoSort';
+our $VERSION = '0.200100';
 
 {
   my %sim_types;
@@ -46,21 +45,33 @@ use base 'DBIx::Class::TopoSort';
 }
 use DBIx::Class::Sims::Types;
 
-sub add_sim {
+sub add_sims {
   my $class = shift;
-  my ($schema, $source, $column, $sim_info) = @_;
+  my ($schema, $source, @remainder) = @_;
 
-  my $col_info = $schema->source($source)->column_info($column);
-  $col_info->{sim} = merge(
-    $col_info->{sim} // {},
-    $sim_info,
-  );
+  my $rsrc = $schema->source($source);
+  my $it = natatime(2, @remainder);
+  while (my ($column, $sim_info) = $it->()) {
+    my $col_info = $schema->source($source)->column_info($column) // next;
+    $col_info->{sim} = merge(
+      $col_info->{sim} // {},
+      $sim_info // {},
+    );
+  }
 
   return;
 }
+*add_sim = \&add_sims;
 
 sub load_sims {
   my $self = shift;
+  my $schema;
+  if (ref($self) && $self->isa('DBIx::Class::Schema')) {
+    $schema = $self;
+  }
+  else {
+    $schema = shift(@_);
+  }
   my ($spec_proto, $opts_proto) = @_;
 
   my $spec = expand_dots(normalize_input($spec_proto));
@@ -74,6 +85,7 @@ sub load_sims {
     return $x;
   };
 
+  # ribasushi says: at least make sure the cond is a hashref (not guaranteed)
   my $self_fk_cols = sub { map {/^self\.(.*)/; $1} values %{$_[0]{cond}} };
   my $self_fk_col  = sub { ($self_fk_cols->(@_))[0] };
   my $foreign_fk_cols = sub { map {/^foreign\.(.*)/; $1} keys %{$_[0]{cond}} };
@@ -84,8 +96,8 @@ sub load_sims {
   # 2. Set the rel_info as the leaf in $reqs
   my $reqs = normalize_input($opts->{constraints} || {});
   my %is_foreign_key;
-  foreach my $name ( $self->sources ) {
-    my $source = $self->source($name);
+  foreach my $name ( $schema->sources ) {
+    my $source = $schema->source($name);
 
     $reqs->{$name} ||= {};
     foreach my $rel_name ( $source->relationships ) {
@@ -116,7 +128,7 @@ sub load_sims {
     #   a. If rows exists, pick a random one.
     #   b. If rows don't exist, $create_item->($fksrc, {})
     my %child_deps;
-    my $source = $self->source($name);
+    my $source = $schema->source($name);
     foreach my $rel_name ( $source->relationships ) {
       my $rel_info = $source->relationship_info($rel_name);
       unless ( $is_fk->($rel_info) ) {
@@ -132,7 +144,7 @@ sub load_sims {
       my $fkcol = $foreign_fk_col->($rel_info);
 
       my $fk_src = $short_source->($rel_info);
-      my $rs = $self->resultset($fk_src);
+      my $rs = $schema->resultset($fk_src);
 
       my $cond;
       if ( $item->{$rel_name} ) {
@@ -166,7 +178,7 @@ sub load_sims {
     my %added_by;
     my $are_columns_equal = sub {
       my ($src, $row, $compare) = @_;
-      foreach my $col ($self->source($src)->columns) {
+      foreach my $col ($schema->source($src)->columns) {
         next if $is_foreign_key{$src}{$col};
 
         next unless exists $row->{$col};
@@ -203,7 +215,7 @@ sub load_sims {
     #   XXX This is more than one item would be supported
     # In all cases, make sure to add { $fkcol => $row->get_column($col) } to the
     # child's $item
-    my $source = $self->source($name);
+    my $source = $schema->source($name);
     foreach my $rel_name ( $source->relationships ) {
       my $rel_info = $source->relationship_info($rel_name);
       next if $is_fk->($rel_info);
@@ -226,7 +238,7 @@ sub load_sims {
   };
   $subs{fix_columns} = sub {
     my ($name, $item) = @_;
-    my $source = $self->source($name);
+    my $source = $schema->source($name);
     foreach my $col_name ( $source->columns ) {
       my $sim_spec;
       if ( exists $item->{$col_name} ) {
@@ -259,7 +271,7 @@ sub load_sims {
           $item->{$col_name} = $sim_spec->{value};
         }
         elsif ( $sim_spec->{type} ) {
-          my $meth = $self->sim_type($sim_spec->{type});
+          my $meth = $schema->sim_type($sim_spec->{type});
           if ( $meth ) {
             $item->{$col_name} = $meth->($info);
           }
@@ -290,9 +302,9 @@ sub load_sims {
     my $child_deps = $subs{fix_fk_dependencies}->($name, $item);
     $subs{fix_columns}->($name, $item);
 
-    my $source = $self->source($name);
+    my $source = $schema->source($name);
     $hooks->{preprocess}->($name, $source, $item);
-    my $row = $self->resultset($name)->create($item);
+    my $row = $schema->resultset($name)->create($item);
     $hooks->{postprocess}->($name, $source, $row);
 
     $subs{fix_child_dependencies}->($name, $row, $child_deps);
@@ -334,9 +346,9 @@ sub load_sims {
   }
 
   return {} unless keys %{$spec};
-  return $self->txn_do(sub {
+  return $schema->txn_do(sub {
     my %rv;
-    foreach my $name ( $self->toposort(%{$opts->{toposort} || {}}) ) {
+    foreach my $name ( DBIx::Class::TopoSort->toposort($schema, %{$opts->{toposort} || {}}) ) {
       next unless $spec->{$name};
 
       while ( my $item = shift @{$spec->{$name}} ) {
@@ -393,7 +405,26 @@ __END__
 
 DBIx::Class::Sims - The addition of simulating data to DBIx::Class
 
-=head1 SYNOPSIS
+=head1 SYNPOSIS (CLASS VERSION)
+
+  DBIx::Class::Sims->add_sims(
+      $schema, 'source_name',
+      address => { type => 'us_address' },
+      zip_code => { type => 'us_zipcode' },
+      # ...
+  );
+
+  my $rows = DBIx::Class::Sims->load_sims($schema, {
+    Table1 => [
+      {}, # Take sims or default values for everything
+      { # Override some values, take sim values for others
+        column1 => 20,
+        column2 => 'something',
+      },
+    ],
+  });
+
+=head1 SYNOPSIS (COMPONENT VERSION)
 
 Within your schema class:
 
@@ -439,7 +470,7 @@ Later:
     add_drop_table => 1,
   });
 
-  my $ids = $schema->load_sims({
+  my $rows = $schema->load_sims({
     Table1 => [
       {}, # Take sims or default values for everything
       { # Override some values, take sim values for others
@@ -472,11 +503,15 @@ This is a L<DBIx::Class> component that adds a few methods to your
 L<DBIx::Class::Schema> object. These methods make it much easier to create data
 for testing purposes (though, obviously, it's not limited to just test data).
 
+Alternately, it can be used as a class method vs. a component, if that fits your
+needs better.
+
 =head1 METHODS
 
 =head2 load_sims
 
 C<< $rv = $schema->load_sims( $spec, ?$opts ) >>
+C<< $rv = DBIx::Class::Sims->load_sims( $schema, $spec, ?$opts ) >>
 
 This method will load the rows requested in C<$spec>, plus any additional rows
 necessary to make those rows work. This includes any parent rows (as defined by

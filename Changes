@@ -1,5 +1,11 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.200100 Feb 25 2014 08:15:00 PDT
+  - Call toposort as a class method of TopoSort, not as a component method.
+  - Allow the load_sims method to be called as a class method of Sims
+    - This allows using this class without requiring it as a component.
+     (Thanks, Ovid!)
+
 0.200020 Feb 25 2014 08:15:00 PDT
    - Add the ability to set sim info at any time (not just at compile-time).
      (Thanks, Ovid!)
