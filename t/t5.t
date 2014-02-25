@@ -216,7 +216,7 @@ use Test::DBIx::Class qw(:resultsets);
 }
 
 # Create two parents, each specifying the same child, and only one child created
-if(0){
+{
   Schema->deploy({ add_drop_table => 1 });
 
   {

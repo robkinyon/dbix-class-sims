@@ -69,6 +69,7 @@ sub load_sims {
   # 1. Ensure the belongs_to relationships are in $reqs
   # 2. Set the rel_info as the leaf in $reqs
   my $reqs = normalize_input($opts->{constraints} || {});
+  my %is_foreign_key;
   foreach my $name ( $self->sources ) {
     my $source = $self->source($name);
 
@@ -78,6 +79,7 @@ sub load_sims {
 
       if ($is_fk->($rel_info)) {
         $reqs->{$name}{$rel_name} = 1;
+        $is_foreign_key{$name}{$_} = 1 for $self_fk_cols->($rel_info);
       }
     }
   }
@@ -146,10 +148,37 @@ sub load_sims {
 
     return \%child_deps;
   };
-  $subs{add_child} = sub {
-    my ($src, $row) = @_;
-    push @{$spec->{$src}}, $row;
-  };
+  {
+    my %added_by;
+    my $are_columns_equal = sub {
+      my ($src, $row, $compare) = @_;
+      foreach my $col ($self->source($src)->columns) {
+        next if $is_foreign_key{$src}{$col};
+
+        next unless exists $row->{$col};
+        return unless exists $compare->{$col};
+        return if $compare->{$col} ne $row->{$col};
+      }
+      return 1;
+    };
+    $subs{add_child} = sub {
+      my ($src, $fkcol, $row, $adder) = @_;
+      # If $row has the same keys (other than parent columns) as another row
+      # added by a different parent table, then set the foreign key for this
+      # parent in the existing row.
+      foreach my $name (keys %added_by) {
+        next if $name eq $adder;
+        foreach my $compare (@{$added_by{$name}}) {
+          if ($are_columns_equal->($src, $row, $compare)) {
+            $compare->{$fkcol} = $row->{$fkcol};
+            return;
+          }
+        }
+      }
+      push @{$spec->{$src}}, $row;
+      push @{$added_by{$adder} ||= []}, $row;
+    };
+  }
   $subs{fix_child_dependencies} = sub {
     my ($name, $row, $child_deps) = @_;
 
@@ -177,7 +206,7 @@ sub load_sims {
       @children = ( ({}) x $reqs->{$name}{$rel_name} ) unless @children;
       foreach my $child (@children) {
         $child->{$fkcol} = $row->get_column($col);
-        $subs{add_child}->($fk_src, $child);
+        $subs{add_child}->($fk_src, $fkcol, $child, $name);
       }
     }
   };
