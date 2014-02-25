@@ -714,4 +714,41 @@ Schema->source('Album')->column_info('name')->{sim} = {
   });
 }
 
+# Specify child and parent and only one child is created
+# XXX I'm not sure this test should be there.
+if(0){
+  Schema->deploy({ add_drop_table => 1 });
+
+  {
+    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
+    is $count, 0, "There are no tables loaded at first";
+  }
+
+  my $rv;
+  lives_ok {
+    $rv = Schema->load_sims(
+      {
+        Artist => [
+          { albums => [ { name => 'Bob' } ] },
+        ],
+        Album => [
+          { name => 'Bob' },
+        ],
+      }
+    );
+  } "load_sims runs to completion";
+
+  is_fields [ 'id', 'name' ], Artist, [
+    [ 1, 'abcd' ],
+  ], "Artist fields are right";
+  is_fields [ 'id', 'name', 'artist_id' ], Album, [
+    [ 1, 'Bob', 1 ],
+  ], "Album fields are right";
+
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 1) ],
+    Album  => [ methods(id => 1, name => 'Bob') ],
+  });
+}
+
 done_testing;

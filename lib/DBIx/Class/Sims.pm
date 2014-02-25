@@ -11,7 +11,7 @@ use List::Util qw( shuffle );
 use Scalar::Util qw( reftype );
 use String::Random qw( random_regex );
 
-our $VERSION = '0.200001';
+our $VERSION = '0.200010';
 
 # Guarantee that toposort is loaded.
 use base 'DBIx::Class::TopoSort';
@@ -581,6 +581,22 @@ the arrayref and pass the hashref directly.
   }
 
 And that will work exactly as expected.
+
+=head2 Notes
+
+=over 4
+
+=item * Multiply-specified children
+
+Sometimes, you will have a table with more than one parent (q.v. t/t5.t for an
+example of this). If you specify a row for each parent and, in each parent,
+specify a child with the same characteristics, only one child will be created.
+The assumption is that you meant the same row.
+
+This does B<not> apply to creating multiple rows with the same characteristics
+as children of the same table. The assumption is that you meant to do that.
+
+=back
 
 =head1 OPTS
 

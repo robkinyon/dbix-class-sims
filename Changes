@@ -1,5 +1,8 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.200010 Feb 25 2014 08:15:00 PDT
+   - Fix a bug where multiply-specified children were not linked properly.
+
 0.200001 Jan 07 2014 14:15:00 PDT
    - Add the missing us_firstname and us_lastname to the ::Types export list
      (Thanks, moltar!)
