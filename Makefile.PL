@@ -10,6 +10,7 @@ all_from 'lib/DBIx/Class/Sims.pm';
 
 requires 'Data::Walk';
 requires 'DBIx::Class::TopoSort';
+requires 'Hash::Merge';
 requires 'List::Util';
 requires 'Scalar::Util';
 requires 'String::Random';

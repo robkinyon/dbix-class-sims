@@ -1,5 +1,9 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.200020 Feb 25 2014 08:15:00 PDT
+   - Add the ability to set sim info at any time (not just at compile-time).
+     (Thanks, Ovid!)
+
 0.200010 Feb 25 2014 08:15:00 PDT
    - Fix a bug where multiply-specified children were not linked properly.
 

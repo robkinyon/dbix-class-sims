@@ -367,12 +367,12 @@ use Test::DBIx::Class qw(:resultsets);
 }
 
 # Specify that the names should be auto-generated if necessary.
-Schema->source('Artist')->column_info('name')->{sim} = {
+DBIx::Class::Sims->add_sim( Schema, 'Artist', 'name', {
   func => sub { return 'abcd' },
-};
-Schema->source('Album')->column_info('name')->{sim} = {
+});
+DBIx::Class::Sims->add_sim( Schema, 'Album', 'name', {
   func => sub { return 'efgh' },
-};
+});
 
 # Auto-generate the parent as necessary
 {
