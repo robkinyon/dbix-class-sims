@@ -23,6 +23,7 @@ t/column_defaults.t
 t/etc/schema.yml
 t/expand_dots.t
 t/normalize_input.t
+t/random_seed.t
 t/self_referential.t
 t/set_primary_key.t
 t/t1.t

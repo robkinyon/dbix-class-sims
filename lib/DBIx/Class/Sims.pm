@@ -14,7 +14,7 @@ use List::MoreUtils qw( natatime );
 use Scalar::Util qw( reftype );
 use String::Random qw( random_regex );
 
-our $VERSION = '0.200100';
+our $VERSION = '0.300000';
 
 {
   my %sim_types;
@@ -52,10 +52,10 @@ sub add_sims {
   my $rsrc = $schema->source($source);
   my $it = natatime(2, @remainder);
   while (my ($column, $sim_info) = $it->()) {
-    my $col_info = $schema->source($source)->column_info($column) // next;
+    my $col_info = $schema->source($source)->column_info($column) || next;
     $col_info->{sim} = merge(
-      $col_info->{sim} // {},
-      $sim_info // {},
+      $col_info->{sim} || {},
+      $sim_info || {},
     );
   }
 
@@ -271,7 +271,7 @@ sub load_sims {
           $item->{$col_name} = $sim_spec->{value};
         }
         elsif ( $sim_spec->{type} ) {
-          my $meth = $schema->sim_type($sim_spec->{type});
+          my $meth = $self->sim_type($sim_spec->{type});
           if ( $meth ) {
             $item->{$col_name} = $meth->($info);
           }
@@ -345,20 +345,36 @@ sub load_sims {
     }
   }
 
-  return {} unless keys %{$spec};
-  return $schema->txn_do(sub {
-    my %rv;
-    foreach my $name ( DBIx::Class::TopoSort->toposort($schema, %{$opts->{toposort} || {}}) ) {
-      next unless $spec->{$name};
+  my ($rows, $additional) = ({}, {});
+  if (keys %{$spec}) {
+    # Yes, this invokes srand() twice, once in implicitly in rand() and once
+    # again right after. But, that's okay. We don't care what the seed is and
+    # this allows DBIC to be called multiple times in the same process in the
+    # same second without problems.
+    $additional->{seed} = $opts->{seed} ||= rand(time & $$);
+    srand($opts->{seed});
 
-      while ( my $item = shift @{$spec->{$name}} ) {
-        my $x = $subs{create_item}->($name, $item);
-        push @{$rv{$name} ||= []}, $x if $initial_spec->{$name}{$item};
+    $rows = $schema->txn_do(sub {
+      my %rows;
+      foreach my $name ( DBIx::Class::TopoSort->toposort($schema, %{$opts->{toposort} || {}}) ) {
+        next unless $spec->{$name};
+
+        while ( my $item = shift @{$spec->{$name}} ) {
+          my $x = $subs{create_item}->($name, $item);
+          push @{$rows{$name} ||= []}, $x if $initial_spec->{$name}{$item};
+        }
       }
-    }
 
-    return \%rv;
-  });
+      return \%rows;
+    });
+  }
+
+  if (wantarray) {
+    return ($rows, $additional);
+  }
+  else {
+    return $rows;
+  }
 }
 
 use YAML::Any qw( LoadFile Load );
@@ -510,8 +526,8 @@ needs better.
 
 =head2 load_sims
 
-C<< $rv = $schema->load_sims( $spec, ?$opts ) >>
-C<< $rv = DBIx::Class::Sims->load_sims( $schema, $spec, ?$opts ) >>
+C<< $rv, $addl? = $schema->load_sims( $spec, ?$opts ) >>
+C<< $rv, $addl? = DBIx::Class::Sims->load_sims( $schema, $spec, ?$opts ) >>
 
 This method will load the rows requested in C<$spec>, plus any additional rows
 necessary to make those rows work. This includes any parent rows (as defined by
@@ -527,12 +543,29 @@ transactions. (I'm looking at you, MyISAM!) If they do not, that is on you.
 
 =head3 Return value
 
-This will return a hash of arrays of hashes. This will match the C<$spec>,
+This returns one or two values, depending on if you call load_sims in a scalar
+or array context.
+
+The first value is a hash of arrays of hashes. This will match the C<$spec>,
 except that where the C<$spec> has a requested set of things to make, the return
 will have the DBIx::Class::Row objects that were created.
 
 Note that you do not get back the objects for anything other than the objects
 specified at the top level.
+
+This second value is a hashref with additional items that may be useful. It may
+contain:
+
+=over 4
+
+=item * seed
+
+This is the random seed that was used in this run. If you set the seed in the
+opts parameter in the load_sims call, it will be that value. Otherwise, it will
+be set to a usefullly random value for you. It will be different every time even
+if you call load_sims multiple times within the same process in the same second.
+
+=back
 
 =head2 set_sim_type
 
@@ -672,7 +705,13 @@ at least 2 addresses." Now, whenever a Person is created, two Addresses will be
 added along as well, if they weren't already created through some other
 specification.
 
+=head2 seed
+
+If set, this will be the srand() seed used for this invocation.
+
 =head2 toposort
+
+This is passed directly to the call to C<< DBIx::Class::TopoSort->toposort >>.
 
 =head2 hooks
 
