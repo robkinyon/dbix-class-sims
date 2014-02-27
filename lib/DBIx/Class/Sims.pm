@@ -14,7 +14,7 @@ use List::MoreUtils qw( natatime );
 use Scalar::Util qw( reftype );
 use String::Random qw( random_regex );
 
-our $VERSION = '0.300000';
+our $VERSION = '0.300001';
 
 {
   my %sim_types;

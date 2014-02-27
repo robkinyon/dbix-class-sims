@@ -12,7 +12,6 @@ resources 'repository'  => 'https://github.com/robkinyon/dbix-class-sims',
 resources 'MailingList' => 'http://lists.scsys.co.uk/cgi-bin/mailman/listinfo/dbix-class';
 resources 'bugtracker'  => 'http://rt.cpan.org/NoAuth/Bugs.html?Dist=DBIx-Class-Sims';
 
- 
 perl_version '5.008_004';
 all_from 'lib/DBIx/Class/Sims.pm';
 
@@ -31,6 +30,7 @@ test_requires 'Test::Exception'   => '0.21';
 test_requires 'Test::More'        => '0.88'; # done_testing
 test_requires 'Test::Deep'        => '0.01';
 test_requires 'Test::Warn'        => '0.01';
+test_requires 'DBD::SQLite'       => '1.40';
 
 tests_recursive;
 

@@ -1,5 +1,9 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300001 Feb 27 2014 06:45:00 PDT
+   - Upgrade the minimum DBD::SQLite requirement for building because CPANTS is
+     throwing failures.
+
 0.300000 Feb 25 2014 08:15:00 PDT
    - THIS RELEASE CONTAINS A BREAKING API CHANGE.
    - The random seed is returned as part of a new optional second value.
