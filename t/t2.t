@@ -56,6 +56,14 @@ BEGIN {
 use Test::DBIx::Class qw(:resultsets);
 use DBIx::Class::Sims;
 
+my $null_constraint_failure;
+if ($DBD::SQLite::VERSION le '1.40') { # Account for version like '1.41_06'
+  $null_constraint_failure = 'may not be NULL';
+}
+else {
+  $null_constraint_failure = 'NOT NULL constraint failed';
+}
+
 {
   Schema->deploy({ add_drop_table => 1 });
 
@@ -75,7 +83,7 @@ use DBIx::Class::Sims;
         ],
       },
     );
-  } qr/may not be NULL/, "Missing required column";
+  } qr/$null_constraint_failure/, "Missing required column";
 
   my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
   is $count, 0, "There are no tables loaded after load_sims is called with a failure";
@@ -100,7 +108,7 @@ use DBIx::Class::Sims;
         ],
       },
     );
-  } qr/may not be NULL/, "Missing required column";
+  } qr/$null_constraint_failure/, "Missing required column";
 
   my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
   is $count, 0, "There are no tables loaded after load_sims is called with a failure";
@@ -125,7 +133,7 @@ use DBIx::Class::Sims;
         ],
       },
     );
-  } qr/may not be NULL/, "Missing required column";
+  } qr/$null_constraint_failure/, "Missing required column";
 
   my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
   is $count, 0, "There are no tables loaded after load_sims is called with a failure";

@@ -1,8 +1,10 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
 0.300002 Feb 28 2014 06:45:00 PDT
-   - Move the null_chance test into xt because the way the test is structured
+   - Move the null_chance test into xt/ because the way the test is structured
      causes spurious failures.
+   - Account for a change in DBD::SQLite's reporting of a NULL constraint
+     violation starting in 1.41_01.
 
 0.300001 Feb 27 2014 06:45:00 PDT
    - Upgrade the minimum DBD::SQLite requirement for building because CPANTS is

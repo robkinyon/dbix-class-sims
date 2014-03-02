@@ -43,6 +43,14 @@ BEGIN {
 
 use Test::DBIx::Class qw(:resultsets);
 
+my $null_constraint_failure;
+if ($DBD::SQLite::VERSION le '1.40') {
+  $null_constraint_failure = 'may not be NULL';
+}
+else {
+  $null_constraint_failure = 'NOT NULL constraint failed';
+}
+
 {
   Schema->deploy({ add_drop_table => 1 });
 
@@ -55,7 +63,7 @@ use Test::DBIx::Class qw(:resultsets);
         ],
       },
     );
-  } qr/may not be NULL/, "Missing required column";
+  } qr/$null_constraint_failure/, "Missing required column";
 
   is Artist->count, 0, "There are still no artists loaded after load_sims is called with a failure";
 }
@@ -74,7 +82,7 @@ use Test::DBIx::Class qw(:resultsets);
         ],
       },
     );
-  } qr/may not be NULL/, "Missing required column";
+  } qr/$null_constraint_failure/, "Missing required column";
 
   is Artist->count, 0, "There are still no artists loaded after load_sims is called with a failure";
 
@@ -87,7 +95,7 @@ use Test::DBIx::Class qw(:resultsets);
         ],
       },
     );
-  } qr/may not be NULL/, "Missing required column";
+  } qr/$null_constraint_failure/, "Missing required column";
 
   is Artist->count, 0, "There are still no artists loaded after load_sims is called with a failure";
 }
