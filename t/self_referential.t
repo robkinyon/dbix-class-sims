@@ -40,7 +40,9 @@ BEGIN {
   }
 }
 
-use Test::DBIx::Class qw(:resultsets);
+use Test::DBIx::Class -connect_opts => {
+  on_connect_do => 'PRAGMA foreign_keys = ON'
+}, qw(:resultsets);
 
 {
   Schema->deploy({ add_drop_table => 1 });

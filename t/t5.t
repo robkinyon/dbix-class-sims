@@ -136,7 +136,9 @@ BEGIN {
   }
 }
 
-use Test::DBIx::Class qw(:resultsets);
+use Test::DBIx::Class -connect_opts => {
+  on_connect_do => 'PRAGMA foreign_keys = ON'
+}, qw(:resultsets);
 
 # Create everything from the child-most class
 {

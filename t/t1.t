@@ -41,7 +41,9 @@ BEGIN {
   }
 }
 
-use Test::DBIx::Class qw(:resultsets);
+use Test::DBIx::Class -connect_opts => {
+  on_connect_do => 'PRAGMA foreign_keys = ON'
+}, qw(:resultsets);
 
 my $null_constraint_failure;
 if ($DBD::SQLite::VERSION le '1.40') {

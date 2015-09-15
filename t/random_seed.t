@@ -39,7 +39,9 @@ BEGIN {
   }
 }
 
-use Test::DBIx::Class qw(:resultsets);
+use Test::DBIx::Class -connect_opts => {
+  on_connect_do => 'PRAGMA foreign_keys = ON'
+}, qw(:resultsets);
 use DBIx::Class::Sims;
 
 my $email;
