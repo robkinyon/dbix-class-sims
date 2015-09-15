@@ -141,7 +141,14 @@ sub load_sims {
         next;
       }
 
-      next unless $reqs->{$name}{$rel_name};
+      next unless defined $reqs->{$name}{$rel_name};
+
+      # Don't force this relationship to be created if we know it's a circular
+      # reference. Instead, we will populate this value in an update after
+      # creating the row we need to reference.
+      if ($opts->{toposort}{skip}{$name}) {
+        next if grep { $_ eq $rel_name } @{$opts->{toposort}{skip}{$name}//[]};
+      }
 
       my $col = $self_fk_col->($rel_info);
       my $fkcol = $foreign_fk_col->($rel_info);
@@ -340,6 +347,7 @@ sub load_sims {
       }
     }
   };
+  my @breadcrumbs;
   $subs{create_item} = sub {
     my ($name, $item) = @_;
 
