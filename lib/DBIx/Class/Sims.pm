@@ -14,7 +14,7 @@ use List::MoreUtils qw( natatime );
 use Scalar::Util qw( blessed reftype );
 use String::Random qw( random_regex );
 
-our $VERSION = '0.300008';
+our $VERSION = '0.300009';
 
 {
   # The aliases in this block are done at BEGIN time so that the ::Types class

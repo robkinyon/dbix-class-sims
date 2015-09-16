@@ -1,5 +1,9 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300009 Sep 16 2015 13:00:00 PDT
+   - Add much better handling of multi-table circular references.
+   - Add a check for unused specifications (likely indicating a spelling error).
+
 0.300008 Mar 15 2016 14:00:00 PDT
    - Force a reload from database of all rows returned by load_sims()
    - format all DateTime-like values that are passed in per the storage's

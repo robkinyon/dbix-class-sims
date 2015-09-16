@@ -27,10 +27,11 @@ requires 'YAML::XS'; # Removes a warning.
 test_requires 'File::Temp'        => '0.01';
 test_requires 'Test::DBIx::Class' => '0.01';
 test_requires 'Test::Exception'   => '0.21';
-test_requires 'Test::More'        => '0.88'; # done_testing
+test_requires 'Test::More'        => '0.88';    # done_testing
 test_requires 'Test::Deep'        => '0.01';
 test_requires 'Test::Warn'        => '0.01';
-test_requires 'DBD::SQLite'       => '1.40';
+test_requires 'DBD::SQLite'       => '1.40';    # Avoid CPANTS failure
+test_requires 'SQL::Translator'   => '0.11022'; # SQLite deferred FKs
 
 tests_recursive;
 
