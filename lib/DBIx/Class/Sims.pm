@@ -455,10 +455,15 @@ sub load_sims {
     );
 
     $rows = $schema->txn_do(sub {
+      # Need to ensure we use every specification that was provided to us.
+      # Otherwise, it's probably a speling eror.
+      my %remainder = map { $_ => 1 } keys %$spec;
+
       my %rows;
       while (1) {
         foreach my $name ( @toposort ) {
           next unless $spec->{$name};
+          delete $remainder{$name};
 
           while ( my $item = shift @{$spec->{$name}} ) {
             my $x = $subs{create_item}->($name, $item);
@@ -470,6 +475,11 @@ sub load_sims {
 
         last unless $subs{has_pending}->();
         $subs{clear_pending}->();
+      }
+
+      if (keys %remainder) {
+        my $list = join("\n\t", sort keys %remainder);
+        die "Not every specification was used:\n\t$list\n";
       }
 
       return \%rows;
