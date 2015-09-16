@@ -27,7 +27,7 @@ BEGIN {
       },
     );
     __PACKAGE__->set_primary_key('id');
-    __PACKAGE__->belongs_to( 'owner' => 'MyApp::Schema::Result::Person' => { "foreign.id" => "self.owner_id" }, { is_deferrable => 1 } );
+    __PACKAGE__->belongs_to( 'owner' => 'MyApp::Schema::Result::Person' => { "foreign.id" => "self.owner_id" });
     __PACKAGE__->has_many( 'employees' => 'MyApp::Schema::Result::Person' => { "foreign.company_id" => "self.id" } );
   }
   {
@@ -63,13 +63,15 @@ BEGIN {
 }
 
 use Test::DBIx::Class -connect_opts => {
-  on_connect_do => 'PRAGMA foreign_keys = ON'
+  on_connect_do => 'PRAGMA foreign_keys = ON',
 }, qw(:resultsets);
 
 {
   Schema->deploy({ add_drop_table => 1 });
 
   is Company->count, 0, "There are no companies loaded at first";
+  is Person->count, 0, "There are no persons loaded at first";
+
   throws_ok {
     Schema->load_sims(
       {
@@ -81,36 +83,15 @@ use Test::DBIx::Class -connect_opts => {
   } qr/expected directed acyclic graph/, "Throws the right exception";
 
   is Company->count, 0, "No company was added";
+  is Person->count, 0, "No person was added";
 }
 
 {
   Schema->deploy({ add_drop_table => 1 });
 
   is Company->count, 0, "There are no companies loaded at first";
-  throws_ok {
-    Schema->load_sims(
-      {
-        Company => [
-          { owner_id => 0 },
-        ],
-      }, {
-        toposort => {
-          skip => {
-            Company => [ 'owner' ],
-          },
-        },
-      },
-    );
-  } qr/FOREIGN KEY constraint failed/, "Throws the right exception with a fake owner_id";
+  is Person->count, 0, "There are no persons loaded at first";
 
-  is Company->count, 0, "No company was added";
-}
-
-if(0){
-  Schema->create_ddl_dir;
-  Schema->deploy({ add_drop_table => 1 });
-
-  is Company->count, 0, "There are no companies loaded at first";
   lives_ok {
     Schema->load_sims(
       {
@@ -137,28 +118,62 @@ if(0){
   cmp_ok Company->first->id, '==', Person->first->employer->id, "Company is the person's employer";
 }
 
-if(0){
+# Follow the unskipped relationship and have the Company be updated
+# after the fact.
+{
   Schema->deploy({ add_drop_table => 1 });
 
   is Company->count, 0, "There are no companies loaded at first";
+  is Person->count, 0, "There are no persons loaded at first";
+
   lives_ok {
     Schema->load_sims(
       {
-        Company => [
-          { children => [ {}, {} ] },
-        ],
+        Person => 1,
       }, {
         toposort => {
           skip => {
-            Company => [ 'parent' ],
+            Company => [ 'owner' ],
           },
         },
       },
     );
   } "Everything loads ok";
 
-  is Company->count, 3, "Three companies were added";
+  is Company->count, 1, "One company was added";
+  is Person->count, 1, "One person was added";
+
+  cmp_ok Company->first->owner->id, '==', Person->first->id, "Company owner is the person";
+  cmp_ok Company->first->id, '==', Person->first->employer->id, "Company is the person's employer";
+}
+
+# Follow the skipped relationship and have the Company be updated
+# after the fact.
+{
+  Schema->deploy({ add_drop_table => 1 });
+
+  is Company->count, 0, "There are no companies loaded at first";
+  is Person->count, 0, "There are no persons loaded at first";
+
+  lives_ok {
+    Schema->load_sims(
+      {
+        Company => 1,
+      }, {
+        toposort => {
+          skip => {
+            Company => [ 'owner' ],
+          },
+        },
+      },
+    );
+  } "Everything loads ok";
+
+  is Company->count, 1, "One company was added";
+  is Person->count, 1, "One person was added";
+
+  cmp_ok Company->first->owner->id, '==', Person->first->id, "Company owner is the person";
+  cmp_ok Company->first->id, '==', Person->first->employer->id, "Company is the person's employer";
 }
 
 done_testing;
-

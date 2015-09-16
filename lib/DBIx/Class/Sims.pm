@@ -120,6 +120,35 @@ sub load_sims {
 
   # Prepopulate column values (as appropriate)
   my %subs;
+
+  # These exist to handle circular references. Since toposort has to break those
+  # links, we use the toposort break as a marker to say "We will put a fake value
+  # in here", then we need to defer handling this column until we have a legal
+  # value to put in it.
+  {
+    my %triggered_checks = ();
+
+    $subs{add_trigger} = sub {
+      my ($built_src, $built_col, $fix_src, $fix_col, $bad_value) = @_;
+      $triggered_checks{$built_src} ||= [];
+      push $triggered_checks{$built_src}, [
+        $built_col, $fix_src, $fix_col, $bad_value,
+      ];
+    };
+
+    $subs{handle_triggers} = sub {
+      my ($source, $row) = @_;
+      foreach my $check (@{$triggered_checks{$source} || []}) {
+        my ($col, $other_src, $other_col, $bad_value) = @$check;
+        $schema->resultset($other_src)->search({
+          $other_col => $bad_value,
+        })->update({
+          $other_col => $row->$col,
+        });
+      }
+      delete $triggered_checks{$source};
+    };
+  }
   $subs{fix_fk_dependencies} = sub {
     my ($name, $item) = @_;
 
@@ -143,18 +172,28 @@ sub load_sims {
 
       next unless defined $reqs->{$name}{$rel_name};
 
-      # Don't force this relationship to be created if we know it's a circular
-      # reference. Instead, we will populate this value in an update after
-      # creating the row we need to reference.
-      if ($opts->{toposort}{skip}{$name}) {
-        next if grep { $_ eq $rel_name } @{$opts->{toposort}{skip}{$name}//[]};
-      }
-
       my $col = $self_fk_col->($rel_info);
       my $fkcol = $foreign_fk_col->($rel_info);
 
       my $fk_src = $short_source->($rel_info);
       my $rs = $schema->resultset($fk_src);
+
+      # Don't force this relationship to be created if we know it's a circular
+      # reference. Instead, we will populate this value in an update after
+      # creating the row we need to reference.
+      if ($opts->{toposort}{skip}{$name}) {
+        if (grep { $_ eq $rel_name } @{$opts->{toposort}{skip}{$name}//[]}) {
+          # Ensure that at least one of the other side will be created.
+          $spec->{$fk_src} //= [{}] unless $rs->count;
+
+          # Add the trigger to ensure this row is updated properly. We will use
+          # the bad value of 0 until someone complains with a failing test.
+          my $bad_value = 0;
+          $subs{add_trigger}->($fk_src, $fkcol, $name, $col, $bad_value);
+          $item->{$col} = $bad_value;
+          next;
+        }
+      }
 
       my $cond;
       if ( $item->{$rel_name} ) {
@@ -347,7 +386,6 @@ sub load_sims {
       }
     }
   };
-  my @breadcrumbs;
   $subs{create_item} = sub {
     my ($name, $item) = @_;
 
@@ -364,6 +402,7 @@ sub load_sims {
     $subs{fix_child_dependencies}->($name, $row, $child_deps);
 
     $hooks->{postprocess}->($name, $source, $row);
+    $subs{handle_triggers}->($name, $row);
 
     return $row;
   };
@@ -802,6 +841,7 @@ If set, this will be the srand() seed used for this invocation.
 =head2 toposort
 
 This is passed directly to the call to C<< DBIx::Class::TopoSort->toposort >>.
+This is necessary if you have any cycles in your database.
 
 =head2 hooks
 
