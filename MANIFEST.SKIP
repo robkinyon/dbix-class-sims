@@ -6,3 +6,4 @@ blib
 Makefile$
 .bak
 .gz
+^MYMETA.yml$

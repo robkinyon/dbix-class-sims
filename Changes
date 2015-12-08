@@ -1,5 +1,8 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300003 Dec 08 2015 19:00:00 PDT
+   - Remove MYMETA.yml (RT#108552)
+
 0.300002 Feb 28 2014 06:45:00 PDT
    - Move the null_chance test into xt/ because the way the test is structured
      causes spurious failures.
