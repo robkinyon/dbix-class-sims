@@ -6,6 +6,8 @@ use 5.008_004;
 use strict;
 use warnings FATAL => 'all';
 
+#use DDP;
+
 use Data::Walk qw( walk );
 use DBIx::Class::TopoSort ();
 use Hash::Merge qw( merge );
@@ -14,7 +16,7 @@ use List::MoreUtils qw( natatime );
 use Scalar::Util qw( reftype );
 use String::Random qw( random_regex );
 
-our $VERSION = '0.300003';
+our $VERSION = '0.300004';
 
 {
   my %sim_types;
@@ -215,13 +217,13 @@ sub load_sims {
       $_ ne 'primary'
     } $source->unique_constraint_names();
 
-    return unless @uniques;
-
     my $rs = $schema->resultset($name);
     my $searched = 0;
     foreach my $unique (@uniques) {
-      # If there are specified values for all the columns in a specific unqiue constraint,
-      # then add that to the list of potential values to search.
+      # If there are specified values for all the columns in a specific unqiue constraint ...
+      next if grep { ! exists $item->{$_} } @$unique;
+
+      # ... then add that to the list of potential values to search.
       $rs = $rs->search({
         ( map { $_ => $item->{$_} } @{$unique})
       });
