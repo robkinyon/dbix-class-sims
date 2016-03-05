@@ -213,8 +213,6 @@ sub load_sims {
     my $source = $schema->source($name);
     my @uniques = map {
       [ $source->unique_constraint_columns($_) ]
-    } grep {
-      $_ ne 'primary'
     } $source->unique_constraint_names();
 
     my $rs = $schema->resultset($name);
