@@ -6,6 +6,8 @@ use 5.008_004;
 use strict;
 use warnings FATAL => 'all';
 
+#use DDP;
+
 use Data::Walk qw( walk );
 use DBIx::Class::TopoSort ();
 use Hash::Merge qw( merge );
@@ -14,7 +16,7 @@ use List::MoreUtils qw( natatime );
 use Scalar::Util qw( reftype );
 use String::Random qw( random_regex );
 
-our $VERSION = '0.300003';
+our $VERSION = '0.300004';
 
 {
   my %sim_types;
@@ -205,6 +207,30 @@ sub load_sims {
       push @{$added_by{$adder} ||= []}, $row;
     };
   }
+  $subs{find_by_unique_constraints} = sub {
+    my ($name, $item) = @_;
+
+    my $source = $schema->source($name);
+    my @uniques = map {
+      [ $source->unique_constraint_columns($_) ]
+    } $source->unique_constraint_names();
+
+    my $rs = $schema->resultset($name);
+    my $searched = 0;
+    foreach my $unique (@uniques) {
+      # If there are specified values for all the columns in a specific unqiue constraint ...
+      next if grep { ! exists $item->{$_} } @$unique;
+
+      # ... then add that to the list of potential values to search.
+      $rs = $rs->search({
+        ( map { $_ => $item->{$_} } @{$unique})
+      });
+      $searched = 1;
+    }
+
+    return unless $searched;
+    return $rs->first;
+  };
   $subs{fix_child_dependencies} = sub {
     my ($name, $row, $child_deps) = @_;
 
@@ -304,7 +330,10 @@ sub load_sims {
 
     my $source = $schema->source($name);
     $hooks->{preprocess}->($name, $source, $item);
-    my $row = $schema->resultset($name)->create($item);
+
+    my $row = $subs{find_by_unique_constraints}->($name, $item)
+      || $schema->resultset($name)->create($item);
+
     $hooks->{postprocess}->($name, $source, $row);
 
     $subs{fix_child_dependencies}->($name, $row, $child_deps);

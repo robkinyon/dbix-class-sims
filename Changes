@@ -1,5 +1,8 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300004 Mar 05 2016 19:00:00 PDT
+   - Add support for looking things up by unique constraints (Thanks, Bluefeet!)
+
 0.300003 Dec 08 2015 19:00:00 PDT
    - Remove MYMETA.yml (RT#108552)
 
