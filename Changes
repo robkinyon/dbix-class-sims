@@ -1,5 +1,9 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300005 Mar 09 2016 19:00:00 PDT
+   - Move the preprocess hook to before the handling of FKs. This allows for the
+     horribly hacky disabling of a FK if your data model requires such things.
+
 0.300004 Mar 05 2016 19:00:00 PDT
    - Add support for looking things up by unique constraints (Thanks, Bluefeet!)
 

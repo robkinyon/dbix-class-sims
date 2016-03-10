@@ -16,7 +16,7 @@ use List::MoreUtils qw( natatime );
 use Scalar::Util qw( reftype );
 use String::Random qw( random_regex );
 
-our $VERSION = '0.300004';
+our $VERSION = '0.300005';
 
 {
   my %sim_types;
@@ -325,11 +325,11 @@ sub load_sims {
   $subs{create_item} = sub {
     my ($name, $item) = @_;
 
-    my $child_deps = $subs{fix_fk_dependencies}->($name, $item);
-    $subs{fix_columns}->($name, $item);
-
     my $source = $schema->source($name);
     $hooks->{preprocess}->($name, $source, $item);
+
+    my $child_deps = $subs{fix_fk_dependencies}->($name, $item);
+    $subs{fix_columns}->($name, $item);
 
     my $row = $subs{find_by_unique_constraints}->($name, $item)
       || $schema->resultset($name)->create($item);
