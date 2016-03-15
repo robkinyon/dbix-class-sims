@@ -14,7 +14,7 @@ use List::MoreUtils qw( natatime );
 use Scalar::Util qw( reftype );
 use String::Random qw( random_regex );
 
-our $VERSION = '0.300007';
+our $VERSION = '0.300008';
 
 {
   # The aliases in this block are done at BEGIN time so that the ::Types class
@@ -427,6 +427,11 @@ sub load_sims {
 
       return \%rows;
     });
+
+    # Force a reload from the database of every row we're returning.
+    foreach my $item (values %$rows) {
+      $_->discard_changes for @$item;
+    }
   }
 
   if (wantarray) {
