@@ -6,8 +6,6 @@ use 5.008_004;
 use strict;
 use warnings FATAL => 'all';
 
-#use DDP;
-
 use Data::Walk qw( walk );
 use DBIx::Class::TopoSort ();
 use Hash::Merge qw( merge );
@@ -164,7 +162,15 @@ sub load_sims {
 
       my $col_info = $source->column_info($col);
       if ( $cond ) {
-        $rs = $rs->search($cond);
+        my %fkcols = map { $_ => 1 } $schema->source($fk_src)->columns;
+        my $search = {
+          (map {
+            $_ => $cond->{$_}
+          } grep {
+            exists $fkcols{$_}
+          } keys %$cond)
+        };
+        $rs = $rs->search($search);
       }
       elsif ( $col_info->{is_nullable} ) {
         next;
@@ -173,13 +179,17 @@ sub load_sims {
         $cond = {};
       }
 
-      my $parent = $rs->first || $subs{create_item}->($fk_src, $cond);
+      my $parent = $rs->first;
+      unless ($parent) {
+        $parent = $subs{create_item}->($fk_src, $cond);
+      }
       $item->{$col} = $parent->get_column($fkcol);
     }
 
     return \%child_deps;
   };
   {
+    my %pending;
     my %added_by;
     my $are_columns_equal = sub {
       my ($src, $row, $compare) = @_;
@@ -208,7 +218,12 @@ sub load_sims {
       }
       push @{$spec->{$src}}, $row;
       push @{$added_by{$adder} ||= []}, $row;
+      $pending{$src} = 1;
     };
+
+    $subs{has_pending} = sub { keys %pending != 0; };
+    $subs{delete_pending} = sub { delete $pending{$_[0]} };
+    $subs{clear_pending} = sub { %pending = () };
   }
   $subs{find_by_unique_constraints} = sub {
     my ($name, $item) = @_;
@@ -387,15 +402,27 @@ sub load_sims {
     $additional->{seed} = $opts->{seed} ||= rand(time & $$);
     srand($opts->{seed});
 
+    my @toposort =  DBIx::Class::TopoSort->toposort(
+      $schema,
+      %{$opts->{toposort} || {}},
+    );
+
     $rows = $schema->txn_do(sub {
       my %rows;
-      foreach my $name ( DBIx::Class::TopoSort->toposort($schema, %{$opts->{toposort} || {}}) ) {
-        next unless $spec->{$name};
+      while (1) {
+        foreach my $name ( @toposort ) {
+          next unless $spec->{$name};
 
-        while ( my $item = shift @{$spec->{$name}} ) {
-          my $x = $subs{create_item}->($name, $item);
-          push @{$rows{$name} ||= []}, $x if $initial_spec->{$name}{$item};
+          while ( my $item = shift @{$spec->{$name}} ) {
+            my $x = $subs{create_item}->($name, $item);
+            push @{$rows{$name} ||= []}, $x if $initial_spec->{$name}{$item};
+          }
+
+          $subs{delete_pending}->($name);
         }
+
+        last unless $subs{has_pending}->();
+        $subs{clear_pending}->();
       }
 
       return \%rows;
