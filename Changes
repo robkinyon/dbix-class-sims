@@ -1,5 +1,11 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300007 Mar 15 2016 12:00:00 PDT
+   - Finalize the ordering within create_item.
+   - Properly handle the case where a child row specifies a parent that has
+     rows of a different child table. (Previously, the child rows would have
+     been part of the search for the parent, resulting in a wonky search.)
+
 0.300006 Mar 10 2016 06:00:00 PDT
    - Move the preprocess hook back. This was a horrible change.
 

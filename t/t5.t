@@ -176,6 +176,44 @@ use Test::DBIx::Class qw(:resultsets);
   });
 }
 
+# Create and specify an artist name from the track through the album.
+{
+  Schema->deploy({ add_drop_table => 1 });
+
+  {
+    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
+    is $count, 0, "There are no tables loaded at first";
+  }
+
+  my $rv;
+  lives_ok {
+    $rv = Schema->load_sims(
+      {
+        Track => [
+          { 'album.artist.name' => 'John' },
+        ],
+      },
+    );
+  } "load_sims runs to completion";
+
+  is_fields [ 'id', 'name' ], Artist, [
+    [ 1, 'John' ],
+  ], "Artist fields are right";
+  is_fields [ 'id', 'name' ], Studio, [
+    [ 1, 'bcde' ],
+  ], "Studio fields are right";
+  is_fields [ 'id', 'name', 'artist_id', 'studio_id' ], Album, [
+    [ 1, 'efgh', 1, 1 ],
+  ], "Album fields are right";
+  is_fields [ 'track_id', 'name', 'album_id' ], Track, [
+    [ 1, 'ijkl', 1 ],
+  ], "Track fields are right";
+
+  cmp_deeply( $rv, {
+    Track => [ methods(track_id => 1) ],
+  });
+}
+
 # Create a parent with a child and have the other parent auto-created.
 {
   Schema->deploy({ add_drop_table => 1 });

@@ -6,8 +6,6 @@ use 5.008_004;
 use strict;
 use warnings FATAL => 'all';
 
-#use DDP;
-
 use Data::Walk qw( walk );
 use DBIx::Class::TopoSort ();
 use Hash::Merge qw( merge );
@@ -16,9 +14,12 @@ use List::MoreUtils qw( natatime );
 use Scalar::Util qw( reftype );
 use String::Random qw( random_regex );
 
-our $VERSION = '0.300006';
+our $VERSION = '0.300007';
 
 {
+  # The aliases in this block are done at BEGIN time so that the ::Types class
+  # can use them when it is loaded through `use`.
+
   my %sim_types;
 
   sub set_sim_type {
@@ -161,7 +162,15 @@ sub load_sims {
 
       my $col_info = $source->column_info($col);
       if ( $cond ) {
-        $rs = $rs->search($cond);
+        my %fkcols = map { $_ => 1 } $schema->source($fk_src)->columns;
+        my $search = {
+          (map {
+            $_ => $cond->{$_}
+          } grep {
+            exists $fkcols{$_}
+          } keys %$cond)
+        };
+        $rs = $rs->search($search);
       }
       elsif ( $col_info->{is_nullable} ) {
         next;
@@ -170,13 +179,17 @@ sub load_sims {
         $cond = {};
       }
 
-      my $parent = $rs->first || $subs{create_item}->($fk_src, $cond);
+      my $parent = $rs->first;
+      unless ($parent) {
+        $parent = $subs{create_item}->($fk_src, $cond);
+      }
       $item->{$col} = $parent->get_column($fkcol);
     }
 
     return \%child_deps;
   };
   {
+    my %pending;
     my %added_by;
     my $are_columns_equal = sub {
       my ($src, $row, $compare) = @_;
@@ -205,7 +218,12 @@ sub load_sims {
       }
       push @{$spec->{$src}}, $row;
       push @{$added_by{$adder} ||= []}, $row;
+      $pending{$src} = 1;
     };
+
+    $subs{has_pending} = sub { keys %pending != 0; };
+    $subs{delete_pending} = sub { delete $pending{$_[0]} };
+    $subs{clear_pending} = sub { %pending = () };
   }
   $subs{find_by_unique_constraints} = sub {
     my ($name, $item) = @_;
@@ -325,18 +343,19 @@ sub load_sims {
   $subs{create_item} = sub {
     my ($name, $item) = @_;
 
-    my $child_deps = $subs{fix_fk_dependencies}->($name, $item);
     $subs{fix_columns}->($name, $item);
 
     my $source = $schema->source($name);
     $hooks->{preprocess}->($name, $source, $item);
 
+    my $child_deps = $subs{fix_fk_dependencies}->($name, $item);
+
     my $row = $subs{find_by_unique_constraints}->($name, $item)
       || $schema->resultset($name)->create($item);
 
-    $hooks->{postprocess}->($name, $source, $row);
-
     $subs{fix_child_dependencies}->($name, $row, $child_deps);
+
+    $hooks->{postprocess}->($name, $source, $row);
 
     return $row;
   };
@@ -383,15 +402,27 @@ sub load_sims {
     $additional->{seed} = $opts->{seed} ||= rand(time & $$);
     srand($opts->{seed});
 
+    my @toposort =  DBIx::Class::TopoSort->toposort(
+      $schema,
+      %{$opts->{toposort} || {}},
+    );
+
     $rows = $schema->txn_do(sub {
       my %rows;
-      foreach my $name ( DBIx::Class::TopoSort->toposort($schema, %{$opts->{toposort} || {}}) ) {
-        next unless $spec->{$name};
+      while (1) {
+        foreach my $name ( @toposort ) {
+          next unless $spec->{$name};
 
-        while ( my $item = shift @{$spec->{$name}} ) {
-          my $x = $subs{create_item}->($name, $item);
-          push @{$rows{$name} ||= []}, $x if $initial_spec->{$name}{$item};
+          while ( my $item = shift @{$spec->{$name}} ) {
+            my $x = $subs{create_item}->($name, $item);
+            push @{$rows{$name} ||= []}, $x if $initial_spec->{$name}{$item};
+          }
+
+          $subs{delete_pending}->($name);
         }
+
+        last unless $subs{has_pending}->();
+        $subs{clear_pending}->();
       }
 
       return \%rows;
@@ -816,6 +847,48 @@ L<DBIx::Class::ResultSource/add_columns>). From that, the handler returns the
 value that will be used for this column.
 
 Please see L<DBIx::Class::Sims::Types> for the list of included sim types.
+
+=head1 SEQUENCE OF EVENTS
+
+When an item is created, the following actions are taken (in this order):
+
+=over 4
+
+=item 1 The columns are fixed up.
+
+This is where generated values are generated. After this is done, all the values
+that will be inserted into the database are now available.
+
+q.v. L</SIM ENTRY> for more information.
+
+=item 1 The preprocess hook fires.
+
+You can modify the hashref as necessary. This includes potentially changing what
+parent and/or child rows to associate with this row.
+
+=item 1 All foreign keys are resolved.
+
+If it's a parent relationship, the parent row will be found or created. All
+parent rows will go through the same sequence of events as described here.
+
+If it's a child relationship, creation of the child rows will be deferred until
+later.
+
+=item 1 The row is found or created.
+
+It might be found by unique constraint or created.
+
+=item 1 All child relationships are handled
+
+Because they're a child relationship, they are deferred until the time that
+model is handled in the toposorted graph. They are not created now because they
+might associate with a different parent that has not been created yet.
+
+=item 1 The postprocess hook fires.
+
+Note that any child rows are not guaranteed to exist yet.
+
+=back
 
 =head1 TODO
 
