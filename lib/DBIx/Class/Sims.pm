@@ -11,7 +11,7 @@ use DBIx::Class::TopoSort ();
 use Hash::Merge qw( merge );
 use List::Util qw( shuffle );
 use List::MoreUtils qw( natatime );
-use Scalar::Util qw( reftype );
+use Scalar::Util qw( blessed reftype );
 use String::Random qw( random_regex );
 
 our $VERSION = '0.300008';
@@ -77,7 +77,7 @@ sub load_sims {
   }
   my ($spec_proto, $opts_proto) = @_;
 
-  my $spec = expand_dots(normalize_input($spec_proto));
+  my $spec = massage_input($schema, normalize_input($spec_proto));
   my $opts = normalize_input($opts_proto || {});
 
   ###### FROM HERE ######
@@ -461,20 +461,37 @@ sub normalize_input {
   return Load($proto);
 }
 
-sub expand_dots {
-  my $struct = shift;
+sub massage_input {
+  my ($schema, $struct) = @_;
 
-  walk sub {
-    if ( ref($_) eq 'HASH' ) {
+  my $dtp = $schema->storage->datetime_parser;
+  walk({
+    preprocess => sub {
+      # Don't descend into the weeds. Only do the things we care about.
+      return if grep { blessed($_) } @_;
+      return unless grep { reftype($_) } @_;
+      return @_;
+    },
+    wanted => sub {
+      return unless (reftype($_)//'') eq 'HASH' && !blessed($_);
       foreach my $k ( keys %$_ ) {
         my $t = $_;
+
+        # Expand the dot-naming convention.
         while ( $k =~ /([^.]*)\.(.*)/ ) {
           $t->{$1} = { $2 => delete($t->{$k}) };
           $t = $t->{$1}; $k = $2;
         }
+
+        # Handle DateTime values passed to us.
+        if (defined $t->{$k}) {
+          if ( $t->{$k} =~ /^\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d$/ ) {
+            $t->{$k} = $dtp->format_datetime($t->{$k});
+          }
+        }
       }
-    }
-  }, $struct;
+    },
+  }, $struct);
 
   return $struct;
 }

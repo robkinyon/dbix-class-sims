@@ -2,6 +2,8 @@ Revision history for DBIx::Class::Sims (ordered by revision number).
 
 0.300008 Mar 15 2016 14:00:00 PDT
    - Force a reload from database of all rows returned by load_sims()
+   - format all DateTime-like values that are passed in per the storage's
+     datetime_parser().
 
 0.300007 Mar 15 2016 12:00:00 PDT
    - Finalize the ordering within create_item.
