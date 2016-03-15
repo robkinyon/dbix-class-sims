@@ -1,5 +1,8 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300007 Mar 15 2016 12:00:00 PDT
+   - Finalize the ordering within create_item.
+
 0.300006 Mar 10 2016 06:00:00 PDT
    - Move the preprocess hook back. This was a horrible change.
 
