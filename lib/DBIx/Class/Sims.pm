@@ -7,6 +7,7 @@ use strict;
 use warnings FATAL => 'all';
 
 use Data::Walk qw( walk );
+use DateTime;
 use DBIx::Class::TopoSort ();
 use Hash::Merge qw( merge );
 use List::Util qw( shuffle );
@@ -14,7 +15,7 @@ use List::MoreUtils qw( natatime );
 use Scalar::Util qw( blessed reftype );
 use String::Random qw( random_regex );
 
-our $VERSION = '0.300008';
+our $VERSION = '0.300009';
 
 {
   # The aliases in this block are done at BEGIN time so that the ::Types class
@@ -485,7 +486,15 @@ sub massage_input {
 
         # Handle DateTime values passed to us.
         if (defined $t->{$k}) {
-          if ( $t->{$k} =~ /^\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d$/ ) {
+          if ( $t->{$k} =~ /^(\d\d\d\d)-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)$/ ) {
+            # format_datetime() requires a DateTime object. This may be a
+            # string, therefore hoist it if need-be.
+            unless (blessed($t->{$k})) {
+              $t->{$k} = DateTime->new(
+                year   => $1, month  => $2, day    => $3,
+                hour   => $4, minute => $5, second => $6,
+              );
+            }
             $t->{$k} = $dtp->format_datetime($t->{$k});
           }
         }

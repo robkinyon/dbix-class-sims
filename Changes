@@ -1,5 +1,8 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300009 Mar 17 2016 09:00:00 PDT
+   - Hoist DateTime-ish strings into DateTime objects as needed.
+
 0.300008 Mar 15 2016 14:00:00 PDT
    - Force a reload from database of all rows returned by load_sims()
    - format all DateTime-like values that are passed in per the storage's

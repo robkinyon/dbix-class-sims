@@ -2,15 +2,12 @@
 use strict;
 use warnings FATAL => 'all';
 
+use DateTime;
+
 use Test::More;
 use Test::Deep;
 use Test::Exception;
 use Test::Warn;
-
-BEGIN {
-  eval { require DateTime; };
-  plan skip_all => "Cannot find DateTime to test against" if $@;
-}
 
 BEGIN {
   {
@@ -58,6 +55,35 @@ use Test::DBIx::Class qw(:resultsets);
       {
         Artist => [
           { name => 'foo', created_on => $now },
+        ],
+      },
+    );
+  } "Everything loads ok";
+
+  my $rs = Artist;
+  is Artist->count, 1, "There are now one artist loaded after load_sims is called";
+
+  my $new_now = Schema->storage->datetime_parser->format_datetime($now);
+  is_fields [ 'id', 'name', 'created_on' ], $rs, [
+    [ 1, 'foo', $new_now ],
+  ], "Artist columns are right";
+
+  cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
+}
+
+{
+  Schema->deploy({ add_drop_table => 1 });
+
+  # Try a string instead of a DateTime object.
+  my $now = DateTime->now();
+
+  is Artist->count, 0, "There are no artists loaded at first";
+  my $rv;
+  lives_ok {
+    $rv = Schema->load_sims(
+      {
+        Artist => [
+          { name => 'foo', created_on => "$now" },
         ],
       },
     );
