@@ -1,7 +1,7 @@
 # vim: set sw=2 ft=perl:
 package DBIx::Class::Sims;
 
-use 5.008_004;
+use 5.010_002;
 
 use strict;
 use warnings FATAL => 'all';
@@ -22,7 +22,7 @@ use List::MoreUtils qw( natatime );
 use Scalar::Util qw( blessed reftype );
 use String::Random qw( random_regex );
 
-our $VERSION = '0.300009';
+our $VERSION = '0.300010';
 
 {
   # The aliases in this block are done at BEGIN time so that the ::Types class
@@ -33,7 +33,7 @@ our $VERSION = '0.300009';
   sub set_sim_type {
     shift;
     my $types = shift;
-    return unless ref($types||'') eq 'HASH';
+    return unless ref($types//'') eq 'HASH';
 
     while ( my ($name, $meth) = each(%$types) ) {
       next unless ref($meth) eq 'CODE';
@@ -63,10 +63,10 @@ sub add_sims {
   my $rsrc = $schema->source($source);
   my $it = natatime(2, @remainder);
   while (my ($column, $sim_info) = $it->()) {
-    my $col_info = $schema->source($source)->column_info($column) || next;
+    my $col_info = $schema->source($source)->column_info($column) // next;
     $col_info->{sim} = merge(
-      $col_info->{sim} || {},
-      $sim_info || {},
+      $col_info->{sim} // {},
+      $sim_info // {},
     );
   }
 
@@ -84,8 +84,8 @@ sub load_sims {
     $schema = shift(@_);
   }
   my ($spec_proto, $opts_proto) = @_;
-  $spec_proto = MyCloner::clone($spec_proto || {});
-  $opts_proto = MyCloner::clone($opts_proto || {});
+  $spec_proto = MyCloner::clone($spec_proto // {});
+  $opts_proto = MyCloner::clone($opts_proto // {});
 
   my $spec = massage_input($schema, normalize_input($spec_proto));
   my $opts = normalize_input($opts_proto);
@@ -107,12 +107,12 @@ sub load_sims {
 
   # 1. Ensure the belongs_to relationships are in $reqs
   # 2. Set the rel_info as the leaf in $reqs
-  my $reqs = normalize_input($opts->{constraints} || {});
+  my $reqs = normalize_input($opts->{constraints} // {});
   my %is_foreign_key;
   foreach my $name ( $schema->sources ) {
     my $source = $schema->source($name);
 
-    $reqs->{$name} ||= {};
+    $reqs->{$name} //= {};
     foreach my $rel_name ( $source->relationships ) {
       my $rel_info = $source->relationship_info($rel_name);
 
@@ -124,9 +124,9 @@ sub load_sims {
   }
 
   # 2: Create the rows in toposorted order
-  my $hooks = $opts->{hooks} || {};
-  $hooks->{preprocess}  ||= sub {};
-  $hooks->{postprocess} ||= sub {};
+  my $hooks = $opts->{hooks} // {};
+  $hooks->{preprocess}  //= sub {};
+  $hooks->{postprocess} //= sub {};
 
   # Prepopulate column values (as appropriate)
   my %subs;
@@ -167,12 +167,7 @@ sub load_sims {
         }
       }
       elsif ( $item->{$col} ) {
-        if (ref($item->{$col})) {
-          $cond = { $fkcol => $item->{$col}->$fkcol };
-        }
-        else {
-          $cond = { $fkcol => $item->{$col} };
-        }
+        $cond = { $fkcol => $item->{$col} };
       }
 
       my $col_info = $source->column_info($col);
@@ -194,7 +189,7 @@ sub load_sims {
         $cond = {};
       }
 
-      my $meta = delete $cond->{__META__} || {};
+      my $meta = delete $cond->{__META__} // {};
 
       my $parent;
       unless ($meta->{create}) {
@@ -237,7 +232,7 @@ sub load_sims {
         }
       }
       push @{$spec->{$src}}, $row;
-      push @{$added_by{$adder} ||= []}, $row;
+      push @{$added_by{$adder} //= []}, $row;
       $pending{$src} = 1;
     };
 
@@ -283,7 +278,7 @@ sub load_sims {
     foreach my $rel_name ( $source->relationships ) {
       my $rel_info = $source->relationship_info($rel_name);
       next if $is_fk->($rel_info);
-      next unless $child_deps->{$rel_name} || $reqs->{$name}{$rel_name};
+      next unless $child_deps->{$rel_name} // $reqs->{$name}{$rel_name};
 
       my $col = $self_fk_col->($rel_info);
       my $fkcol = $foreign_fk_col->($rel_info);
@@ -292,7 +287,7 @@ sub load_sims {
 
       # Need to ensure that $child_deps >= $reqs
 
-      my @children = @{$child_deps->{$rel_name} || []};
+      my @children = @{$child_deps->{$rel_name} // []};
       @children = ( ({}) x $reqs->{$name}{$rel_name} ) unless @children;
       foreach my $child (@children) {
         $child->{$fkcol} = $row->get_column($col);
@@ -306,7 +301,7 @@ sub load_sims {
     foreach my $col_name ( $source->columns ) {
       my $sim_spec;
       if ( exists $item->{$col_name} ) {
-        if ((reftype($item->{$col_name}) || '') eq 'REF' &&
+        if ((reftype($item->{$col_name}) // '') eq 'REF' &&
           reftype(${$item->{$col_name}}) eq 'HASH' ) {
           $sim_spec = ${ delete $item->{$col_name} };
         }
@@ -318,8 +313,8 @@ sub load_sims {
 
       my $info = $source->column_info($col_name);
 
-      $sim_spec ||= $info->{sim};
-      if ( ref($sim_spec || '') eq 'HASH' ) {
+      $sim_spec //= $info->{sim};
+      if ( ref($sim_spec // '') eq 'HASH' ) {
         if ( exists $sim_spec->{null_chance} && !$info->{nullable} ) {
           # Add check for not a number
           if ( rand() < $sim_spec->{null_chance} ) {
@@ -328,7 +323,7 @@ sub load_sims {
           }
         }
 
-        if ( ref($sim_spec->{func} || '') eq 'CODE' ) {
+        if ( ref($sim_spec->{func} // '') eq 'CODE' ) {
           $item->{$col_name} = $sim_spec->{func}->($info);
         }
         elsif ( exists $sim_spec->{value} ) {
@@ -345,13 +340,13 @@ sub load_sims {
         }
         else {
           if ( $info->{data_type} eq 'int' ) {
-            my $min = $sim_spec->{min} || 0;
-            my $max = $sim_spec->{max} || 100;
+            my $min = $sim_spec->{min} // 0;
+            my $max = $sim_spec->{max} // 100;
             $item->{$col_name} = int(rand($max-$min))+$min;
           }
           elsif ( $info->{data_type} eq 'varchar' ) {
-            my $min = $sim_spec->{min} || 1;
-            my $max = $sim_spec->{max} || $info->{data_length} || 255;
+            my $min = $sim_spec->{min} // 1;
+            my $max = $sim_spec->{max} // $info->{data_length} // 255;
             $item->{$col_name} = random_regex(
               '\w' . "{$min,$max}"
             );
@@ -371,7 +366,7 @@ sub load_sims {
     my $child_deps = $subs{fix_fk_dependencies}->($name, $item);
 
     my $row = $subs{find_by_unique_constraints}->($name, $item)
-      || $schema->resultset($name)->create($item);
+      // $schema->resultset($name)->create($item);
 
     $subs{fix_child_dependencies}->($name, $row, $child_deps);
 
@@ -384,7 +379,7 @@ sub load_sims {
   my $initial_spec = {};
   foreach my $name (keys %$spec) {
     # Allow a number to be passed in
-    if ( (reftype($spec->{$name})||'') ne 'ARRAY' ) {
+    if ( (reftype($spec->{$name})//'') ne 'ARRAY' ) {
       if ( !ref($spec->{$name}) ) {
         if ( $spec->{$name} =~ /^\d+$/ ) {
           $spec->{$name} = [ map { {} } 1 .. $spec->{$name} ];
@@ -419,12 +414,12 @@ sub load_sims {
     # again right after. But, that's okay. We don't care what the seed is and
     # this allows DBIC to be called multiple times in the same process in the
     # same second without problems.
-    $additional->{seed} = $opts->{seed} ||= rand(time & $$);
+    $additional->{seed} = $opts->{seed} //= rand(time & $$);
     srand($opts->{seed});
 
     my @toposort =  DBIx::Class::TopoSort->toposort(
       $schema,
-      %{$opts->{toposort} || {}},
+      %{$opts->{toposort} // {}},
     );
 
     $rows = $schema->txn_do(sub {
@@ -435,7 +430,7 @@ sub load_sims {
 
           while ( my $item = shift @{$spec->{$name}} ) {
             my $x = $subs{create_item}->($name, $item);
-            push @{$rows{$name} ||= []}, $x if $initial_spec->{$name}{$item};
+            push @{$rows{$name} //= []}, $x if $initial_spec->{$name}{$item};
           }
 
           $subs{delete_pending}->($name);
