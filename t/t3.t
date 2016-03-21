@@ -115,7 +115,7 @@ use Test::DBIx::Class qw(:resultsets);
         ],
       },
     );
-  };
+  } "load_sims runs to completion";
 
   is_fields [ 'id', 'name' ], Artist, [
     [ 1, 'foo' ],
@@ -199,7 +199,7 @@ use Test::DBIx::Class qw(:resultsets);
     $rv = Schema->load_sims(
       {
         Album => [
-          { name => 'bar1', artist => $rv->{Artist}[0] },
+          { name => 'bar1', artist => $rv->{Artist}[2] },
         ],
       },
     );
@@ -212,7 +212,7 @@ use Test::DBIx::Class qw(:resultsets);
     [ 4, 'foo4' ],
   ], "Artist fields are right";
   is_fields [ 'id', 'name', 'artist_id' ], Album, [
-    [ 1, 'bar1', 1 ],
+    [ 1, 'bar1', 3 ],
   ], "Album fields are right";
 
   cmp_deeply( $rv, {

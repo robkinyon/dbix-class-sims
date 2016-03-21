@@ -13,6 +13,8 @@ use warnings FATAL => 'all';
   use Clone::Any qw(clone);
 }
 
+use DDP;
+
 use Data::Walk qw( walk );
 use DateTime;
 use DBIx::Class::TopoSort ();
@@ -22,7 +24,7 @@ use List::MoreUtils qw( natatime );
 use Scalar::Util qw( blessed reftype );
 use String::Random qw( random_regex );
 
-our $VERSION = '0.300010';
+our $VERSION = '0.300100';
 
 {
   # The aliases in this block are done at BEGIN time so that the ::Types class
@@ -160,14 +162,23 @@ sub load_sims {
       my $rs = $schema->resultset($fk_src);
 
       my $cond;
-      if ( $item->{$rel_name} ) {
-        $cond = delete $item->{$rel_name};
-        if ( !ref($cond) ) {
-          $cond = { $fkcol => $cond };
+      my $proto = delete($item->{$rel_name}) // delete($item->{$col});
+      if ($proto) {
+        # Assume anything blessed is blessed into DBIC.
+        if (blessed($proto)) {
+          $cond = { $fkcol => $proto->$fkcol };
         }
-      }
-      elsif ( $item->{$col} ) {
-        $cond = { $fkcol => $item->{$col} };
+        # Assume any hashref is a Sims specification
+        elsif (ref($proto) eq 'HASH') {
+          $cond = $proto
+        }
+        # Assume any unblessed scalar is a column value.
+        elsif (!ref($proto)) {
+          $cond = { $fkcol => $proto };
+        }
+        else {
+          die "Unsure what to do about $name->$rel_name():" . p($proto);
+        }
       }
 
       my $col_info = $source->column_info($col);
@@ -190,6 +201,8 @@ sub load_sims {
       }
 
       my $meta = delete $cond->{__META__} // {};
+
+      #warn "Looking for $name->$rel_name(".p($cond).")\n";
 
       my $parent;
       unless ($meta->{create}) {
@@ -358,6 +371,7 @@ sub load_sims {
   $subs{create_item} = sub {
     my ($name, $item) = @_;
 
+    #warn "Starting with $name (".p($item).")\n";
     $subs{fix_columns}->($name, $item);
 
     my $source = $schema->source($name);
@@ -365,6 +379,7 @@ sub load_sims {
 
     my $child_deps = $subs{fix_fk_dependencies}->($name, $item);
 
+    #warn "Creating $name (".p($item).")\n";
     my $row = $subs{find_by_unique_constraints}->($name, $item)
       // $schema->resultset($name)->create($item);
 

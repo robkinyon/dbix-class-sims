@@ -16,6 +16,7 @@ perl_version '5.010_002';
 all_from 'lib/DBIx/Class/Sims.pm';
 
 requires 'Clone::Any';
+requires 'Data::Printer';
 requires 'Data::Walk';
 requires 'DateTime';
 requires 'DBIx::Class::TopoSort' => '0.050001';
