@@ -4,6 +4,7 @@ Revision history for DBIx::Class::Sims (ordered by revision number).
    - Allow passing in parent objects
    - Enable forcing creation of parents with a __META__ field
    - Clone the provided arguments because we handle them destructively
+   - Use {limit => 1} when searching for the first parent.
    X Better error messages when looking for a parent using a bad column name
 
 0.300009 Mar 17 2016 09:00:00 PDT

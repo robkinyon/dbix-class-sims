@@ -198,7 +198,7 @@ sub load_sims {
 
       my $parent;
       unless ($meta->{create}) {
-        $parent = $rs->first;
+        $parent = $rs->search(undef, { limit => 1 })->first;
       }
       unless ($parent) {
         $parent = $subs{create_item}->($fk_src, $cond);
