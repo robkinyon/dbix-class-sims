@@ -6,6 +6,13 @@ use 5.008_004;
 use strict;
 use warnings FATAL => 'all';
 
+{
+  # Do **NOT** import a clone() function into the DBIx::Class::Schema namespace
+  # because that will override DBIC's clone() method and break all the things.
+  package MyCloner;
+  use Clone::Any qw(clone);
+}
+
 use Data::Walk qw( walk );
 use DateTime;
 use DBIx::Class::TopoSort ();
@@ -77,9 +84,11 @@ sub load_sims {
     $schema = shift(@_);
   }
   my ($spec_proto, $opts_proto) = @_;
+  $spec_proto = MyCloner::clone($spec_proto || {});
+  $opts_proto = MyCloner::clone($opts_proto || {});
 
   my $spec = massage_input($schema, normalize_input($spec_proto));
-  my $opts = normalize_input($opts_proto || {});
+  my $opts = normalize_input($opts_proto);
 
   ###### FROM HERE ######
   # These are utility methods to help navigate the rel_info hash.
@@ -158,7 +167,12 @@ sub load_sims {
         }
       }
       elsif ( $item->{$col} ) {
-        $cond = { $fkcol => $item->{$col} };
+        if (ref($item->{$col})) {
+          $cond = { $fkcol => $item->{$col}->$fkcol };
+        }
+        else {
+          $cond = { $fkcol => $item->{$col} };
+        }
       }
 
       my $col_info = $source->column_info($col);
@@ -180,7 +194,12 @@ sub load_sims {
         $cond = {};
       }
 
-      my $parent = $rs->first;
+      my $meta = delete $cond->{__META__} || {};
+
+      my $parent;
+      unless ($meta->{create}) {
+        $parent = $rs->first;
+      }
       unless ($parent) {
         $parent = $subs{create_item}->($fk_src, $cond);
       }
@@ -683,6 +702,7 @@ structure should look like:
       {
         column => $value,
         column => $value,
+        relationship => $parent_object,
         relationship => {
           column => $value,
         },
@@ -721,6 +741,41 @@ used by any other component. See L</SIM ENTRY> for more information.
 
 B<NOTE>: The keys of the outermost hash are resultsource names. The keys within
 the row-specific hashes are either columns or relationships. Not resultsources.
+
+=head2 Reuse wherever possible
+
+The Sims's normal behavior is to attempt to reuse whenever possible. The theory
+is that if you didn't say you cared about something, you do B<NOT> care about
+that thing.
+
+=head3 Unique constraints
+
+If a source has unique constraints defined, the Sims will use them to determine
+if a new row with these values I<can> be created or not. If a row already
+exists with these values for the unique constraints, then that row will be used
+instead of creating a new one.
+
+This is B<REGARDLESS> of the values for the non-unique-constraint rows.
+
+=head3 Forcing creation of a parent
+
+If you do not specify values for a parent (i.e., belongs_to), then the first row
+for that parent will be be used. If you don't care what values the parent has,
+but you care that a different parent is used, then you can set the __META__ key
+as follows:
+
+  $schema->load_sims({
+    Album => {
+      artist => { __META__ => { create => 1 } },
+      name => 'Some name',
+    }
+  })
+
+This will force the creation of a parent instead of reusing the parent.
+
+B<NOTE>: If the simmed values within the parent's class would result in values
+that are the same across a unique constraint with an existing row, then that
+row will be used. This just bypasses the "attempt to use the first parent".
 
 =head2 Alternatives
 
@@ -767,7 +822,7 @@ specify a child with the same characteristics, only one child will be created.
 The assumption is that you meant the same row.
 
 This does B<not> apply to creating multiple rows with the same characteristics
-as children of the same table. The assumption is that you meant to do that.
+as children of the same parent. The assumption is that you meant to do that.
 
 =back
 

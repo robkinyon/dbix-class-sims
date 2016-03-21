@@ -1,5 +1,11 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300010 Mar 21 2016 09:00:00 PDT
+   - Allow passing in parent objects
+   - Enable forcing creation of parents with a __META__ field
+   - Clone the provided arguments because we handle them destructively
+   X Better error messages when looking for a parent using a bad column name
+
 0.300009 Mar 17 2016 09:00:00 PDT
    - Hoist DateTime-ish strings into DateTime objects as needed.
 

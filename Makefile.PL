@@ -15,6 +15,7 @@ resources 'bugtracker'  => 'http://rt.cpan.org/NoAuth/Bugs.html?Dist=DBIx-Class-
 perl_version '5.008_004';
 all_from 'lib/DBIx/Class/Sims.pm';
 
+requires 'Clone::Any';
 requires 'Data::Walk';
 requires 'DateTime';
 requires 'DBIx::Class::TopoSort' => '0.050001';
