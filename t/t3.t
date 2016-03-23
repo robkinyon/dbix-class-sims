@@ -115,7 +115,7 @@ use Test::DBIx::Class qw(:resultsets);
         ],
       },
     );
-  };
+  } "load_sims runs to completion";
 
   is_fields [ 'id', 'name' ], Artist, [
     [ 1, 'foo' ],
@@ -171,6 +171,52 @@ use Test::DBIx::Class qw(:resultsets);
   cmp_deeply( $rv, {
     Artist => [ methods(id => 1), methods(id => 2), methods(id => 3), methods(id => 4) ],
     Album => [ methods(id => 1), methods(id => 2) ],
+  });
+}
+
+# Connect by object
+{
+  Schema->deploy({ add_drop_table => 1 });
+
+  {
+    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
+    is $count, 0, "There are no tables loaded at first";
+  }
+
+  my $rv;
+  lives_ok {
+    $rv = Schema->load_sims(
+      {
+        Artist => [
+          { name => 'foo1' },
+          { name => 'foo2' },
+          { name => 'foo3' },
+          { name => 'foo4' },
+        ],
+      }
+    );
+
+    $rv = Schema->load_sims(
+      {
+        Album => [
+          { name => 'bar1', artist => $rv->{Artist}[2] },
+        ],
+      },
+    );
+  } "load_sims runs to completion";
+
+  is_fields [ 'id', 'name' ], Artist, [
+    [ 1, 'foo1' ],
+    [ 2, 'foo2' ],
+    [ 3, 'foo3' ],
+    [ 4, 'foo4' ],
+  ], "Artist fields are right";
+  is_fields [ 'id', 'name', 'artist_id' ], Album, [
+    [ 1, 'bar1', 3 ],
+  ], "Album fields are right";
+
+  cmp_deeply( $rv, {
+    Album => [ methods(id => 1) ],
   });
 }
 
@@ -402,6 +448,47 @@ DBIx::Class::Sims->add_sim( Schema, 'Album', 'name', {
   ], "Album fields are right";
 
   cmp_deeply( $rv, {
+    Album => [ methods(id => 1) ],
+  });
+}
+
+# Force creation of a parent even though one already exists
+{
+  Schema->deploy({ add_drop_table => 1 });
+
+  {
+    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
+    is $count, 0, "There are no tables loaded at first";
+  }
+
+  my $rv;
+  lives_ok {
+    $rv = Schema->load_sims(
+      {
+        Artist => [
+          { name => 'foo' },
+          { name => 'foo2' },
+        ],
+        Album => [
+          { name => 'bar', artist => { __META__ => { create => 1 } } },
+        ],
+      },
+    );
+  } "load_sims runs to completion";
+
+  is_fields [ 'id', 'name' ], Artist, [
+    [ 1, 'foo' ],
+    [ 2, 'foo2' ],
+    [ 3, 'abcd' ],
+  ], "Artist fields are right";
+
+  # This should work, but doesn't. Opened RT#87799 against Test::DBIx::Class.
+  is_fields [ 'id', 'name', 'artist_id' ], Album, [
+    [ 1, 'bar', 3 ],
+  ], "Album fields are right";
+
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 1), methods(id => 2) ],
     Album => [ methods(id => 1) ],
   });
 }

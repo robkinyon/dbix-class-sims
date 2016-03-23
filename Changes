@@ -1,5 +1,15 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300100 Mar 21 2016 09:00:00 PDT
+   - THIS RELEASE CONTAINS A BACK-COMPAT BREAKING CHANGE.
+   - Upgrade Perl minimum version from 5.8.4 to 5.10.2.
+     - CPANTS was claiming breakage on 5.8.x and no need to support it.
+     - Convert all ||= -> //=
+   - Clone the provided arguments because we handle them destructively
+   - Enable forcing creation of parents with a __META__ field
+   - Use {limit => 1} when searching for the first parent.
+   X Better error messages when looking for a parent using a bad column name
+
 0.300009 Mar 17 2016 09:00:00 PDT
    - Hoist DateTime-ish strings into DateTime objects as needed.
 

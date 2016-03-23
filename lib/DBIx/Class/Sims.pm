@@ -1,10 +1,19 @@
 # vim: set sw=2 ft=perl:
 package DBIx::Class::Sims;
 
-use 5.008_004;
+use 5.010_002;
 
 use strict;
 use warnings FATAL => 'all';
+
+{
+  # Do **NOT** import a clone() function into the DBIx::Class::Schema namespace
+  # because that will override DBIC's clone() method and break all the things.
+  package MyCloner;
+  use Clone::Any qw(clone);
+}
+
+use DDP;
 
 use Data::Walk qw( walk );
 use DateTime;
@@ -15,7 +24,7 @@ use List::MoreUtils qw( natatime );
 use Scalar::Util qw( blessed reftype );
 use String::Random qw( random_regex );
 
-our $VERSION = '0.300009';
+our $VERSION = '0.300100';
 
 {
   # The aliases in this block are done at BEGIN time so that the ::Types class
@@ -26,7 +35,7 @@ our $VERSION = '0.300009';
   sub set_sim_type {
     shift;
     my $types = shift;
-    return unless ref($types||'') eq 'HASH';
+    return unless ref($types//'') eq 'HASH';
 
     while ( my ($name, $meth) = each(%$types) ) {
       next unless ref($meth) eq 'CODE';
@@ -56,10 +65,10 @@ sub add_sims {
   my $rsrc = $schema->source($source);
   my $it = natatime(2, @remainder);
   while (my ($column, $sim_info) = $it->()) {
-    my $col_info = $schema->source($source)->column_info($column) || next;
+    my $col_info = $schema->source($source)->column_info($column) // next;
     $col_info->{sim} = merge(
-      $col_info->{sim} || {},
-      $sim_info || {},
+      $col_info->{sim} // {},
+      $sim_info // {},
     );
   }
 
@@ -77,9 +86,11 @@ sub load_sims {
     $schema = shift(@_);
   }
   my ($spec_proto, $opts_proto) = @_;
+  $spec_proto = MyCloner::clone($spec_proto // {});
+  $opts_proto = MyCloner::clone($opts_proto // {});
 
   my $spec = massage_input($schema, normalize_input($spec_proto));
-  my $opts = normalize_input($opts_proto || {});
+  my $opts = normalize_input($opts_proto);
 
   ###### FROM HERE ######
   # These are utility methods to help navigate the rel_info hash.
@@ -98,12 +109,12 @@ sub load_sims {
 
   # 1. Ensure the belongs_to relationships are in $reqs
   # 2. Set the rel_info as the leaf in $reqs
-  my $reqs = normalize_input($opts->{constraints} || {});
+  my $reqs = normalize_input($opts->{constraints} // {});
   my %is_foreign_key;
   foreach my $name ( $schema->sources ) {
     my $source = $schema->source($name);
 
-    $reqs->{$name} ||= {};
+    $reqs->{$name} //= {};
     foreach my $rel_name ( $source->relationships ) {
       my $rel_info = $source->relationship_info($rel_name);
 
@@ -115,9 +126,9 @@ sub load_sims {
   }
 
   # 2: Create the rows in toposorted order
-  my $hooks = $opts->{hooks} || {};
-  $hooks->{preprocess}  ||= sub {};
-  $hooks->{postprocess} ||= sub {};
+  my $hooks = $opts->{hooks} // {};
+  $hooks->{preprocess}  //= sub {};
+  $hooks->{postprocess} //= sub {};
 
   # Prepopulate column values (as appropriate)
   my %subs;
@@ -151,14 +162,23 @@ sub load_sims {
       my $rs = $schema->resultset($fk_src);
 
       my $cond;
-      if ( $item->{$rel_name} ) {
-        $cond = delete $item->{$rel_name};
-        if ( !ref($cond) ) {
-          $cond = { $fkcol => $cond };
+      my $proto = delete($item->{$rel_name}) // delete($item->{$col});
+      if ($proto) {
+        # Assume anything blessed is blessed into DBIC.
+        if (blessed($proto)) {
+          $cond = { $fkcol => $proto->$fkcol };
         }
-      }
-      elsif ( $item->{$col} ) {
-        $cond = { $fkcol => $item->{$col} };
+        # Assume any hashref is a Sims specification
+        elsif (ref($proto) eq 'HASH') {
+          $cond = $proto
+        }
+        # Assume any unblessed scalar is a column value.
+        elsif (!ref($proto)) {
+          $cond = { $fkcol => $proto };
+        }
+        else {
+          die "Unsure what to do about $name->$rel_name():" . p($proto);
+        }
       }
 
       my $col_info = $source->column_info($col);
@@ -180,7 +200,14 @@ sub load_sims {
         $cond = {};
       }
 
-      my $parent = $rs->first;
+      my $meta = delete $cond->{__META__} // {};
+
+      #warn "Looking for $name->$rel_name(".p($cond).")\n";
+
+      my $parent;
+      unless ($meta->{create}) {
+        $parent = $rs->search(undef, { limit => 1 })->first;
+      }
       unless ($parent) {
         $parent = $subs{create_item}->($fk_src, $cond);
       }
@@ -218,7 +245,7 @@ sub load_sims {
         }
       }
       push @{$spec->{$src}}, $row;
-      push @{$added_by{$adder} ||= []}, $row;
+      push @{$added_by{$adder} //= []}, $row;
       $pending{$src} = 1;
     };
 
@@ -264,7 +291,7 @@ sub load_sims {
     foreach my $rel_name ( $source->relationships ) {
       my $rel_info = $source->relationship_info($rel_name);
       next if $is_fk->($rel_info);
-      next unless $child_deps->{$rel_name} || $reqs->{$name}{$rel_name};
+      next unless $child_deps->{$rel_name} // $reqs->{$name}{$rel_name};
 
       my $col = $self_fk_col->($rel_info);
       my $fkcol = $foreign_fk_col->($rel_info);
@@ -273,7 +300,7 @@ sub load_sims {
 
       # Need to ensure that $child_deps >= $reqs
 
-      my @children = @{$child_deps->{$rel_name} || []};
+      my @children = @{$child_deps->{$rel_name} // []};
       @children = ( ({}) x $reqs->{$name}{$rel_name} ) unless @children;
       foreach my $child (@children) {
         $child->{$fkcol} = $row->get_column($col);
@@ -287,7 +314,7 @@ sub load_sims {
     foreach my $col_name ( $source->columns ) {
       my $sim_spec;
       if ( exists $item->{$col_name} ) {
-        if ((reftype($item->{$col_name}) || '') eq 'REF' &&
+        if ((reftype($item->{$col_name}) // '') eq 'REF' &&
           reftype(${$item->{$col_name}}) eq 'HASH' ) {
           $sim_spec = ${ delete $item->{$col_name} };
         }
@@ -299,8 +326,8 @@ sub load_sims {
 
       my $info = $source->column_info($col_name);
 
-      $sim_spec ||= $info->{sim};
-      if ( ref($sim_spec || '') eq 'HASH' ) {
+      $sim_spec //= $info->{sim};
+      if ( ref($sim_spec // '') eq 'HASH' ) {
         if ( exists $sim_spec->{null_chance} && !$info->{nullable} ) {
           # Add check for not a number
           if ( rand() < $sim_spec->{null_chance} ) {
@@ -309,7 +336,7 @@ sub load_sims {
           }
         }
 
-        if ( ref($sim_spec->{func} || '') eq 'CODE' ) {
+        if ( ref($sim_spec->{func} // '') eq 'CODE' ) {
           $item->{$col_name} = $sim_spec->{func}->($info);
         }
         elsif ( exists $sim_spec->{value} ) {
@@ -326,13 +353,13 @@ sub load_sims {
         }
         else {
           if ( $info->{data_type} eq 'int' ) {
-            my $min = $sim_spec->{min} || 0;
-            my $max = $sim_spec->{max} || 100;
+            my $min = $sim_spec->{min} // 0;
+            my $max = $sim_spec->{max} // 100;
             $item->{$col_name} = int(rand($max-$min))+$min;
           }
           elsif ( $info->{data_type} eq 'varchar' ) {
-            my $min = $sim_spec->{min} || 1;
-            my $max = $sim_spec->{max} || $info->{data_length} || 255;
+            my $min = $sim_spec->{min} // 1;
+            my $max = $sim_spec->{max} // $info->{data_length} // 255;
             $item->{$col_name} = random_regex(
               '\w' . "{$min,$max}"
             );
@@ -344,6 +371,7 @@ sub load_sims {
   $subs{create_item} = sub {
     my ($name, $item) = @_;
 
+    #warn "Starting with $name (".p($item).")\n";
     $subs{fix_columns}->($name, $item);
 
     my $source = $schema->source($name);
@@ -351,8 +379,14 @@ sub load_sims {
 
     my $child_deps = $subs{fix_fk_dependencies}->($name, $item);
 
-    my $row = $subs{find_by_unique_constraints}->($name, $item)
-      || $schema->resultset($name)->create($item);
+    #warn "Creating $name (".p($item).")\n";
+    my $row = eval {
+      $subs{find_by_unique_constraints}->($name, $item)
+      // $schema->resultset($name)->create($item);
+    }; if ($@) {
+      warn "ERROR Creating $name (".p($item).")\n";
+      die $@;
+    }
 
     $subs{fix_child_dependencies}->($name, $row, $child_deps);
 
@@ -365,7 +399,7 @@ sub load_sims {
   my $initial_spec = {};
   foreach my $name (keys %$spec) {
     # Allow a number to be passed in
-    if ( (reftype($spec->{$name})||'') ne 'ARRAY' ) {
+    if ( (reftype($spec->{$name})//'') ne 'ARRAY' ) {
       if ( !ref($spec->{$name}) ) {
         if ( $spec->{$name} =~ /^\d+$/ ) {
           $spec->{$name} = [ map { {} } 1 .. $spec->{$name} ];
@@ -400,12 +434,12 @@ sub load_sims {
     # again right after. But, that's okay. We don't care what the seed is and
     # this allows DBIC to be called multiple times in the same process in the
     # same second without problems.
-    $additional->{seed} = $opts->{seed} ||= rand(time & $$);
+    $additional->{seed} = $opts->{seed} //= rand(time & $$);
     srand($opts->{seed});
 
     my @toposort =  DBIx::Class::TopoSort->toposort(
       $schema,
-      %{$opts->{toposort} || {}},
+      %{$opts->{toposort} // {}},
     );
 
     $rows = $schema->txn_do(sub {
@@ -416,7 +450,7 @@ sub load_sims {
 
           while ( my $item = shift @{$spec->{$name}} ) {
             my $x = $subs{create_item}->($name, $item);
-            push @{$rows{$name} ||= []}, $x if $initial_spec->{$name}{$item};
+            push @{$rows{$name} //= []}, $x if $initial_spec->{$name}{$item};
           }
 
           $subs{delete_pending}->($name);
@@ -683,6 +717,7 @@ structure should look like:
       {
         column => $value,
         column => $value,
+        relationship => $parent_object,
         relationship => {
           column => $value,
         },
@@ -721,6 +756,41 @@ used by any other component. See L</SIM ENTRY> for more information.
 
 B<NOTE>: The keys of the outermost hash are resultsource names. The keys within
 the row-specific hashes are either columns or relationships. Not resultsources.
+
+=head2 Reuse wherever possible
+
+The Sims's normal behavior is to attempt to reuse whenever possible. The theory
+is that if you didn't say you cared about something, you do B<NOT> care about
+that thing.
+
+=head3 Unique constraints
+
+If a source has unique constraints defined, the Sims will use them to determine
+if a new row with these values I<can> be created or not. If a row already
+exists with these values for the unique constraints, then that row will be used
+instead of creating a new one.
+
+This is B<REGARDLESS> of the values for the non-unique-constraint rows.
+
+=head3 Forcing creation of a parent
+
+If you do not specify values for a parent (i.e., belongs_to), then the first row
+for that parent will be be used. If you don't care what values the parent has,
+but you care that a different parent is used, then you can set the __META__ key
+as follows:
+
+  $schema->load_sims({
+    Album => {
+      artist => { __META__ => { create => 1 } },
+      name => 'Some name',
+    }
+  })
+
+This will force the creation of a parent instead of reusing the parent.
+
+B<NOTE>: If the simmed values within the parent's class would result in values
+that are the same across a unique constraint with an existing row, then that
+row will be used. This just bypasses the "attempt to use the first parent".
 
 =head2 Alternatives
 
@@ -767,7 +837,7 @@ specify a child with the same characteristics, only one child will be created.
 The assumption is that you meant the same row.
 
 This does B<not> apply to creating multiple rows with the same characteristics
-as children of the same table. The assumption is that you meant to do that.
+as children of the same parent. The assumption is that you meant to do that.
 
 =back
 
