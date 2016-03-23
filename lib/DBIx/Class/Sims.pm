@@ -380,8 +380,13 @@ sub load_sims {
     my $child_deps = $subs{fix_fk_dependencies}->($name, $item);
 
     #warn "Creating $name (".p($item).")\n";
-    my $row = $subs{find_by_unique_constraints}->($name, $item)
+    my $row = eval {
+      $subs{find_by_unique_constraints}->($name, $item)
       // $schema->resultset($name)->create($item);
+    }; if ($@) {
+      warn "ERROR Creating $name (".p($item).")\n";
+      die $@;
+    }
 
     $subs{fix_child_dependencies}->($name, $row, $child_deps);
 
