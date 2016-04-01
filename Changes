@@ -1,5 +1,8 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300101 Apr 01 2016 11:30:00 PDT
+   - Fix mistake where I used "limit" instead of "rows" (Thanks gtermars!)
+
 0.300100 Mar 21 2016 09:00:00 PDT
    - THIS RELEASE UPGRADES THE MINIMUM PERL VERSION
    - Upgrade Perl minimum version from 5.8.4 to 5.10.2

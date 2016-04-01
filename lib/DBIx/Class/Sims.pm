@@ -24,7 +24,7 @@ use List::MoreUtils qw( natatime );
 use Scalar::Util qw( blessed reftype );
 use String::Random qw( random_regex );
 
-our $VERSION = '0.300100';
+our $VERSION = '0.300101';
 
 {
   # The aliases in this block are done at BEGIN time so that the ::Types class
@@ -206,7 +206,7 @@ sub load_sims {
 
       my $parent;
       unless ($meta->{create}) {
-        $parent = $rs->search(undef, { limit => 1 })->first;
+        $parent = $rs->search(undef, { rows => 1 })->first;
       }
       unless ($parent) {
         $parent = $subs{create_item}->($fk_src, $cond);
