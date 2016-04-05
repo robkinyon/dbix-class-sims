@@ -5,6 +5,7 @@ use warnings FATAL => 'all';
 use Test::More;
 use Test::Deep;
 use Test::Exception;
+use Test::Trap;
 
 BEGIN {
   {
@@ -80,7 +81,7 @@ use Test::DBIx::Class qw(:resultsets);
     is $count, 0, "There are no tables loaded at first";
   }
 
-  throws_ok {
+  trap {
     Schema->load_sims(
       {
         Album => [
@@ -88,7 +89,10 @@ use Test::DBIx::Class qw(:resultsets);
         ],
       },
     );
-  } qr/artists\.name/i, "load_sims dies with a failure";
+  };
+  is $trap->leaveby, 'die', "load_sims fails";
+  is $trap->stdout, '', "No STDOUT";
+  like $trap->die,  qr/artists\.name/i, "load_sims dies with a failure";
 
   my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
   is $count, 0, "There are no tables loaded after load_sims is called with a failure";

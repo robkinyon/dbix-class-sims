@@ -5,6 +5,7 @@ use warnings FATAL => 'all';
 use Test::More;
 use Test::Deep;
 use Test::Exception;
+use Test::Trap;
 use Test::Warn;
 
 BEGIN {
@@ -116,7 +117,7 @@ use Test::DBIx::Class qw(:resultsets);
   {
     is Artist->count, 1, "There is one artist loaded now";
     my $rv;
-    throws_ok {
+    trap {
       $rv = Schema->load_sims(
         {
           Artist => [
@@ -124,7 +125,10 @@ use Test::DBIx::Class qw(:resultsets);
           ],
         },
       );
-    } qr/UNIQUE constraint failed/, "Didn't specify enough in the request";
+    };
+    is $trap->leaveby, 'die', "load_sims fails";
+    is $trap->stdout, '', "No STDOUT";
+    like $trap->die, qr/UNIQUE constraint failed/, "Didn't specify enough in the request";
   }
 }
 

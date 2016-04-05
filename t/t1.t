@@ -5,6 +5,7 @@ use warnings FATAL => 'all';
 use Test::More;
 use Test::Deep;
 use Test::Exception;
+use Test::Trap;
 use Test::Warn;
 
 BEGIN {
@@ -55,7 +56,7 @@ else {
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
-  throws_ok {
+  trap {
     Schema->load_sims(
       {
         Artist => [
@@ -63,7 +64,11 @@ else {
         ],
       },
     );
-  } qr/$null_constraint_failure/, "Missing required column";
+  };
+
+  is $trap->leaveby, 'die', "load_sims fails";
+  is $trap->stdout, '', "No STDOUT";
+  like $trap->die, qr/$null_constraint_failure/, "Missing required column";
 
   is Artist->count, 0, "There are still no artists loaded after load_sims is called with a failure";
 }
@@ -73,7 +78,7 @@ else {
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
-  throws_ok {
+  trap {
     Schema->load_sims(
       {
         Artist => [
@@ -82,11 +87,14 @@ else {
         ],
       },
     );
-  } qr/$null_constraint_failure/, "Missing required column";
+  };
+  is $trap->leaveby, 'die', "load_sims fails";
+  is $trap->stdout, '', "No STDOUT";
+  like $trap->die, qr/$null_constraint_failure/, "Missing required column";
 
   is Artist->count, 0, "There are still no artists loaded after load_sims is called with a failure";
 
-  throws_ok {
+  trap {
     Schema->load_sims(
       {
         Artist => [
@@ -95,7 +103,10 @@ else {
         ],
       },
     );
-  } qr/$null_constraint_failure/, "Missing required column";
+  };
+  is $trap->leaveby, 'die', "load_sims fails";
+  is $trap->stdout, '', "No STDOUT";
+  like $trap->die, qr/$null_constraint_failure/, "Missing required column";
 
   is Artist->count, 0, "There are still no artists loaded after load_sims is called with a failure";
 }

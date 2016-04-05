@@ -24,7 +24,7 @@ use List::MoreUtils qw( natatime );
 use Scalar::Util qw( blessed reftype );
 use String::Random qw( random_regex );
 
-our $VERSION = '0.300101';
+our $VERSION = '0.300102';
 
 {
   # The aliases in this block are done at BEGIN time so that the ::Types class
@@ -235,17 +235,17 @@ sub load_sims {
       # If $row has the same keys (other than parent columns) as another row
       # added by a different parent table, then set the foreign key for this
       # parent in the existing row.
-      foreach my $name (keys %added_by) {
-        next if $name eq $adder;
-        foreach my $compare (@{$added_by{$name}}) {
-          if ($are_columns_equal->($src, $row, $compare)) {
-            $compare->{$fkcol} = $row->{$fkcol};
-            return;
-          }
+      foreach my $compare (@{$spec->{$src}}) {
+        next if exists $added_by{$adder} && exists $added_by{$adder}{$compare};
+        if ($are_columns_equal->($src, $row, $compare)) {
+          $compare->{$fkcol} = $row->{$fkcol};
+          return;
         }
       }
+
       push @{$spec->{$src}}, $row;
-      push @{$added_by{$adder} //= []}, $row;
+      $added_by{$adder} //= {};
+      $added_by{$adder}{$row} = !!1;
       $pending{$src} = 1;
     };
 
@@ -442,26 +442,31 @@ sub load_sims {
       %{$opts->{toposort} // {}},
     );
 
-    $rows = $schema->txn_do(sub {
-      my %rows;
-      while (1) {
-        foreach my $name ( @toposort ) {
-          next unless $spec->{$name};
+    $rows = eval {
+      $schema->txn_do(sub {
+        my %rows;
+        while (1) {
+          foreach my $name ( @toposort ) {
+            next unless $spec->{$name};
 
-          while ( my $item = shift @{$spec->{$name}} ) {
-            my $x = $subs{create_item}->($name, $item);
-            push @{$rows{$name} //= []}, $x if $initial_spec->{$name}{$item};
+            while ( my $item = shift @{$spec->{$name}} ) {
+              my $x = $subs{create_item}->($name, $item);
+              push @{$rows{$name} //= []}, $x if $initial_spec->{$name}{$item};
+            }
+
+            $subs{delete_pending}->($name);
           }
 
-          $subs{delete_pending}->($name);
+          last unless $subs{has_pending}->();
+          $subs{clear_pending}->();
         }
 
-        last unless $subs{has_pending}->();
-        $subs{clear_pending}->();
-      }
-
-      return \%rows;
-    });
+        return \%rows;
+      });
+    }; if ($@) {
+      warn "SEED: $opts->{seed}\n";
+      die $@;
+    }
 
     # Force a reload from the database of every row we're returning.
     foreach my $item (values %$rows) {

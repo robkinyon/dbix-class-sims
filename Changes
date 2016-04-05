@@ -1,5 +1,11 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300102 Apr 05 2016 08:00:00 PDT
+   - Fix bug where the check to ensure different parents specifying the same
+     child will link to it was too expansive.
+   - Warn the seed used when a failure throws an error.
+   - Improve test suite output to not show the outputted warning on failure.
+
 0.300101 Apr 01 2016 11:30:00 PDT
    - Fix mistake where I used "limit" instead of "rows" (Thanks gtermars!)
 

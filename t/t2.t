@@ -5,6 +5,7 @@ use warnings FATAL => 'all';
 use Test::More;
 use Test::Deep;
 use Test::Exception;
+use Test::Trap;
 
 BEGIN {
   {
@@ -72,7 +73,7 @@ else {
     is $count, 0, "There are no tables loaded at first";
   }
 
-  throws_ok {
+  trap {
     DBIx::Class::Sims->load_sims(Schema,
       {
         Artist => [
@@ -83,7 +84,10 @@ else {
         ],
       },
     );
-  } qr/$null_constraint_failure/, "Missing required column";
+  };
+  is $trap->leaveby, 'die', "load_sims fails";
+  is $trap->stdout, '', "No STDOUT";
+  like $trap->die, qr/$null_constraint_failure/, "Missing required column";
 
   my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
   is $count, 0, "There are no tables loaded after load_sims is called with a failure";
@@ -97,7 +101,7 @@ else {
     is $count, 0, "There are no tables loaded at first";
   }
 
-  throws_ok {
+  trap {
     DBIx::Class::Sims->load_sims(Schema,
       {
         Artist => [
@@ -108,7 +112,10 @@ else {
         ],
       },
     );
-  } qr/$null_constraint_failure/, "Missing required column";
+  };
+  is $trap->leaveby, 'die', "load_sims fails";
+  is $trap->stdout, '', "No STDOUT";
+  like $trap->die, qr/$null_constraint_failure/, "Missing required column";
 
   my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
   is $count, 0, "There are no tables loaded after load_sims is called with a failure";
@@ -122,7 +129,7 @@ else {
     is $count, 0, "There are no tables loaded at first";
   }
 
-  throws_ok {
+  trap {
     DBIx::Class::Sims->load_sims(Schema,
       {
         Artist => [
@@ -133,7 +140,10 @@ else {
         ],
       },
     );
-  } qr/$null_constraint_failure/, "Missing required column";
+  };
+  is $trap->leaveby, 'die', "load_sims fails";
+  is $trap->stdout, '', "No STDOUT";
+  like $trap->die, qr/$null_constraint_failure/, "Missing required column";
 
   my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
   is $count, 0, "There are no tables loaded after load_sims is called with a failure";
