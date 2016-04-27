@@ -233,9 +233,9 @@ use Test::DBIx::Class qw(:resultsets);
     is $count, 0, "There are no tables loaded at first";
   }
 
-  my $rv;
+  my ($rv, $addl);
   lives_ok {
-    $rv = Schema->load_sims(
+    ($rv, $addl) = Schema->load_sims(
       {
         Album => [
           { name => 'bar1', 'artist.name' => 'foo3' },
@@ -256,6 +256,11 @@ use Test::DBIx::Class qw(:resultsets);
 
   cmp_deeply( $rv, {
     Album => [ methods(id => 1), methods(id => 2) ],
+  });
+
+  cmp_deeply( $addl->{created}, {
+    Album => 2,
+    Artist => 2,
   });
 }
 

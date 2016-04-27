@@ -3,8 +3,7 @@ package DBIx::Class::Sims;
 
 use 5.010_002;
 
-use strict;
-use warnings FATAL => 'all';
+use strictures 2;
 
 {
   # Do **NOT** import a clone() function into the DBIx::Class::Schema namespace
@@ -12,19 +11,6 @@ use warnings FATAL => 'all';
   package MyCloner;
   use Clone::Any qw(clone);
 }
-
-use DDP;
-
-use Data::Walk qw( walk );
-use DateTime;
-use DBIx::Class::TopoSort ();
-use Hash::Merge qw( merge );
-use List::Util qw( shuffle );
-use List::MoreUtils qw( natatime );
-use Scalar::Util qw( blessed reftype );
-use String::Random qw( random_regex );
-
-our $VERSION = '0.300102';
 
 {
   # The aliases in this block are done at BEGIN time so that the ::Types class
@@ -57,6 +43,19 @@ our $VERSION = '0.300102';
   BEGIN { *sim_types = \&sim_type; }
 }
 use DBIx::Class::Sims::Types;
+
+use DDP;
+
+use Data::Walk qw( walk );
+use DateTime;
+use DBIx::Class::TopoSort ();
+use Hash::Merge qw( merge );
+use List::MoreUtils qw( natatime );
+use Scalar::Util qw( blessed reftype );
+
+our $VERSION = '0.300200';
+
+use DBIx::Class::Sims::Runner;
 
 sub add_sims {
   my $class = shift;
@@ -92,308 +91,14 @@ sub load_sims {
   my $spec = massage_input($schema, normalize_input($spec_proto));
   my $opts = normalize_input($opts_proto);
 
-  ###### FROM HERE ######
-  # These are utility methods to help navigate the rel_info hash.
-  my $is_fk = sub { return exists $_[0]{attrs}{is_foreign_key_constraint} };
-  my $short_source = sub {
-    (my $x = $_[0]{source}) =~ s/.*:://;
-    return $x;
-  };
-
-  # ribasushi says: at least make sure the cond is a hashref (not guaranteed)
-  my $self_fk_cols = sub { map {/^self\.(.*)/; $1} values %{$_[0]{cond}} };
-  my $self_fk_col  = sub { ($self_fk_cols->(@_))[0] };
-  my $foreign_fk_cols = sub { map {/^foreign\.(.*)/; $1} keys %{$_[0]{cond}} };
-  my $foreign_fk_col  = sub { ($foreign_fk_cols->(@_))[0] };
-  ###### TO HERE ######
-
   # 1. Ensure the belongs_to relationships are in $reqs
   # 2. Set the rel_info as the leaf in $reqs
   my $reqs = normalize_input($opts->{constraints} // {});
-  my %is_foreign_key;
-  foreach my $name ( $schema->sources ) {
-    my $source = $schema->source($name);
-
-    $reqs->{$name} //= {};
-    foreach my $rel_name ( $source->relationships ) {
-      my $rel_info = $source->relationship_info($rel_name);
-
-      if ($is_fk->($rel_info)) {
-        $reqs->{$name}{$rel_name} = 1;
-        $is_foreign_key{$name}{$_} = 1 for $self_fk_cols->($rel_info);
-      }
-    }
-  }
 
   # 2: Create the rows in toposorted order
   my $hooks = $opts->{hooks} // {};
   $hooks->{preprocess}  //= sub {};
   $hooks->{postprocess} //= sub {};
-
-  # Prepopulate column values (as appropriate)
-  my %subs;
-  $subs{fix_fk_dependencies} = sub {
-    my ($name, $item) = @_;
-
-    # 1. If we have something, then:
-    #   a. If it's a scalar, then, COND = { $fk => scalar }
-    #   b. Look up the row by COND
-    #   c. If the row is not there, then $create_item->($fksrc, COND)
-    # 2. If we don't have something and the column is non-nullable, then:
-    #   a. If rows exists, pick a random one.
-    #   b. If rows don't exist, $create_item->($fksrc, {})
-    my %child_deps;
-    my $source = $schema->source($name);
-    foreach my $rel_name ( $source->relationships ) {
-      my $rel_info = $source->relationship_info($rel_name);
-      unless ( $is_fk->($rel_info) ) {
-        if ($item->{$rel_name}) {
-          $child_deps{$rel_name} = delete $item->{$rel_name};
-        }
-        next;
-      }
-
-      next unless $reqs->{$name}{$rel_name};
-
-      my $col = $self_fk_col->($rel_info);
-      my $fkcol = $foreign_fk_col->($rel_info);
-
-      my $fk_src = $short_source->($rel_info);
-      my $rs = $schema->resultset($fk_src);
-
-      my $cond;
-      my $proto = delete($item->{$rel_name}) // delete($item->{$col});
-      if ($proto) {
-        # Assume anything blessed is blessed into DBIC.
-        if (blessed($proto)) {
-          $cond = { $fkcol => $proto->$fkcol };
-        }
-        # Assume any hashref is a Sims specification
-        elsif (ref($proto) eq 'HASH') {
-          $cond = $proto
-        }
-        # Assume any unblessed scalar is a column value.
-        elsif (!ref($proto)) {
-          $cond = { $fkcol => $proto };
-        }
-        else {
-          die "Unsure what to do about $name->$rel_name():" . p($proto);
-        }
-      }
-
-      my $col_info = $source->column_info($col);
-      if ( $cond ) {
-        my %fkcols = map { $_ => 1 } $schema->source($fk_src)->columns;
-        my $search = {
-          (map {
-            $_ => $cond->{$_}
-          } grep {
-            exists $fkcols{$_}
-          } keys %$cond)
-        };
-        $rs = $rs->search($search);
-      }
-      elsif ( $col_info->{is_nullable} ) {
-        next;
-      }
-      else {
-        $cond = {};
-      }
-
-      my $meta = delete $cond->{__META__} // {};
-
-      #warn "Looking for $name->$rel_name(".p($cond).")\n";
-
-      my $parent;
-      unless ($meta->{create}) {
-        $parent = $rs->search(undef, { rows => 1 })->first;
-      }
-      unless ($parent) {
-        $parent = $subs{create_item}->($fk_src, $cond);
-      }
-      $item->{$col} = $parent->get_column($fkcol);
-    }
-
-    return \%child_deps;
-  };
-  {
-    my %pending;
-    my %added_by;
-    my $are_columns_equal = sub {
-      my ($src, $row, $compare) = @_;
-      foreach my $col ($schema->source($src)->columns) {
-        next if $is_foreign_key{$src}{$col};
-
-        next unless exists $row->{$col};
-        return unless exists $compare->{$col};
-        return if $compare->{$col} ne $row->{$col};
-      }
-      return 1;
-    };
-    $subs{add_child} = sub {
-      my ($src, $fkcol, $row, $adder) = @_;
-      # If $row has the same keys (other than parent columns) as another row
-      # added by a different parent table, then set the foreign key for this
-      # parent in the existing row.
-      foreach my $compare (@{$spec->{$src}}) {
-        next if exists $added_by{$adder} && exists $added_by{$adder}{$compare};
-        if ($are_columns_equal->($src, $row, $compare)) {
-          $compare->{$fkcol} = $row->{$fkcol};
-          return;
-        }
-      }
-
-      push @{$spec->{$src}}, $row;
-      $added_by{$adder} //= {};
-      $added_by{$adder}{$row} = !!1;
-      $pending{$src} = 1;
-    };
-
-    $subs{has_pending} = sub { keys %pending != 0; };
-    $subs{delete_pending} = sub { delete $pending{$_[0]} };
-    $subs{clear_pending} = sub { %pending = () };
-  }
-  $subs{find_by_unique_constraints} = sub {
-    my ($name, $item) = @_;
-
-    my $source = $schema->source($name);
-    my @uniques = map {
-      [ $source->unique_constraint_columns($_) ]
-    } $source->unique_constraint_names();
-
-    my $rs = $schema->resultset($name);
-    my $searched = 0;
-    foreach my $unique (@uniques) {
-      # If there are specified values for all the columns in a specific unqiue constraint ...
-      next if grep { ! exists $item->{$_} } @$unique;
-
-      # ... then add that to the list of potential values to search.
-      $rs = $rs->search({
-        ( map { $_ => $item->{$_} } @{$unique})
-      });
-      $searched = 1;
-    }
-
-    return unless $searched;
-    return $rs->first;
-  };
-  $subs{fix_child_dependencies} = sub {
-    my ($name, $row, $child_deps) = @_;
-
-    # 1. If we have something, then:
-    #   a. If it's not an array, then make it an array
-    # 2. If we don't have something,
-    #   a. Make an array with an empty item
-    #   XXX This is more than one item would be supported
-    # In all cases, make sure to add { $fkcol => $row->get_column($col) } to the
-    # child's $item
-    my $source = $schema->source($name);
-    foreach my $rel_name ( $source->relationships ) {
-      my $rel_info = $source->relationship_info($rel_name);
-      next if $is_fk->($rel_info);
-      next unless $child_deps->{$rel_name} // $reqs->{$name}{$rel_name};
-
-      my $col = $self_fk_col->($rel_info);
-      my $fkcol = $foreign_fk_col->($rel_info);
-
-      my $fk_src = $short_source->($rel_info);
-
-      # Need to ensure that $child_deps >= $reqs
-
-      my @children = @{$child_deps->{$rel_name} // []};
-      @children = ( ({}) x $reqs->{$name}{$rel_name} ) unless @children;
-      foreach my $child (@children) {
-        $child->{$fkcol} = $row->get_column($col);
-        $subs{add_child}->($fk_src, $fkcol, $child, $name);
-      }
-    }
-  };
-  $subs{fix_columns} = sub {
-    my ($name, $item) = @_;
-    my $source = $schema->source($name);
-    foreach my $col_name ( $source->columns ) {
-      my $sim_spec;
-      if ( exists $item->{$col_name} ) {
-        if ((reftype($item->{$col_name}) // '') eq 'REF' &&
-          reftype(${$item->{$col_name}}) eq 'HASH' ) {
-          $sim_spec = ${ delete $item->{$col_name} };
-        }
-        # Pass the value along to DBIC - we don't know how to deal with it.
-        else {
-          next;
-        }
-      }
-
-      my $info = $source->column_info($col_name);
-
-      $sim_spec //= $info->{sim};
-      if ( ref($sim_spec // '') eq 'HASH' ) {
-        if ( exists $sim_spec->{null_chance} && !$info->{nullable} ) {
-          # Add check for not a number
-          if ( rand() < $sim_spec->{null_chance} ) {
-            $item->{$col_name} = undef;
-            next;
-          }
-        }
-
-        if ( ref($sim_spec->{func} // '') eq 'CODE' ) {
-          $item->{$col_name} = $sim_spec->{func}->($info);
-        }
-        elsif ( exists $sim_spec->{value} ) {
-          $item->{$col_name} = $sim_spec->{value};
-        }
-        elsif ( $sim_spec->{type} ) {
-          my $meth = $self->sim_type($sim_spec->{type});
-          if ( $meth ) {
-            $item->{$col_name} = $meth->($info);
-          }
-          else {
-            warn "Type '$sim_spec->{type}' is not loaded";
-          }
-        }
-        else {
-          if ( $info->{data_type} eq 'int' ) {
-            my $min = $sim_spec->{min} // 0;
-            my $max = $sim_spec->{max} // 100;
-            $item->{$col_name} = int(rand($max-$min))+$min;
-          }
-          elsif ( $info->{data_type} eq 'varchar' ) {
-            my $min = $sim_spec->{min} // 1;
-            my $max = $sim_spec->{max} // $info->{data_length} // 255;
-            $item->{$col_name} = random_regex(
-              '\w' . "{$min,$max}"
-            );
-          }
-        }
-      }
-    }
-  };
-  $subs{create_item} = sub {
-    my ($name, $item) = @_;
-
-    #warn "Starting with $name (".p($item).")\n";
-    $subs{fix_columns}->($name, $item);
-
-    my $source = $schema->source($name);
-    $hooks->{preprocess}->($name, $source, $item);
-
-    my $child_deps = $subs{fix_fk_dependencies}->($name, $item);
-
-    #warn "Creating $name (".p($item).")\n";
-    my $row = eval {
-      $subs{find_by_unique_constraints}->($name, $item)
-      // $schema->resultset($name)->create($item);
-    }; if ($@) {
-      warn "ERROR Creating $name (".p($item).")\n";
-      die $@;
-    }
-
-    $subs{fix_child_dependencies}->($name, $row, $child_deps);
-
-    $hooks->{postprocess}->($name, $source, $row);
-
-    return $row;
-  };
 
   # Create a lookup of the items passed in so we can return them back.
   my $initial_spec = {};
@@ -442,31 +147,24 @@ sub load_sims {
       %{$opts->{toposort} // {}},
     );
 
+    my $runner = DBIx::Class::Sims::Runner->new(
+      parent => $self,
+      schema => $schema,
+      toposort => \@toposort,
+      initial_spec => $initial_spec,
+      spec => $spec,
+      hooks => $hooks,
+      reqs => $reqs,
+    );
+
     $rows = eval {
-      $schema->txn_do(sub {
-        my %rows;
-        while (1) {
-          foreach my $name ( @toposort ) {
-            next unless $spec->{$name};
-
-            while ( my $item = shift @{$spec->{$name}} ) {
-              my $x = $subs{create_item}->($name, $item);
-              push @{$rows{$name} //= []}, $x if $initial_spec->{$name}{$item};
-            }
-
-            $subs{delete_pending}->($name);
-          }
-
-          last unless $subs{has_pending}->();
-          $subs{clear_pending}->();
-        }
-
-        return \%rows;
-      });
+      $runner->run();
     }; if ($@) {
       warn "SEED: $opts->{seed}\n";
       die $@;
     }
+
+    $additional->{created} = $runner->{created};
 
     # Force a reload from the database of every row we're returning.
     foreach my $item (values %$rows) {
@@ -492,6 +190,7 @@ sub normalize_input {
 
   # Doing a stat on a filename with a newline throws an error.
   my $x = eval {
+    no warnings;
     if ( -e $proto ) {
       return LoadFile($proto);
     }
@@ -694,6 +393,12 @@ This is the random seed that was used in this run. If you set the seed in the
 opts parameter in the load_sims call, it will be that value. Otherwise, it will
 be set to a usefullly random value for you. It will be different every time even
 if you call load_sims multiple times within the same process in the same second.
+
+=item * created
+
+This is a hashref containing a count of each source that was created. This is
+different from the first return value in that this lists everything created, not
+just what was requested. It also only has counts, not the actual rows.
 
 =back
 

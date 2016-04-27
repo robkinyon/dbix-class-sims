@@ -1,5 +1,10 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300200 Apr 27 2016 08:00:00 PDT
+   - Refactor the codebase into a prepper and a runner. The runner will make it
+     easier to extend the codebase and add more functionality.
+   - Count what is created and return that as $additional->{created}.
+
 0.300102 Apr 05 2016 08:00:00 PDT
    - Fix bug where the check to ensure different parents specifying the same
      child will link to it was too expansive.
