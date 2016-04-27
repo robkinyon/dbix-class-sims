@@ -164,6 +164,8 @@ sub load_sims {
       die $@;
     }
 
+    $additional->{created} = $runner->{created};
+
     # Force a reload from the database of every row we're returning.
     foreach my $item (values %$rows) {
       $_->discard_changes for @$item;
@@ -391,6 +393,12 @@ This is the random seed that was used in this run. If you set the seed in the
 opts parameter in the load_sims call, it will be that value. Otherwise, it will
 be set to a usefullly random value for you. It will be different every time even
 if you call load_sims multiple times within the same process in the same second.
+
+=item * created
+
+This is a hashref containing a count of each source that was created. This is
+different from the first return value in that this lists everything created, not
+just what was requested. It also only has counts, not the actual rows.
 
 =back
 

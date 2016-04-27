@@ -49,6 +49,8 @@ sub initialize {
     }
   }
 
+  $self->{created} = {};
+
   return;
 }
 
@@ -314,12 +316,16 @@ sub create_item {
   my $child_deps = $self->fix_fk_dependencies($name, $item);
 
   #warn "Creating $name (".p($item).")\n";
-  my $row = eval {
-    $self->find_by_unique_constraints($name, $item)
-      // $self->schema->resultset($name)->create($item);
-  }; if ($@) {
-    warn "ERROR Creating $name (".p($item).")\n";
-    die $@;
+  my $row = $self->find_by_unique_constraints($name, $item);
+  unless ($row) {
+    $row = eval {
+      $self->schema->resultset($name)->create($item);
+    }; if ($@) {
+      warn "ERROR Creating $name (".p($item).")\n";
+      die $@;
+    }
+    # This tracks everything that was created, not just what was requested.
+    $self->{created}{$name}++;
   }
 
   $self->fix_child_dependencies($name, $row, $child_deps);
