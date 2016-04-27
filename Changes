@@ -1,5 +1,9 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300201 Apr 27 2016 14:00:00 PDT
+   - Add a die_on_failure option (defaulting to 1) and returning the error when
+     it is not set.
+
 0.300200 Apr 27 2016 08:00:00 PDT
    - Refactor the codebase into a prepper and a runner. The runner will make it
      easier to extend the codebase and add more functionality.

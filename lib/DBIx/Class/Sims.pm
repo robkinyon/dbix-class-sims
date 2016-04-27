@@ -53,7 +53,7 @@ use Hash::Merge qw( merge );
 use List::MoreUtils qw( natatime );
 use Scalar::Util qw( blessed reftype );
 
-our $VERSION = '0.300200';
+our $VERSION = '0.300201';
 
 use DBIx::Class::Sims::Runner;
 
@@ -160,8 +160,12 @@ sub load_sims {
     $rows = eval {
       $runner->run();
     }; if ($@) {
-      warn "SEED: $opts->{seed}\n";
-      die $@;
+      $additional->{error} = $@;
+
+      if ($opts->{die_on_failure} // 1) {
+        warn "SEED: $opts->{seed}\n";
+        die $@;
+      }
     }
 
     $additional->{created} = $runner->{created};
@@ -387,6 +391,10 @@ contain:
 
 =over 4
 
+=item * error
+
+This will contain any error that happened while trying to create the rows.
+
 =item * seed
 
 This is the random seed that was used in this run. If you set the seed in the
@@ -575,6 +583,13 @@ created.  But, we could specify a constraint that says "Every person must have
 at least 2 addresses." Now, whenever a Person is created, two Addresses will be
 added along as well, if they weren't already created through some other
 specification.
+
+=head2 die_on_failure
+
+If set to 0, this will prevent a die when creating a row. Instead, you will be
+responsible for checking C<< $additional->{error} >> yourself.
+
+This defaults to 1.
 
 =head2 seed
 
