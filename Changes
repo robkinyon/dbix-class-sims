@@ -1,5 +1,8 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300202 Apr 30 2016 14:00:00 PDT
+   - Add missing MANIFEST files (stupid me!)
+
 0.300201 Apr 27 2016 14:00:00 PDT
    - Add a die_on_failure option (defaulting to 1) and returning the error when
      it is not set.
