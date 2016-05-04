@@ -25,7 +25,7 @@ requires 'List::Util';
 requires 'List::MoreUtils';
 requires 'Scalar::Util';
 requires 'String::Random';
-requires 'YAML::XS'; # Removes a warning.
+requires 'YAML::Any'; # Removes a warning.
  
 test_requires 'File::Temp'        => '0.01';
 test_requires 'Test::DBIx::Class' => '0.01';

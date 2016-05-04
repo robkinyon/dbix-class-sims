@@ -254,7 +254,7 @@ __END__
 
 DBIx::Class::Sims - The addition of simulating data to DBIx::Class
 
-=head1 SYNPOSIS (CLASS VERSION)
+=head1 SYNOPSIS (CLASS VERSION)
 
   DBIx::Class::Sims->add_sims(
       $schema, 'source_name',
@@ -399,7 +399,7 @@ This will contain any error that happened while trying to create the rows.
 
 This is the random seed that was used in this run. If you set the seed in the
 opts parameter in the load_sims call, it will be that value. Otherwise, it will
-be set to a usefullly random value for you. It will be different every time even
+be set to a usefully random value for you. It will be different every time even
 if you call load_sims multiple times within the same process in the same second.
 
 =item * created
