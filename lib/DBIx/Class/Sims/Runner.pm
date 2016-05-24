@@ -6,6 +6,7 @@ use strictures 2;
 
 use DDP;
 
+use Hash::Merge qw( merge );
 use Scalar::Util qw( blessed reftype );
 use String::Random qw( random_regex );
 
@@ -49,12 +50,43 @@ sub initialize {
     }
   }
 
-  $self->{created} = {};
+  $self->{created}    = {};
+  $self->{duplicates} = {};
 
   return;
 }
 
 sub schema { shift->{schema} }
+
+sub create_search {
+  my $self = shift;
+  my ($rs, $name, $cond) = @_;
+
+  my $source = $self->schema->source($name);
+  my %cols = map { $_ => 1 } $source->columns;
+  my $search = {
+    (map {
+      $_ => $cond->{$_}
+    } grep {
+      exists $cols{$_}
+    } keys %$cond)
+  };
+  $rs = $rs->search($search);
+
+  foreach my $rel_name ($source->relationships) {
+    next unless exists $cond->{$rel_name};
+    next unless reftype($cond->{$rel_name}) eq 'HASH';
+
+    # This will not work with nested relationships.
+    my %search = map {
+      ;"$rel_name.$_" => $cond->{$rel_name}{$_}
+    } keys %{$cond->{$rel_name}};
+
+    $rs = $rs->search(\%search, { join => $rel_name });
+  }
+
+  return $rs;
+}
 
 sub fix_fk_dependencies {
   my $self = shift;
@@ -83,8 +115,8 @@ sub fix_fk_dependencies {
     my $col = $self_fk_col->($rel_info);
     my $fkcol = $foreign_fk_col->($rel_info);
 
-    my $fk_src = $short_source->($rel_info);
-    my $rs = $self->schema->resultset($fk_src);
+    my $fk_name = $short_source->($rel_info);
+    my $rs = $self->schema->resultset($fk_name);
 
     my $cond;
     my $proto = delete($item->{$rel_name}) // delete($item->{$col});
@@ -108,15 +140,7 @@ sub fix_fk_dependencies {
 
     my $col_info = $source->column_info($col);
     if ( $cond ) {
-      my %fkcols = map { $_ => 1 } $self->schema->source($fk_src)->columns;
-      my $search = {
-        (map {
-          $_ => $cond->{$_}
-        } grep {
-          exists $fkcols{$_}
-        } keys %$cond)
-      };
-      $rs = $rs->search($search);
+      $rs = $self->create_search($rs, $fk_name, $cond);
     }
     elsif ( $col_info->{is_nullable} ) {
       next;
@@ -134,13 +158,14 @@ sub fix_fk_dependencies {
       $parent = $rs->search(undef, { rows => 1 })->first;
     }
     unless ($parent) {
-      $parent = $self->create_item($fk_src, $cond);
+      $parent = $self->create_item($fk_name, $cond);
     }
     $item->{$col} = $parent->get_column($fkcol);
   }
 
   return \%child_deps;
 }
+
 {
   my %pending;
   my %added_by;
@@ -181,6 +206,7 @@ sub fix_fk_dependencies {
   sub delete_pending { delete $pending{$_[1]}; }
   sub clear_pending { %pending = (); }
 }
+
 sub find_by_unique_constraints {
   my $self = shift;
   my ($name, $item) = @_;
@@ -191,21 +217,40 @@ sub find_by_unique_constraints {
   } $source->unique_constraint_names();
 
   my $rs = $self->schema->resultset($name);
-  my $searched = 0;
+  my $searched = {};
   foreach my $unique (@uniques) {
     # If there are specified values for all the columns in a specific unqiue constraint ...
     next if grep { ! exists $item->{$_} } @$unique;
 
     # ... then add that to the list of potential values to search.
-    $rs = $rs->search({
-      ( map { $_ => $item->{$_} } @{$unique})
-    });
-    $searched = 1;
+    my %criteria;
+    foreach my $colname (@{$unique}) {
+      my $value = $item->{$colname};
+      my $classname = blessed($value);
+      if ( $classname && $classname->isa('DateTime') ) {
+        my $dtf = $self->schema->storage->datetime_parser;
+        $value = $dtf->format_datetime($value);
+      }
+
+      $criteria{$colname} = $value;
+    }
+    
+    $rs = $rs->search(\%criteria);
+    $searched = merge($searched, \%criteria);
   }
 
-  return unless $searched;
-  return $rs->first;
+  return unless keys %$searched;
+  my $row = $rs->first;
+  if ($row) {
+    push @{$self->{duplicates}{$name}}, {
+      criteria => $searched,
+      found    => $row,
+    };
+    return $row;
+  }
+  return;
 }
+
 sub fix_child_dependencies {
   my $self = shift;
   my ($name, $row, $child_deps) = @_;
@@ -226,7 +271,7 @@ sub fix_child_dependencies {
     my $col = $self_fk_col->($rel_info);
     my $fkcol = $foreign_fk_col->($rel_info);
 
-    my $fk_src = $short_source->($rel_info);
+    my $fk_name = $short_source->($rel_info);
 
     # Need to ensure that $child_deps >= $self->{reqs}
 
@@ -234,7 +279,7 @@ sub fix_child_dependencies {
     @children = ( ({}) x $self->{reqs}{$name}{$rel_name} ) unless @children;
     foreach my $child (@children) {
       $child->{$fkcol} = $row->get_column($col);
-      $self->add_child($fk_src, $fkcol, $child, $name);
+      $self->add_child($fk_name, $fkcol, $child, $name);
     }
   }
 }

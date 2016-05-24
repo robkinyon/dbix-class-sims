@@ -168,7 +168,8 @@ sub load_sims {
       }
     }
 
-    $additional->{created} = $runner->{created};
+    $additional->{created}    = $runner->{created};
+    $additional->{duplicates} = $runner->{duplicates};
 
     # Force a reload from the database of every row we're returning.
     foreach my $item (values %$rows) {
@@ -395,6 +396,8 @@ contain:
 
 This will contain any error that happened while trying to create the rows.
 
+This is most useful when C<< die_on_failure >> is set to 0.
+
 =item * seed
 
 This is the random seed that was used in this run. If you set the seed in the
@@ -407,6 +410,16 @@ if you call load_sims multiple times within the same process in the same second.
 This is a hashref containing a count of each source that was created. This is
 different from the first return value in that this lists everything created, not
 just what was requested. It also only has counts, not the actual rows.
+
+=item * duplicates
+
+This is a hashref containing a list for each source of all the duplicates that
+were found when creating rows for that source. For each duplicate found, there
+will be an entry that specifies the criteria used to find that duplicate and the
+row in the database that was found.
+
+The list will be ordered by when the duplicate was found, but that ordering will
+B<NOT> be stable across different runs unless the same C<< seed >> is used.
 
 =back
 

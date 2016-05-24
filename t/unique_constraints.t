@@ -51,9 +51,9 @@ use Test::DBIx::Class qw(:resultsets);
 
   {
     is Artist->count, 0, "There are no artists loaded at first";
-    my $rv;
+    my ($rv, $addl);
     lives_ok {
-      $rv = Schema->load_sims(
+      ($rv, $addl) = Schema->load_sims(
         {
           Artist => [
             { first_name => 'Taylor', last_name => 'Swift' },
@@ -67,13 +67,14 @@ use Test::DBIx::Class qw(:resultsets);
     ], "Artist columns are right";
 
     cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
+    cmp_deeply( $addl->{duplicates}, {} );
   }
 
   {
     is Artist->count, 1, "There is one artist loaded now";
-    my $rv;
+    my ($rv, $addl);
     lives_ok {
-      $rv = Schema->load_sims(
+      ($rv, $addl) = Schema->load_sims(
         {
           Artist => [
             { first_name => 'Taylor', last_name => 'Swift' },
@@ -87,6 +88,15 @@ use Test::DBIx::Class qw(:resultsets);
     ], "Artist columns are still right";
 
     cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
+    cmp_deeply($addl->{duplicates}, {
+      Artist => [{
+        criteria => {
+          first_name => 'Taylor',
+          last_name => 'Swift',
+        },
+        found => ignore()
+      }]
+    });
   }
 }
 

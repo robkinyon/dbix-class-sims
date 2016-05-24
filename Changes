@@ -1,5 +1,9 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300203 May 24 2016 14:00:00 PDT
+   - Add basic capability to follow relationships for finding parentage
+   - Add detection of DateTime objects when searching across unique constraints
+
 0.300202 Apr 30 2016 14:00:00 PDT
    - Add missing MANIFEST files (stupid me!)
 
