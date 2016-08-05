@@ -53,7 +53,7 @@ use Hash::Merge qw( merge );
 use List::MoreUtils qw( natatime );
 use Scalar::Util qw( blessed reftype );
 
-our $VERSION = '0.300203';
+our $VERSION = '0.300204';
 
 use DBIx::Class::Sims::Runner;
 

@@ -77,10 +77,13 @@ sub create_search {
     next unless exists $cond->{$rel_name};
     next unless reftype($cond->{$rel_name}) eq 'HASH';
 
-    # This will not work with nested relationships.
     my %search = map {
       ;"$rel_name.$_" => $cond->{$rel_name}{$_}
+    } grep {
+      # Nested relationships are automagically handled. q.v. t/t5.t
+      !ref $cond->{$rel_name}{$_}
     } keys %{$cond->{$rel_name}};
+
 
     $rs = $rs->search(\%search, { join => $rel_name });
   }

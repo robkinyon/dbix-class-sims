@@ -1,5 +1,8 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300204 Aug 05 2016 14:00:00 PDT
+   - Support nested relationships when finding existing rows
+
 0.300203 May 24 2016 14:00:00 PDT
    - Add basic capability to follow relationships for finding parentage
    - Add detection of DateTime objects when searching across unique constraints
