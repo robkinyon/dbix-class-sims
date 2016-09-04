@@ -105,7 +105,7 @@ BEGIN {
 
 use Test::DBIx::Class qw(:resultsets);
 
-{
+subtest "Autogenerate grandparent" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   {
@@ -137,6 +137,6 @@ use Test::DBIx::Class qw(:resultsets);
   cmp_deeply( $rv, {
     Track => [ methods(id => 1) ],
   });
-}
+};
 
 done_testing;

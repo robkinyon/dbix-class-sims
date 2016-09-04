@@ -65,7 +65,7 @@ else {
   $null_constraint_failure = 'NOT NULL constraint failed';
 }
 
-{
+subtest "validate required columns (both missing)" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   {
@@ -91,9 +91,9 @@ else {
 
   my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
   is $count, 0, "There are no tables loaded after load_sims is called with a failure";
-}
+};
 
-{
+subtest "validate required columns (first missing)" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   {
@@ -119,9 +119,9 @@ else {
 
   my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
   is $count, 0, "There are no tables loaded after load_sims is called with a failure";
-}
+};
 
-{
+subtest "validate required columns (second missing)" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   {
@@ -147,9 +147,9 @@ else {
 
   my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
   is $count, 0, "There are no tables loaded after load_sims is called with a failure";
-}
+};
 
-{
+subtest "validate required columns (none missing)" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   {
@@ -185,6 +185,6 @@ else {
     Artist => [ methods(id => 1) ],
     Studio => [ methods(id => 1) ],
   });
-}
+};
 
 done_testing;

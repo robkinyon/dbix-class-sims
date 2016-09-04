@@ -171,8 +171,7 @@ BEGIN {
 
 use Test::DBIx::Class qw(:resultsets);
 
-# Create everything from the child-most class
-{
+subtest "Autogenerate ancestors (2 lineages)" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   {
@@ -191,8 +190,11 @@ use Test::DBIx::Class qw(:resultsets);
     );
   } "load_sims runs to completion";
 
-  is_fields [ 'id', 'name' ], Artist, [
+  is_fields [ 'id', 'name' ], House, [
     [ 1, 'abcd' ],
+  ], "House fields are right";
+  is_fields [ 'id', 'name', 'house_id' ], Artist, [
+    [ 1, 'abcd', 1 ],
   ], "Artist fields are right";
   is_fields [ 'id', 'name' ], Studio, [
     [ 1, 'bcde' ],
@@ -207,10 +209,9 @@ use Test::DBIx::Class qw(:resultsets);
   cmp_deeply( $rv, {
     Track => [ methods(track_id => 1) ],
   });
-}
+};
 
-# Create and specify a house name from the track through the album and artist.
-{
+subtest "Autogenerate 3 parent-layers deep" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   {
@@ -248,10 +249,9 @@ use Test::DBIx::Class qw(:resultsets);
   cmp_deeply( $rv, {
     Track => [ methods(track_id => 1) ],
   });
-}
+};
 
-# Given an existing house, use it.
-{
+subtest "Consume a specified 3 parent-layers deep" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   {
@@ -299,10 +299,9 @@ use Test::DBIx::Class qw(:resultsets);
   cmp_deeply( $rv, {
     Track => [ methods(track_id => 1) ],
   });
-}
+};
 
-# Create and specify an artist name from the track through the album.
-{
+subtest "Autogenerate 2 parent-layers deep" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   {
@@ -337,10 +336,9 @@ use Test::DBIx::Class qw(:resultsets);
   cmp_deeply( $rv, {
     Track => [ methods(track_id => 1) ],
   });
-}
+};
 
-# Create a parent with a child and have the other parent auto-created.
-{
+subtest "Create a parent with a child and other parent autogenerate" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   {
@@ -376,10 +374,9 @@ use Test::DBIx::Class qw(:resultsets);
   cmp_deeply( $rv, {
     Artist => [ methods(id => 1) ],
   });
-}
+};
 
-# Create two parents, each specifying the same child, and only one child created
-{
+subtest "Create 2 parents, each specifying same child, only 1 child" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   {
@@ -413,6 +410,6 @@ use Test::DBIx::Class qw(:resultsets);
     Artist => [ methods(id => 1) ],
     Studio => [ methods(id => 1) ],
   });
-}
+};
 
 done_testing;
