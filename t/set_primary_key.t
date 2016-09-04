@@ -33,7 +33,7 @@ BEGIN {
 
 use Test::DBIx::Class qw(:resultsets);
 
-{
+subtest "Can use a default value for a char PK" => {
   Schema->deploy({ add_drop_table => 1 });
 
   is Country->count, 0, "There are no countries loaded at first";
@@ -49,9 +49,9 @@ use Test::DBIx::Class qw(:resultsets);
 
   is Country->count, 1, "Country was added";
   is Country->first->code, 'US', 'Country code is US';
-}
+};
 
-{
+subtest "Can specify the value of a char PK" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   is Country->count, 0, "There are no countries loaded at first";
@@ -67,6 +67,6 @@ use Test::DBIx::Class qw(:resultsets);
 
   is Country->count, 1, "Country was added";
   is Country->first->code, 'UK', 'Country code is UK';
-}
+};
 
 done_testing;

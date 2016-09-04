@@ -42,61 +42,62 @@ BEGIN {
 use Test::DBIx::Class qw(:resultsets);
 use DBIx::Class::Sims;
 
-my $email;
-my $seed;
-{
-  Schema->deploy({ add_drop_table => 1 });
+subtest "Same random value when reusing a seed" => sub {
+  my ($email, $seed);
+  {
+    Schema->deploy({ add_drop_table => 1 });
 
-  my ($rv, $addl);
-  lives_ok {
-    ($rv, $addl) = DBIx::Class::Sims->load_sims(Schema,
-      {
-        Artist => [
-          { name => 'Joe' },
-        ],
-      },
-    );
-  } "Everything loads ok";
-  $seed = $addl->{seed};
+    my ($rv, $addl);
+    lives_ok {
+      ($rv, $addl) = DBIx::Class::Sims->load_sims(Schema,
+        {
+          Artist => [
+            { name => 'Joe' },
+          ],
+        },
+      );
+    } "Everything loads ok";
+    $seed = $addl->{seed};
 
-  is Artist->count, 1, "There is now one artist loaded after load_sims is called";
+    is Artist->count, 1, "There is now one artist loaded after load_sims is called";
 
-  $email = (Artist->all)[0]->email;
-  is_fields [ 'id', 'name', 'email' ], Artist, [
-    [ 1, 'Joe', $email ],
-  ], "Artist columns are correct";
+    $email = (Artist->all)[0]->email;
+    is_fields [ 'id', 'name', 'email' ], Artist, [
+      [ 1, 'Joe', $email ],
+    ], "Artist columns are correct";
 
-  cmp_deeply( $rv, {
-    Artist => [ methods(id => 1, name => 'Joe', email => $email) ],
-  });
-}
+    cmp_deeply( $rv, {
+      Artist => [ methods(id => 1, name => 'Joe', email => $email) ],
+    });
+  }
 
-{
-  Schema->deploy({ add_drop_table => 1 });
+  {
+    Schema->deploy({ add_drop_table => 1 });
 
-  my $rv;
-  lives_ok {
-    $rv = DBIx::Class::Sims->load_sims(Schema,
-      {
-        Artist => [
-          { name => 'Joe' },
-        ],
-      },
-      {
-        seed => $seed,
-      },
-    );
-  } "Everything loads ok";
+    my $rv;
+    lives_ok {
+      $rv = DBIx::Class::Sims->load_sims(Schema,
+        {
+          Artist => [
+            { name => 'Joe' },
+          ],
+        },
+        {
+          seed => $seed,
+        },
+      );
+    } "Everything loads ok";
 
-  is Artist->count, 1, "There is now one artist loaded after load_sims is called";
+    is Artist->count, 1, "There is now one artist loaded after load_sims is called";
 
-  is_fields [ 'id', 'name', 'email' ], Artist, [
-    [ 1, 'Joe', $email ],
-  ], "Artist columns are correct";
+    is_fields [ 'id', 'name', 'email' ], Artist, [
+      [ 1, 'Joe', $email ],
+    ], "Artist columns are correct";
 
-  cmp_deeply( $rv, {
-    Artist => [ methods(id => 1, name => 'Joe', email => $email) ],
-  });
-}
+    cmp_deeply( $rv, {
+      Artist => [ methods(id => 1, name => 'Joe', email => $email) ],
+    });
+  }
+};
 
 done_testing;

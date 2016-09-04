@@ -42,7 +42,7 @@ BEGIN {
 
 use Test::DBIx::Class qw(:resultsets);
 
-{
+subtest "Cyclic graphs throw an error" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   is Company->count, 0, "There are no companies loaded at first";
@@ -57,9 +57,9 @@ use Test::DBIx::Class qw(:resultsets);
   } qr/expected directed acyclic graph/, "Throws the right exception";
 
   is Company->count, 0, "No company was added";
-}
+};
 
-{
+subtest "Specify a toposort->skip breaks the cycle" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   is Company->count, 0, "There are no companies loaded at first";
@@ -80,9 +80,9 @@ use Test::DBIx::Class qw(:resultsets);
   } "Everything loads ok";
 
   is Company->count, 1, "One company was added";
-}
+};
 
-{
+subtest "Can build parents on the skipped relationship" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   is Company->count, 0, "There are no companies loaded at first";
@@ -103,9 +103,9 @@ use Test::DBIx::Class qw(:resultsets);
   } "Everything loads ok";
 
   is Company->count, 2, "Two companies were added";
-}
+};
 
-{
+subtest "Can build children on the skipped relationship" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   is Company->count, 0, "There are no companies loaded at first";
@@ -126,6 +126,6 @@ use Test::DBIx::Class qw(:resultsets);
   } "Everything loads ok";
 
   is Company->count, 3, "Three companies were added";
-}
+};
 
 done_testing;
