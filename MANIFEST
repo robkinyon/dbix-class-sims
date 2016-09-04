@@ -29,11 +29,11 @@ t/parent_child_parent.t
 t/random_seed.t
 t/self_referential.t
 t/set_primary_key.t
-t/t1.t
-t/t2.t
-t/t3.t
-t/t4.t
-t/t5.t
+t/single_table.t
+t/unrelated_tables.t
+t/parent_child.t
+t/grandchild.t
+t/two_grandparents.t
 t/types/email_address.t
 t/types/ip_address.t
 t/types/us_address.t
