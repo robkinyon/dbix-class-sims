@@ -137,7 +137,7 @@ sub fix_fk_dependencies {
         $cond = { $fkcol => $proto };
       }
       else {
-        die "Unsure what to do about $name->$rel_name():" . p($proto);
+        die "Unsure what to do about $name->$rel_name():" . np($proto);
       }
     }
 
@@ -154,7 +154,7 @@ sub fix_fk_dependencies {
 
     my $meta = delete $cond->{__META__} // {};
 
-    #warn "Looking for $name->$rel_name(".p($cond).")\n";
+    #warn "Looking for $name->$rel_name(".np($cond).")\n";
 
     my $parent;
     unless ($meta->{create}) {
@@ -355,7 +355,7 @@ sub create_item {
 
   my ($name, $item) = @_;
 
-  #warn "Starting with $name (".p($item).")\n";
+  #warn "Starting with $name (".np($item).")\n";
   $self->fix_columns($name, $item);
 
   my $source = $self->schema->source($name);
@@ -363,13 +363,13 @@ sub create_item {
 
   my $child_deps = $self->fix_fk_dependencies($name, $item);
 
-  #warn "Creating $name (".p($item).")\n";
+  #warn "Creating $name (".np($item).")\n";
   my $row = $self->find_by_unique_constraints($name, $item);
   unless ($row) {
     $row = eval {
       $self->schema->resultset($name)->create($item);
     }; if ($@) {
-      warn "ERROR Creating $name (".p($item).")\n";
+      warn "ERROR Creating $name (".np($item).")\n";
       die $@;
     }
     # This tracks everything that was created, not just what was requested.

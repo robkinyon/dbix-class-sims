@@ -52,7 +52,7 @@ else {
   $null_constraint_failure = 'NOT NULL constraint failed';
 }
 
-{
+subtest "Missing required column" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
@@ -71,10 +71,10 @@ else {
   like $trap->die, qr/$null_constraint_failure/, "Missing required column";
 
   is Artist->count, 0, "There are still no artists loaded after load_sims is called with a failure";
-}
+};
 
 # If any row fails, the whole things fails.
-{
+subtest "Missing required column on some row" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
@@ -109,9 +109,9 @@ else {
   like $trap->die, qr/$null_constraint_failure/, "Missing required column";
 
   is Artist->count, 0, "There are still no artists loaded after load_sims is called with a failure";
-}
+};
 
-{
+subtest "A single row succeeds" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
@@ -133,9 +133,9 @@ else {
   ], "Artist columns are right";
   
   cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
-}
+};
 
-{
+subtest "Load multiple rows" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
@@ -159,10 +159,10 @@ else {
   ], "Artist columns are right";
   
   cmp_deeply( $rv, { Artist => [ methods(id => 1), methods(id => 2) ] } );
-}
+};
 
 # Test passing in a sim type
-{
+subtest "Pass in a sim_type" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
@@ -184,12 +184,12 @@ else {
   ], "Artist columns are right";
   
   cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
-}
+};
 
 Schema->source('Artist')->column_info('name')->{sim}{value} = 'george';
 
 # Verify that passing in a sim spec overrides the existing one.
-{
+subtest "Override a sim_type" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
@@ -211,10 +211,10 @@ Schema->source('Artist')->column_info('name')->{sim}{value} = 'george';
   ], "Artist columns are right";
   
   cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
-}
+};
 
 # Test the ability to pass in a number instead of a specification for a source
-{
+subtest "Set 1 for number of rows" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
@@ -234,9 +234,9 @@ Schema->source('Artist')->column_info('name')->{sim}{value} = 'george';
   ], "Artist columns are right";
   
   cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
-}
+};
 
-{
+subtest "Set 2 for number of rows" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
@@ -257,9 +257,9 @@ Schema->source('Artist')->column_info('name')->{sim}{value} = 'george';
   ], "Artist columns are right";
   
   cmp_deeply( $rv, { Artist => [ methods(id => 1), methods(id => 2) ] } );
-}
+};
 
-{
+subtest "Provide a hashref for rows" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
@@ -279,9 +279,9 @@ Schema->source('Artist')->column_info('name')->{sim}{value} = 'george';
   ], "Artist columns are right";
   
   cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
-}
+};
 
-{
+subtest "A scalarref is unknown" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
@@ -298,6 +298,6 @@ Schema->source('Artist')->column_info('name')->{sim}{value} = 'george';
   is $rs->count, 0, "There are no artists loaded after load_sims is called";
   
   cmp_deeply( $rv, {} );
-}
+};
 
 done_testing;
