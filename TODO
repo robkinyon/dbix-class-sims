@@ -1,0 +1,9 @@
+[X] Hoist the number/hashref->arrayref conversion to all levels
+[X] Add references in strings for relationship names
+[ ] Add children to meet to level of constraint
+    [ ] Document constraints better (?)
+[ ] Fix depth search in Runner::create_search()
+    [ ] NO FAILING TEST??!
+[ ] Provide a sim function that can use back-references
+    [ ] to created rows
+    [ ] to other columns of this row
