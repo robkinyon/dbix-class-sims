@@ -53,9 +53,10 @@ use Hash::Merge qw( merge );
 use List::MoreUtils qw( natatime );
 use Scalar::Util qw( blessed reftype );
 
-our $VERSION = '0.300204';
+our $VERSION = '0.300300';
 
 use DBIx::Class::Sims::Runner;
+use DBIx::Class::Sims::Util;
 
 sub add_sims {
   my $class = shift;
@@ -103,30 +104,13 @@ sub load_sims {
   # Create a lookup of the items passed in so we can return them back.
   my $initial_spec = {};
   foreach my $name (keys %$spec) {
-    # Allow a number to be passed in
-    if ( (reftype($spec->{$name})//'') ne 'ARRAY' ) {
-      if ( !ref($spec->{$name}) ) {
-        if ( $spec->{$name} =~ /^\d+$/ ) {
-          $spec->{$name} = [ map { {} } 1 .. $spec->{$name} ];
-        }
-        # I don't know what to do with it.
-        else {
-          warn "Skipping $name - I don't know what to do!\n";
-          delete $spec->{$name};
-          next;
-        }
-      }
-      # If they pass a hashref, wrap it in an arrayref.
-      elsif ( reftype($spec->{$name}) eq 'HASH' ) {
-        $spec->{$name} = [ $spec->{$name} ];
-      }
-      # I don't know what to do with it.
-      else {
-        warn "Skipping $name - I don't know what to do!\n";
-        delete $spec->{$name};
-        next;
-      }
+    my $normalized = DBIx::Class::Sims::Util->normalize_aoh($spec->{$name});
+    unless ($normalized) {
+      warn "Skipping $name - I don't know what to do!\n";
+      delete $spec->{$name};
+      next;
     }
+    $spec->{$name} = $normalized;
 
     foreach my $item (@{$spec->{$name}}) {
       $initial_spec->{$name}{$item} = 1;
@@ -537,6 +521,18 @@ up being, you can take a shortcut:
 That will create 3 of that thing, taking all the defaults and sim'ed options as
 exist.
 
+This will also work if you want 3 of a child via a has_many relationship. For
+example, you can do:
+
+  {
+      Artist => {
+          name => 'Someone Famous',
+          albums => 240,
+      },
+  }
+
+That will create 240 different albums for that artist, all with the defaults.
+
 =head3 Just one thing
 
 If you are creating one of a thing and setting some of the values, you can skip
@@ -555,6 +551,27 @@ the arrayref and pass the hashref directly.
   }
 
 And that will work exactly as expected.
+
+=head3 References
+
+Let's say you have a table that's a child of two other tables. You can specify
+that relationship as follows:
+
+  {
+      Parent1 => 1,
+      Parent2 => {
+          Child => {
+              parent1 => \"Parent1[0]",
+          },
+      },
+  }
+
+That's a reference to a string with the tablename as a pseudo-array, then the
+index into that array. This only works for rows that you are going to return
+back from the C<< load_sims() >> call.
+
+This also only works for belongs_to relationships. Since all parents are created
+before all children, the Sims cannot back-reference into children.
 
 =head2 Notes
 

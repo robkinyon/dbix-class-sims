@@ -1,4 +1,4 @@
-use 5.008_004;
+use 5.010_002;
 
 use strict;
 use warnings FATAL => 'all';

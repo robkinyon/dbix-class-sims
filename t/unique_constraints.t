@@ -45,8 +45,7 @@ BEGIN {
 
 use Test::DBIx::Class qw(:resultsets);
 
-{
-  note "Load an artist, then try and find that artist with a second load_sims by by same values";
+subtest "Load and retrieve a row by multi-col UK" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   {
@@ -98,10 +97,9 @@ use Test::DBIx::Class qw(:resultsets);
       }]
     });
   }
-}
+};
 
-{
-  note "Load an artist, then try and find that artist with a second load_sims with only first_name";
+subtest "Don't specify enough to find by multi-col UK" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   {
@@ -140,10 +138,9 @@ use Test::DBIx::Class qw(:resultsets);
     is $trap->stdout, '', "No STDOUT";
     like $trap->die, qr/UNIQUE constraint failed/, "Didn't specify enough in the request";
   }
-}
+};
 
-{
-  note "Load an artist, then try and find that artist with a second load_sims with PK";
+subtest "Load and retrieve a row by PK" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   {
@@ -183,6 +180,6 @@ use Test::DBIx::Class qw(:resultsets);
 
     cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
   }
-}
+};
 
 done_testing

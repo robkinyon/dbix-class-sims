@@ -38,7 +38,7 @@ BEGIN {
 
 use Test::DBIx::Class qw(:resultsets);
 
-{
+subtest "Use default values" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
@@ -57,6 +57,6 @@ use Test::DBIx::Class qw(:resultsets);
   ], "Artist columns are right";
   
   cmp_deeply( $rv, { Artist => [ methods(id => 1) ] }, 'Correct rows returned' );
-}
+};
 
 done_testing;

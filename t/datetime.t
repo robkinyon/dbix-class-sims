@@ -43,7 +43,7 @@ BEGIN {
 
 use Test::DBIx::Class qw(:resultsets);
 
-{
+subtest "Accept a DateTime object" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   my $now = DateTime->now;
@@ -69,9 +69,9 @@ use Test::DBIx::Class qw(:resultsets);
   ], "Artist columns are right";
 
   cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
-}
+};
 
-{
+subtest "Accept a stringified DateTime object" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   # Try a string instead of a DateTime object.
@@ -98,6 +98,6 @@ use Test::DBIx::Class qw(:resultsets);
   ], "Artist columns are right";
 
   cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
-}
+};
 
 done_testing;

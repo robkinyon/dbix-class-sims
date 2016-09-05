@@ -96,8 +96,7 @@ BEGIN {
 
 use Test::DBIx::Class qw(:resultsets);
 
-# Create a row with a parent which has a different child specified as well.
-{
+subtest "Specify child->parent->other_child" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   {
@@ -137,11 +136,9 @@ use Test::DBIx::Class qw(:resultsets);
   cmp_deeply( $rv, {
     Album => [ methods(id => 1) ],
   });
-}
+};
 
-# Create a row that uses an existing parent which would have had a different
-# child specified.
-{
+subtest "Create row using existing parent which would have had a different child" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   {
@@ -184,5 +181,6 @@ use Test::DBIx::Class qw(:resultsets);
     Artist => [ methods(id => 1) ],
     Album  => [ methods(id => 1) ],
   });
-}
+};
+
 done_testing;

@@ -10,6 +10,8 @@ use Hash::Merge qw( merge );
 use Scalar::Util qw( blessed reftype );
 use String::Random qw( random_regex );
 
+use DBIx::Class::Sims::Util ();
+
 ###### FROM HERE ######
 # These are utility methods to help navigate the rel_info hash.
 my $is_fk = sub { return exists $_[0]{attrs}{is_foreign_key_constraint} };
@@ -136,8 +138,23 @@ sub fix_fk_dependencies {
       elsif (!ref($proto)) {
         $cond = { $fkcol => $proto };
       }
+      # Use a referenced row
+      elsif (ref($proto) eq 'SCALAR') {
+        my ($table, $idx) = ($$proto =~ /(.+)\[(\d+)\]$/);
+        unless ($table && defined $idx) {
+          die "Unsure what to do about $name->$rel_name():" . np($proto);
+        }
+        unless (exists $self->{rows}{$table}) {
+          die "No rows in $table to reference\n";
+        }
+        unless (exists $self->{rows}{$table}[$idx]) {
+          die "Not enough ($idx) rows in $table to reference\n";
+        }
+
+        $cond = { $fkcol => $self->{rows}{$table}[$idx]->$fkcol };
+      }
       else {
-        die "Unsure what to do about $name->$rel_name():" . p($proto);
+        die "Unsure what to do about $name->$rel_name():" . np($proto);
       }
     }
 
@@ -154,7 +171,7 @@ sub fix_fk_dependencies {
 
     my $meta = delete $cond->{__META__} // {};
 
-    #warn "Looking for $name->$rel_name(".p($cond).")\n";
+    #warn "Looking for $name->$rel_name(".np($cond).")\n";
 
     my $parent;
     unless ($meta->{create}) {
@@ -276,10 +293,20 @@ sub fix_child_dependencies {
 
     my $fk_name = $short_source->($rel_info);
 
+    my @children;
+    if ($child_deps->{$rel_name}) {
+      my $n = DBIx::Class::Sims::Util->normalize_aoh($child_deps->{$rel_name});
+      unless ($n) {
+        die "Don't know what to do with $name->{$rel_name}\n\t".np($row);
+      }
+      @children = @{$n};
+    }
+    else {
+      @children = ( ({}) x $self->{reqs}{$name}{$rel_name} );
+    }
+
     # Need to ensure that $child_deps >= $self->{reqs}
 
-    my @children = @{$child_deps->{$rel_name} // []};
-    @children = ( ({}) x $self->{reqs}{$name}{$rel_name} ) unless @children;
     foreach my $child (@children) {
       $child->{$fkcol} = $row->get_column($col);
       $self->add_child($fk_name, $fkcol, $child, $name);
@@ -296,7 +323,7 @@ sub fix_columns {
     my $sim_spec;
     if ( exists $item->{$col_name} ) {
       if ((reftype($item->{$col_name}) // '') eq 'REF' &&
-        reftype(${$item->{$col_name}}) eq 'HASH' ) {
+        (reftype(${$item->{$col_name}}) // '') eq 'HASH' ) {
         $sim_spec = ${ delete $item->{$col_name} };
       }
       # Pass the value along to DBIC - we don't know how to deal with it.
@@ -355,7 +382,7 @@ sub create_item {
 
   my ($name, $item) = @_;
 
-  #warn "Starting with $name (".p($item).")\n";
+  #warn "Starting with $name (".np($item).")\n";
   $self->fix_columns($name, $item);
 
   my $source = $self->schema->source($name);
@@ -363,13 +390,13 @@ sub create_item {
 
   my $child_deps = $self->fix_fk_dependencies($name, $item);
 
-  #warn "Creating $name (".p($item).")\n";
+  #warn "Creating $name (".np($item).")\n";
   my $row = $self->find_by_unique_constraints($name, $item);
   unless ($row) {
     $row = eval {
       $self->schema->resultset($name)->create($item);
     }; if ($@) {
-      warn "ERROR Creating $name (".p($item).")\n";
+      warn "ERROR Creating $name (".np($item).")\n";
       die $@;
     }
     # This tracks everything that was created, not just what was requested.
@@ -387,14 +414,17 @@ sub run {
   my $self = shift;
 
   return $self->schema->txn_do(sub {
-    my %rows;
+    $self->{rows} = {};
     while (1) {
       foreach my $name ( @{$self->{toposort}} ) {
         next unless $self->{spec}{$name};
 
         while ( my $item = shift @{$self->{spec}{$name}} ) {
-          my $x = $self->create_item($name, $item);
-          push @{$rows{$name} //= []}, $x if $self->{initial_spec}{$name}{$item};
+          my $row = $self->create_item($name, $item);
+
+          if ($self->{initial_spec}{$name}{$item}) {
+            push @{$self->{rows}{$name} //= []}, $row;
+          }
         }
 
         $self->delete_pending($name);
@@ -404,7 +434,7 @@ sub run {
       $self->clear_pending();
     }
 
-    return \%rows;
+    return $self->{rows};
   });
 }
 
