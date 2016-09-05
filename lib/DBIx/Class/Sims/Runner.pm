@@ -138,6 +138,21 @@ sub fix_fk_dependencies {
       elsif (!ref($proto)) {
         $cond = { $fkcol => $proto };
       }
+      # Use a referenced row
+      elsif (ref($proto) eq 'SCALAR') {
+        my ($table, $idx) = ($$proto =~ /(.+)\[(\d+)\]$/);
+        unless ($table && defined $idx) {
+          die "Unsure what to do about $name->$rel_name():" . np($proto);
+        }
+        unless (exists $self->{rows}{$table}) {
+          die "No rows in $table to reference\n";
+        }
+        unless (exists $self->{rows}{$table}[$idx]) {
+          die "Not enough ($idx) rows in $table to reference\n";
+        }
+
+        $cond = { $fkcol => $self->{rows}{$table}[$idx]->$fkcol };
+      }
       else {
         die "Unsure what to do about $name->$rel_name():" . np($proto);
       }
@@ -308,7 +323,7 @@ sub fix_columns {
     my $sim_spec;
     if ( exists $item->{$col_name} ) {
       if ((reftype($item->{$col_name}) // '') eq 'REF' &&
-        reftype(${$item->{$col_name}}) eq 'HASH' ) {
+        (reftype(${$item->{$col_name}}) // '') eq 'HASH' ) {
         $sim_spec = ${ delete $item->{$col_name} };
       }
       # Pass the value along to DBIC - we don't know how to deal with it.
@@ -399,14 +414,17 @@ sub run {
   my $self = shift;
 
   return $self->schema->txn_do(sub {
-    my %rows;
+    $self->{rows} = {};
     while (1) {
       foreach my $name ( @{$self->{toposort}} ) {
         next unless $self->{spec}{$name};
 
         while ( my $item = shift @{$self->{spec}{$name}} ) {
-          my $x = $self->create_item($name, $item);
-          push @{$rows{$name} //= []}, $x if $self->{initial_spec}{$name}{$item};
+          my $row = $self->create_item($name, $item);
+
+          if ($self->{initial_spec}{$name}{$item}) {
+            push @{$self->{rows}{$name} //= []}, $row;
+          }
         }
 
         $self->delete_pending($name);
@@ -416,7 +434,7 @@ sub run {
       $self->clear_pending();
     }
 
-    return \%rows;
+    return $self->{rows};
   });
 }
 

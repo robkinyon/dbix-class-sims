@@ -895,4 +895,76 @@ subtest "Accept a hashref for children" => sub {
   });
 };
 
+subtest "Connect to the parent by reference" => sub {
+  Schema->deploy({ add_drop_table => 1 });
+
+  {
+    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
+    is $count, 0, "There are no tables loaded at first";
+  }
+
+  my $rv;
+  lives_ok {
+    $rv = Schema->load_sims(
+      {
+        Artist => 1,
+        Album  => {
+          name => 'foo',
+          artist => \"Artist[0]",
+        },
+      },
+    );
+  } "load_sims runs to completion";
+
+  is_fields [ 'id', 'name' ], Artist, [
+    [ 1, 'abcd' ],
+  ], "Artist fields are right";
+  is_fields [ 'id', 'name', 'artist_id' ], Album, [
+    [ 1, 'foo', 1 ],
+  ], "Album fields are right";
+
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 1) ],
+    Album  => [ methods(id => 1) ],
+  });
+};
+
+subtest "Connect to the right parent by reference" => sub {
+  Schema->deploy({ add_drop_table => 1 });
+
+  {
+    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
+    is $count, 0, "There are no tables loaded at first";
+  }
+
+  my $rv;
+  lives_ok {
+    $rv = Schema->load_sims(
+      {
+        Artist => [
+          { name => 'first' },
+          { name => 'second' },
+          { name => 'third' },
+        ],
+        Album  => [
+          { artist => \"Artist[1]" },
+          { artist => \"Artist[2]" },
+          { artist => \"Artist[0]" },
+        ],
+      },
+    );
+  } "load_sims runs to completion";
+
+  is_fields [ 'id', 'name' ], Artist, [
+    [ 1, 'first' ],
+    [ 2, 'second' ],
+    [ 3, 'third' ],
+  ], "Artist fields are right";
+  is_fields [ 'id', 'name', 'artist_id' ], Album, [
+    [ 1, 'efgh', 2 ],
+    [ 2, 'efgh', 3 ],
+    [ 3, 'efgh', 1 ],
+  ], "Album fields are right";
+};
+
 done_testing;

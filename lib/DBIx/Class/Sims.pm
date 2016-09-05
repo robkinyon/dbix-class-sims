@@ -521,6 +521,18 @@ up being, you can take a shortcut:
 That will create 3 of that thing, taking all the defaults and sim'ed options as
 exist.
 
+This will also work if you want 3 of a child via a has_many relationship. For
+example, you can do:
+
+  {
+      Artist => {
+          name => 'Someone Famous',
+          albums => 240,
+      },
+  }
+
+That will create 240 different albums for that artist, all with the defaults.
+
 =head3 Just one thing
 
 If you are creating one of a thing and setting some of the values, you can skip
@@ -539,6 +551,27 @@ the arrayref and pass the hashref directly.
   }
 
 And that will work exactly as expected.
+
+=head3 References
+
+Let's say you have a table that's a child of two other tables. You can specify
+that relationship as follows:
+
+  {
+      Parent1 => 1,
+      Parent2 => {
+          Child => {
+              parent1 => \"Parent1[0]",
+          },
+      },
+  }
+
+That's a reference to a string with the tablename as a pseudo-array, then the
+index into that array. This only works for rows that you are going to return
+back from the C<< load_sims() >> call.
+
+This also only works for belongs_to relationships. Since all parents are created
+before all children, the Sims cannot back-reference into children.
 
 =head2 Notes
 
