@@ -56,6 +56,7 @@ use Scalar::Util qw( blessed reftype );
 our $VERSION = '0.300204';
 
 use DBIx::Class::Sims::Runner;
+use DBIx::Class::Sims::Util;
 
 sub add_sims {
   my $class = shift;
@@ -103,30 +104,13 @@ sub load_sims {
   # Create a lookup of the items passed in so we can return them back.
   my $initial_spec = {};
   foreach my $name (keys %$spec) {
-    # Allow a number to be passed in
-    if ( (reftype($spec->{$name})//'') ne 'ARRAY' ) {
-      if ( !ref($spec->{$name}) ) {
-        if ( $spec->{$name} =~ /^\d+$/ ) {
-          $spec->{$name} = [ map { {} } 1 .. $spec->{$name} ];
-        }
-        # I don't know what to do with it.
-        else {
-          warn "Skipping $name - I don't know what to do!\n";
-          delete $spec->{$name};
-          next;
-        }
-      }
-      # If they pass a hashref, wrap it in an arrayref.
-      elsif ( reftype($spec->{$name}) eq 'HASH' ) {
-        $spec->{$name} = [ $spec->{$name} ];
-      }
-      # I don't know what to do with it.
-      else {
-        warn "Skipping $name - I don't know what to do!\n";
-        delete $spec->{$name};
-        next;
-      }
+    my $normalized = DBIx::Class::Sims::Util->normalize_aoh($spec->{$name});
+    unless ($normalized) {
+      warn "Skipping $name - I don't know what to do!\n";
+      delete $spec->{$name};
+      next;
     }
+    $spec->{$name} = $normalized;
 
     foreach my $item (@{$spec->{$name}}) {
       $initial_spec->{$name}{$item} = 1;

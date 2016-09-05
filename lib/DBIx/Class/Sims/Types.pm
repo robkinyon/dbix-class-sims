@@ -1,7 +1,9 @@
+# vim: set sw=2 ft=perl:
 package DBIx::Class::Sims::Types;
 
-use strict;
-use warnings FATAL => 'all';
+use 5.010_002;
+
+use strictures 2;
 
 use DBIx::Class::Sims;
 DBIx::Class::Sims->set_sim_types({

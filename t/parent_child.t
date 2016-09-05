@@ -792,4 +792,107 @@ subtest "Only create one child even if specified two ways" => sub {
   });
 };
 
+subtest "Accept a number of children (1)" => sub {
+  Schema->deploy({ add_drop_table => 1 });
+
+  {
+    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
+    is $count, 0, "There are no tables loaded at first";
+  }
+
+  my $rv;
+  lives_ok {
+    $rv = Schema->load_sims(
+      {
+        Artist => [
+          {
+            name => 'foo',
+            albums => 1,
+          },
+        ],
+      },
+    );
+  } "load_sims runs to completion";
+
+  is_fields [ 'id', 'name' ], Artist, [
+    [ 1, 'foo' ],
+  ], "Artist fields are right";
+  is_fields [ 'id', 'name', 'artist_id' ], Album, [
+    [ 1, 'efgh', 1 ],
+  ], "Album fields are right";
+
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 1) ],
+  });
+};
+
+subtest "Accept a number of children (2)" => sub {
+  Schema->deploy({ add_drop_table => 1 });
+
+  {
+    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
+    is $count, 0, "There are no tables loaded at first";
+  }
+
+  my $rv;
+  lives_ok {
+    $rv = Schema->load_sims(
+      {
+        Artist => [
+          {
+            name => 'foo',
+            albums => 2,
+          },
+        ],
+      },
+    );
+  } "load_sims runs to completion";
+
+  is_fields [ 'id', 'name' ], Artist, [
+    [ 1, 'foo' ],
+  ], "Artist fields are right";
+  is_fields [ 'id', 'name', 'artist_id' ], Album, [
+    [ 1, 'efgh', 1 ],
+    [ 2, 'efgh', 1 ],
+  ], "Album fields are right";
+
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 1) ],
+  });
+};
+
+subtest "Accept a hashref for children" => sub {
+  Schema->deploy({ add_drop_table => 1 });
+
+  {
+    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
+    is $count, 0, "There are no tables loaded at first";
+  }
+
+  my $rv;
+  lives_ok {
+    $rv = Schema->load_sims(
+      {
+        Artist => [
+          {
+            name => 'foo',
+            albums => { name => 'foobar' },
+          },
+        ],
+      },
+    );
+  } "load_sims runs to completion";
+
+  is_fields [ 'id', 'name' ], Artist, [
+    [ 1, 'foo' ],
+  ], "Artist fields are right";
+  is_fields [ 'id', 'name', 'artist_id' ], Album, [
+    [ 1, 'foobar', 1 ],
+  ], "Album fields are right";
+
+  cmp_deeply( $rv, {
+    Artist => [ methods(id => 1) ],
+  });
+};
+
 done_testing;

@@ -33,7 +33,7 @@ BEGIN {
 
 use Test::DBIx::Class qw(:resultsets);
 
-subtest "Can use a default value for a char PK" => {
+subtest "Can use a default value for a char PK" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   is Country->count, 0, "There are no countries loaded at first";

@@ -10,6 +10,8 @@ use Hash::Merge qw( merge );
 use Scalar::Util qw( blessed reftype );
 use String::Random qw( random_regex );
 
+use DBIx::Class::Sims::Util ();
+
 ###### FROM HERE ######
 # These are utility methods to help navigate the rel_info hash.
 my $is_fk = sub { return exists $_[0]{attrs}{is_foreign_key_constraint} };
@@ -276,10 +278,20 @@ sub fix_child_dependencies {
 
     my $fk_name = $short_source->($rel_info);
 
+    my @children;
+    if ($child_deps->{$rel_name}) {
+      my $n = DBIx::Class::Sims::Util->normalize_aoh($child_deps->{$rel_name});
+      unless ($n) {
+        die "Don't know what to do with $name->{$rel_name}\n\t".np($row);
+      }
+      @children = @{$n};
+    }
+    else {
+      @children = ( ({}) x $self->{reqs}{$name}{$rel_name} );
+    }
+
     # Need to ensure that $child_deps >= $self->{reqs}
 
-    my @children = @{$child_deps->{$rel_name} // []};
-    @children = ( ({}) x $self->{reqs}{$name}{$rel_name} ) unless @children;
     foreach my $child (@children) {
       $child->{$fkcol} = $row->get_column($col);
       $self->add_child($fk_name, $fkcol, $child, $name);
