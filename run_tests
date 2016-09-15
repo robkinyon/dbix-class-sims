@@ -1,12 +1,6 @@
 #!/bin/bash
 
-if [[ -z $1 ]]; then
-  TESTFILES="t"
-else
-  TESTFILES="$@"
-fi
-
 docker run --rm \
   -v $(pwd):/app \
-  sims \
-  $TESTFILES
+  sims_loader \
+  "$@"

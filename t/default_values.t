@@ -22,7 +22,6 @@ BEGIN {
         data_type => 'varchar',
         size => 128,
         is_nullable => 0,
-        default_value => 'George',
       },
     );
     __PACKAGE__->set_primary_key('id');
@@ -38,6 +37,28 @@ BEGIN {
 
 use Test::DBIx::Class qw(:resultsets);
 
+subtest "Use default values" => sub {
+  Schema->deploy({ add_drop_table => 1 });
+
+  is Artist->count, 0, "There are no artists loaded at first";
+  my $rv;
+  lives_ok {
+    $rv = Schema->load_sims(
+      {
+        Artist => 1,
+      },
+    );
+  } "Everything loads ok";
+
+  is Artist->count, 1, "There are now one artist loaded after load_sims is called";
+  my $row = Artist->first;
+  is $row->id, 1, "Artist ID is correct";
+  like $row->name, /.+/, "Artist name is populated";
+  
+  cmp_deeply( $rv, { Artist => [ methods(id => 1) ] }, 'Correct rows returned' );
+};
+
+Schema->source('Artist')->column_info('name')->{default_value} = 'george';
 subtest "Use default values" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
