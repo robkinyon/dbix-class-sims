@@ -1,5 +1,5 @@
 # vi:sw=2
-use strictures '2';
+use strictures 2;
 
 use Test::More;
 
@@ -70,13 +70,10 @@ use t::common qw(sims_test);
 
 sims_test("Connect parent/child by id" => {
   spec => {
-    Artist => { id => 1, name => 'foo' },
-    Album => { name => 'bar', artist_id => 1 },
-  },
-  expect => {
     Artist => [ { id => 1, name => 'foo' } ],
-    Album  => [ { id => 1, name => 'bar', artist_id => 1 } ],
+    Album => [ { name => 'bar', artist_id => 1 } ],
   },
+  expect => sub { shift->{spec} },
 });
 
 sims_test("Connect parent/child by lookup" => {
@@ -113,11 +110,7 @@ sims_test("Connect parent/child by object in relationship" => {
       { id => 1, name => 'bar1', artist_id => 3 },
     ],
   },
-  rv => {
-    Album  => [
-      { id => 1, name => 'bar1', artist_id => 3 },
-    ],
-  },
+  rv => sub { { Album => shift->{expect}{Album} } },
 });
 
 sims_test("Autogenerate a parent with a name" => {
@@ -137,12 +130,7 @@ sims_test("Autogenerate a parent with a name" => {
       { id => 2, name => 'bar2', artist_id => 2 },
     ],
   },
-  rv => {
-    Album  => [
-      { id => 1, name => 'bar1', artist_id => 1 },
-      { id => 2, name => 'bar2', artist_id => 2 },
-    ],
-  },
+  rv => sub { { Album => shift->{expect}{Album} } },
   addl => {
     created =>  {
       Artist => 2,

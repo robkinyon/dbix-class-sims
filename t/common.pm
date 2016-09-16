@@ -2,8 +2,7 @@
 package # Hide from PAUSE
   t::common;
 
-use strict;
-use warnings FATAL => 'all';
+use strictures 2;
 
 use base 'Exporter';
 our @EXPORT_OK = qw(
@@ -47,12 +46,20 @@ sub sims_test ($$) {
         } "load_sims runs to completion";
       }
 
+      if (ref($opts->{expect}) eq 'CODE') {
+        $opts->{expect} = $opts->{expect}->($opts);
+      }
+
       while (my ($name, $expect) = each %{$opts->{expect}}) {
         cmp_deeply(
           [ ResultSet($name)->all ],
           [ map { methods(%$_) } @$expect ],
           "Rows in database for $name are expected",
         );
+      }
+
+      if (ref($opts->{rv}//'') eq 'CODE') {
+        $opts->{rv} = $opts->{rv}->($opts);
       }
 
       my $expected_rv = {};
