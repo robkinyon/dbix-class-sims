@@ -42,32 +42,6 @@ DISTRIBUTIONS
       Test::More 0
       parent 0
       perl 5.008001
-  CPAN-Meta-2.150010
-    pathname: D/DA/DAGOLDEN/CPAN-Meta-2.150010.tar.gz
-    provides:
-      CPAN::Meta 2.150010
-      CPAN::Meta::Converter 2.150010
-      CPAN::Meta::Feature 2.150010
-      CPAN::Meta::History 2.150010
-      CPAN::Meta::Merge 2.150010
-      CPAN::Meta::Prereqs 2.150010
-      CPAN::Meta::Spec 2.150010
-      CPAN::Meta::Validator 2.150010
-      Parse::CPAN::Meta 2.150010
-    requirements:
-      CPAN::Meta::Requirements 2.121
-      CPAN::Meta::YAML 0.011
-      Carp 0
-      Encode 0
-      Exporter 0
-      ExtUtils::MakeMaker 6.17
-      File::Spec 0.80
-      JSON::PP 2.27300
-      Scalar::Util 0
-      perl 5.008001
-      strict 0
-      version 0.88
-      warnings 0
   Capture-Tiny-0.44
     pathname: D/DA/DAGOLDEN/Capture-Tiny-0.44.tar.gz
     provides:
@@ -883,6 +857,7 @@ DISTRIBUTIONS
       DateTime 0.1
       DateTime::Format::Builder 0.6
       ExtUtils::MakeMaker 0
+      perl 5.003
   DateTime-Format-Strptime-1.68
     pathname: D/DR/DROLSKY/DateTime-Format-Strptime-1.68.tar.gz
     provides:
@@ -1332,6 +1307,63 @@ DISTRIBUTIONS
       Scalar::Util 0
       Test::Most 0
       Time::Zone 0
+  Devel-Cover-1.23
+    pathname: P/PJ/PJCJ/Devel-Cover-1.23.tar.gz
+    provides:
+      Devel::Cover 1.23
+      Devel::Cover::Annotation::Git 1.23
+      Devel::Cover::Annotation::Random 1.23
+      Devel::Cover::Annotation::Svk 1.23
+      Devel::Cover::Branch 1.23
+      Devel::Cover::Collection 1.23
+      Devel::Cover::Collection::Template::Provider 1.23
+      Devel::Cover::Condition 1.23
+      Devel::Cover::Condition_and_2 1.23
+      Devel::Cover::Condition_and_3 1.23
+      Devel::Cover::Condition_or_2 1.23
+      Devel::Cover::Condition_or_3 1.23
+      Devel::Cover::Condition_xor_4 1.23
+      Devel::Cover::Criterion 1.23
+      Devel::Cover::DB 1.23
+      Devel::Cover::DB::Criterion 1.23
+      Devel::Cover::DB::Digests 1.23
+      Devel::Cover::DB::File 1.23
+      Devel::Cover::DB::IO 1.23
+      Devel::Cover::DB::IO::JSON 1.23
+      Devel::Cover::DB::IO::Sereal 1.23
+      Devel::Cover::DB::IO::Storable 1.23
+      Devel::Cover::DB::Run 1.23
+      Devel::Cover::DB::Structure 1.23
+      Devel::Cover::Html_Common 1.23
+      Devel::Cover::Op 1.23
+      Devel::Cover::Pod 1.23
+      Devel::Cover::Report::Compilation 1.23
+      Devel::Cover::Report::Html 1.23
+      Devel::Cover::Report::Html_basic 1.23
+      Devel::Cover::Report::Html_basic::Template::Provider 1.23
+      Devel::Cover::Report::Html_minimal 1.23
+      Devel::Cover::Report::Html_subtle 1.23
+      Devel::Cover::Report::Html_subtle::Template::Provider 1.23
+      Devel::Cover::Report::Json 1.23
+      Devel::Cover::Report::Sort 1.23
+      Devel::Cover::Report::Text 1.23
+      Devel::Cover::Report::Text2 1.23
+      Devel::Cover::Report::Vim 1.23
+      Devel::Cover::Report::Vim::Template::Provider 1.23
+      Devel::Cover::Statement 1.23
+      Devel::Cover::Subroutine 1.23
+      Devel::Cover::Test 1.23
+      Devel::Cover::Time 1.23
+      Devel::Cover::Truth_Table 1.23
+      Devel::Cover::Truth_Table::Row 1.23
+      Devel::Cover::Util 1.23
+      Devel::Cover::Web 1.23
+    requirements:
+      Digest::MD5 0
+      ExtUtils::MakeMaker 0
+      HTML::Entities 3.69
+      Storable 0
+      Test::More 0
   Devel-GlobalDestruction-0.13
     pathname: H/HA/HAARG/Devel-GlobalDestruction-0.13.tar.gz
     provides:
@@ -1561,6 +1593,27 @@ DISTRIBUTIONS
       Storable 2.05
       Test::More 0
       perl 5.006
+  HTML-Parser-3.72
+    pathname: G/GA/GAAS/HTML-Parser-3.72.tar.gz
+    provides:
+      HTML::Entities 3.69
+      HTML::Filter 3.72
+      HTML::HeadParser 3.71
+      HTML::LinkExtor 3.69
+      HTML::Parser 3.72
+      HTML::PullParser 3.57
+      HTML::TokeParser 3.69
+    requirements:
+      ExtUtils::MakeMaker 0
+      HTML::Tagset 3
+      XSLoader 0
+      perl 5.008
+  HTML-Tagset-3.20
+    pathname: P/PE/PETDANCE/HTML-Tagset-3.20.tar.gz
+    provides:
+      HTML::Tagset 3.20
+    requirements:
+      ExtUtils::MakeMaker 0
   Hash-Merge-0.200
     pathname: R/RE/REHSACK/Hash-Merge-0.200.tar.gz
     provides:
@@ -1585,15 +1638,6 @@ DISTRIBUTIONS
       JSON 2.90
       JSON::Backend::PP 2.90
       JSON::Boolean 2.90
-    requirements:
-      ExtUtils::MakeMaker 0
-      Test::More 0
-  JSON-PP-2.27400
-    pathname: M/MA/MAKAMAKA/JSON-PP-2.27400.tar.gz
-    provides:
-      JSON::PP 2.27400
-      JSON::PP::Boolean 2.27400
-      JSON::PP::IncrParser 2.27400
     requirements:
       ExtUtils::MakeMaker 0
       Test::More 0
@@ -2206,7 +2250,7 @@ DISTRIBUTIONS
       Moose::Meta::Attribute::Custom::Trait::ENV 0.02
       MooseX::Attribute::ENV 0.02
     requirements:
-      ExtUtils::MakeMaker 6.98
+      ExtUtils::MakeMaker 7.0401
       Moose 0.48
       Test::More 0
       perl 5.008006
@@ -2777,60 +2821,6 @@ DISTRIBUTIONS
       perl 5.006001
       strict 0
       warnings 0
-  Test-Harness-3.36
-    pathname: L/LE/LEONT/Test-Harness-3.36.tar.gz
-    provides:
-      App::Prove 3.36
-      App::Prove::State 3.36
-      App::Prove::State::Result 3.36
-      App::Prove::State::Result::Test 3.36
-      Harness::Hook undef
-      TAP::Base 3.36
-      TAP::Formatter::Base 3.36
-      TAP::Formatter::Color 3.36
-      TAP::Formatter::Console 3.36
-      TAP::Formatter::Console::ParallelSession 3.36
-      TAP::Formatter::Console::Session 3.36
-      TAP::Formatter::File 3.36
-      TAP::Formatter::File::Session 3.36
-      TAP::Formatter::Session 3.36
-      TAP::Harness 3.36
-      TAP::Harness::Env 3.36
-      TAP::Object 3.36
-      TAP::Parser 3.36
-      TAP::Parser::Aggregator 3.36
-      TAP::Parser::Grammar 3.36
-      TAP::Parser::Iterator 3.36
-      TAP::Parser::Iterator::Array 3.36
-      TAP::Parser::Iterator::Process 3.36
-      TAP::Parser::Iterator::Stream 3.36
-      TAP::Parser::IteratorFactory 3.36
-      TAP::Parser::Multiplexer 3.36
-      TAP::Parser::Result 3.36
-      TAP::Parser::Result::Bailout 3.36
-      TAP::Parser::Result::Comment 3.36
-      TAP::Parser::Result::Plan 3.36
-      TAP::Parser::Result::Pragma 3.36
-      TAP::Parser::Result::Test 3.36
-      TAP::Parser::Result::Unknown 3.36
-      TAP::Parser::Result::Version 3.36
-      TAP::Parser::Result::YAML 3.36
-      TAP::Parser::ResultFactory 3.36
-      TAP::Parser::Scheduler 3.36
-      TAP::Parser::Scheduler::Job 3.36
-      TAP::Parser::Scheduler::Spinner 3.36
-      TAP::Parser::Source 3.36
-      TAP::Parser::SourceHandler 3.36
-      TAP::Parser::SourceHandler::Executable 3.36
-      TAP::Parser::SourceHandler::File 3.36
-      TAP::Parser::SourceHandler::Handle 3.36
-      TAP::Parser::SourceHandler::Perl 3.36
-      TAP::Parser::SourceHandler::RawTAP 3.36
-      TAP::Parser::YAMLish::Reader 3.36
-      TAP::Parser::YAMLish::Writer 3.36
-      Test::Harness 3.36
-    requirements:
-      ExtUtils::MakeMaker 0
   Test-MockTime-0.15
     pathname: D/DD/DDICK/Test-MockTime-0.15.tar.gz
     provides:

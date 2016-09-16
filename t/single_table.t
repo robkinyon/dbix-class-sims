@@ -52,65 +52,6 @@ else {
   $null_constraint_failure = 'NOT NULL constraint failed';
 }
 
-subtest "Missing required column" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  is Artist->count, 0, "There are no artists loaded at first";
-  trap {
-    Schema->load_sims(
-      {
-        Artist => [
-          {},
-        ],
-      },
-    );
-  };
-
-  is $trap->leaveby, 'die', "load_sims fails";
-  is $trap->stdout, '', "No STDOUT";
-  like $trap->die, qr/$null_constraint_failure/, "Missing required column";
-
-  is Artist->count, 0, "There are still no artists loaded after load_sims is called with a failure";
-};
-
-# If any row fails, the whole things fails.
-subtest "Missing required column on some row" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  is Artist->count, 0, "There are no artists loaded at first";
-  trap {
-    Schema->load_sims(
-      {
-        Artist => [
-          { name => 'foo' },
-          {},
-        ],
-      },
-    );
-  };
-  is $trap->leaveby, 'die', "load_sims fails";
-  is $trap->stdout, '', "No STDOUT";
-  like $trap->die, qr/$null_constraint_failure/, "Missing required column";
-
-  is Artist->count, 0, "There are still no artists loaded after load_sims is called with a failure";
-
-  trap {
-    Schema->load_sims(
-      {
-        Artist => [
-          {},
-          { name => 'foo' },
-        ],
-      },
-    );
-  };
-  is $trap->leaveby, 'die', "load_sims fails";
-  is $trap->stdout, '', "No STDOUT";
-  like $trap->die, qr/$null_constraint_failure/, "Missing required column";
-
-  is Artist->count, 0, "There are still no artists loaded after load_sims is called with a failure";
-};
-
 subtest "A single row succeeds" => sub {
   Schema->deploy({ add_drop_table => 1 });
 

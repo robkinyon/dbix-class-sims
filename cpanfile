@@ -21,4 +21,5 @@ on test => sub {
   requires 'Test::Warn'        => '0.01';
   requires 'Test::Trap'        => '0.3.2';
   requires 'DBD::SQLite'       => '1.40';
+  requires 'Devel::Cover';
 };

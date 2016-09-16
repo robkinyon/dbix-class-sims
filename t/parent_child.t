@@ -72,31 +72,6 @@ BEGIN {
 
 use Test::DBIx::Class qw(:resultsets);
 
-subtest "Cannot create child when parent fails" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
-
-  trap {
-    Schema->load_sims(
-      {
-        Album => [
-          {},
-        ],
-      },
-    );
-  };
-  is $trap->leaveby, 'die', "load_sims fails";
-  is $trap->stdout, '', "No STDOUT";
-  like $trap->die,  qr/artists\.name/i, "load_sims dies with a failure";
-
-  my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-  is $count, 0, "There are no tables loaded after load_sims is called with a failure";
-};;
-
 subtest "Connect parent/child by id" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
@@ -130,7 +105,7 @@ subtest "Connect parent/child by id" => sub {
     Artist => [ methods(id => 1) ],
     Album => [ methods(id => 1) ],
   });
-};;
+};
 
 subtest "Connect parent/child by lookup" => sub {
   Schema->deploy({ add_drop_table => 1 });

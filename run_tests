@@ -1,6 +1,7 @@
 #!/bin/bash
 
+MSYS_NO_PATHCONV=1 \
 docker run --rm \
   -v $(pwd):/app \
-  sims_loader \
+  sims_test \
   "$@"

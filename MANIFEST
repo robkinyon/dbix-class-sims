@@ -48,4 +48,3 @@ t/types/us_ssntin.t
 t/types/us_state.t
 t/types/us_zipcode.t
 t/unique_constraints.t
-t/unrelated_tables.t

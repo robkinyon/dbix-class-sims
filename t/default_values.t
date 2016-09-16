@@ -37,7 +37,7 @@ BEGIN {
 
 use Test::DBIx::Class qw(:resultsets);
 
-subtest "Use default values" => sub {
+subtest "Generate a name without sim-spec" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
   is Artist->count, 0, "There are no artists loaded at first";
@@ -53,12 +53,12 @@ subtest "Use default values" => sub {
   is Artist->count, 1, "There are now one artist loaded after load_sims is called";
   my $row = Artist->first;
   is $row->id, 1, "Artist ID is correct";
-  like $row->name, /.+/, "Artist name is populated";
+  like $row->name, qr/.+/, "Artist name is populated";
   
   cmp_deeply( $rv, { Artist => [ methods(id => 1) ] }, 'Correct rows returned' );
 };
 
-Schema->source('Artist')->column_info('name')->{default_value} = 'george';
+Schema->source('Artist')->column_info('name')->{default_value} = 'George';
 subtest "Use default values" => sub {
   Schema->deploy({ add_drop_table => 1 });
 
