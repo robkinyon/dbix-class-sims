@@ -21,6 +21,7 @@ MANIFEST.SKIP
 META.yml
 MYMETA.json
 t/common.pm
+t/loader.pm
 t/column_defaults.t
 t/datetime.t
 t/default_values.t

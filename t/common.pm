@@ -6,13 +6,14 @@ use strictures 2;
 
 use base 'Exporter';
 our @EXPORT_OK = qw(
-  sims_test
+  sims_test Schema
 );
 
 use Test::More;
 use Test::Deep;
 use Test::Exception;
 use Test::Trap;
+use Test::Warn;
 
 use Test::DBIx::Class;
 
@@ -45,16 +46,23 @@ sub sims_test ($$) {
       else {
         my @args = ref($opts->{spec}//'') eq 'ARRAY'
           ? @{$opts->{spec}} : ($opts->{spec}//{});
-        lives_ok {
-          ($rv, $addl) = Schema->load_sims(@args)
-        } "load_sims runs to completion";
+        if ($opts->{warning}) {
+          warning_like {
+            ($rv, $addl) = Schema->load_sims(@args)
+          } $opts->{warning};
+        }
+        else {
+          lives_ok {
+            ($rv, $addl) = Schema->load_sims(@args)
+          } "load_sims runs to completion";
+        }
       }
 
-      if (ref($opts->{expect}) eq 'CODE') {
+      if (ref($opts->{expect}//'') eq 'CODE') {
         $opts->{expect} = $opts->{expect}->($opts);
       }
 
-      while (my ($name, $expect) = each %{$opts->{expect}}) {
+      while (my ($name, $expect) = each %{$opts->{expect} // {}}) {
         $expect = [ $expect ] unless ref($expect) eq 'ARRAY';
         cmp_bag(
           [ ResultSet($name)->all ],
@@ -68,7 +76,7 @@ sub sims_test ($$) {
       }
 
       my $expected_rv = {};
-      while (my ($n,$e) = each %{$opts->{rv} // $opts->{expect}}) {
+      while (my ($n,$e) = each %{$opts->{rv} // $opts->{expect} // {}}) {
         $e = [ $e ] unless ref($e) eq 'ARRAY';
         $expected_rv->{$n} = [ map { methods(%$_) } @$e ];
       }
