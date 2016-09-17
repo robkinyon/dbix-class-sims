@@ -14,7 +14,7 @@ use Test::Deep;
 use Test::Exception;
 use Test::Trap;
 
-use Test::DBIx::Class qw(:resultsets);
+use Test::DBIx::Class;
 
 sub sims_test ($$) {
   my ($name, $opts) = @_;
@@ -30,8 +30,10 @@ sub sims_test ($$) {
 
     my ($rv, $addl);
     if ($opts->{dies}) {
+      my @args = ref($opts->{spec}//'') eq 'ARRAY'
+        ? @{$opts->{spec}} : ($opts->{spec}//{});
       dies_ok {
-        ($rv, $addl) = Schema->load_sims($opts->{spec} // {})
+        ($rv, $addl) = Schema->load_sims(@args)
       } "load_sims does NOT run to completion";
     }
     else {
@@ -41,8 +43,10 @@ sub sims_test ($$) {
         } "load_sims runs to completion";
       }
       else {
+        my @args = ref($opts->{spec}//'') eq 'ARRAY'
+          ? @{$opts->{spec}} : ($opts->{spec}//{});
         lives_ok {
-          ($rv, $addl) = Schema->load_sims($opts->{spec} // {})
+          ($rv, $addl) = Schema->load_sims(@args)
         } "load_sims runs to completion";
       }
 
@@ -51,6 +55,7 @@ sub sims_test ($$) {
       }
 
       while (my ($name, $expect) = each %{$opts->{expect}}) {
+        $expect = [ $expect ] unless ref($expect) eq 'ARRAY';
         cmp_deeply(
           [ ResultSet($name)->all ],
           [ map { methods(%$_) } @$expect ],
@@ -64,6 +69,7 @@ sub sims_test ($$) {
 
       my $expected_rv = {};
       while (my ($n,$e) = each %{$opts->{rv} // $opts->{expect}}) {
+        $e = [ $e ] unless ref($e) eq 'ARRAY';
         $expected_rv->{$n} = [ map { methods(%$_) } @$e ];
       }
       cmp_deeply($rv, $expected_rv, "Return value is as expected");

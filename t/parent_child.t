@@ -2,81 +2,67 @@
 use strictures 2;
 
 use Test::More;
+use Test::Deep; # Needed for re() below
 
 BEGIN {
-  {
-    package MyApp::Schema::Result::Artist;
-    use base 'DBIx::Class::Core';
-    __PACKAGE__->table('artists');
-    __PACKAGE__->add_columns(
-      id => {
-        data_type => 'int',
-        is_nullable => 0,
-        is_auto_increment => 1,
+  use t::loader qw(build_schema);
+  build_schema([
+    Artist => {
+      table => 'artists',
+      columns => {
+        id => {
+          data_type => 'int',
+          is_nullable => 0,
+          is_auto_increment => 1,
+        },
+        name => {
+          data_type => 'varchar',
+          size => 128,
+          is_nullable => 0,
+        },
       },
-      name => {
-        data_type => 'varchar',
-        size => 128,
-        is_nullable => 0,
+      primary_keys => [ 'id' ],
+      has_many => {
+        albums => { Album => 'artist_id' },
       },
-    );
-    __PACKAGE__->set_primary_key('id');
-    __PACKAGE__->has_many(
-      albums => 'MyApp::Schema::Result::Album' => 'artist_id',
-    );
-  }
-
-  {
-    package MyApp::Schema::Result::Album;
-    use base 'DBIx::Class::Core';
-    __PACKAGE__->table('albums');
-    __PACKAGE__->add_columns(
-      id => {
-        data_type => 'int',
-        is_nullable => 0,
-        is_auto_increment => 1,
+    },
+    Album => {
+      table => 'albums',
+      columns => {
+        id => {
+          data_type => 'int',
+          is_nullable => 0,
+          is_auto_increment => 1,
+        },
+        artist_id => {
+          data_type => 'int',
+          is_nullable => 0,
+        },
+        name => {
+          data_type => 'varchar',
+          size => 128,
+          is_nullable => 0,
+        },
       },
-      artist_id => {
-        data_type => 'int',
-        is_nullable => 0,
+      primary_keys => [ 'id' ],
+      belongs_to => {
+        artist => { Artist => 'artist_id' },
       },
-      name => {
-        data_type => 'varchar',
-        size => 128,
-        is_nullable => 0,
-      },
-      other_name => {
-        data_type => 'varchar',
-        size => 128,
-        is_nullable => 1,
-      },
-    );
-    __PACKAGE__->set_primary_key('id');
-    __PACKAGE__->belongs_to(
-      artist => 'MyApp::Schema::Result::Artist' => 'artist_id',
-    );
-  }
-
-  {
-    package MyApp::Schema;
-    use base 'DBIx::Class::Schema';
-    __PACKAGE__->register_class(Artist => 'MyApp::Schema::Result::Artist');
-    __PACKAGE__->register_class(Album => 'MyApp::Schema::Result::Album');
-    __PACKAGE__->load_components('Sims');
-  }
-};
+    },
+  ]);
+}
 
 use t::common qw(sims_test);
 
-sims_test("Connect parent/child by id" => {
+sims_test "Connect parent/child by id" => {
   spec => {
     Artist => [ { id => 1, name => 'foo' } ],
     Album => [ { name => 'bar', artist_id => 1 } ],
   },
   expect => sub { shift->{spec} },
-});
+};
 
-sims_test("Connect parent/child by lookup" => {
+sims_test "Connect parent/child by lookup" => {
   spec => {
     Artist => [ map { { name => "foo$_" } } 1..4 ],
     Album => [
@@ -91,9 +77,9 @@ sims_test("Connect parent/child by lookup" => {
       { id => 2, name => 'bar2', artist_id => 1 },
     ],
   },
-});
+};
 
-sims_test("Connect parent/child by object in relationship" => {
+sims_test "Connect parent/child by object in relationship" => {
   load_sims => sub {
     my ($schema) = @_;
     my $rv = $schema->load_sims({
@@ -111,9 +97,9 @@ sims_test("Connect parent/child by object in relationship" => {
     ],
   },
   rv => sub { { Album => shift->{expect}{Album} } },
-});
+};
 
-sims_test("Autogenerate a parent with a name" => {
+sims_test "Autogenerate a parent with a name" => {
   spec => {
     Album => [
       { name => 'bar1', 'artist.name' => 'foo3' },
@@ -137,316 +123,152 @@ sims_test("Autogenerate a parent with a name" => {
       Album => 2,
     },
   },
-});
+};
+
+sims_test "Connect to a random parent" => {
+  spec => {
+    Artist => { name => 'foo' },
+    Album => { name => 'bar' },
+  },
+  expect => {
+    Artist => [ { id => 1, name => 'foo' } ],
+    Album => [ { id => 1, name => 'bar', artist_id => 1 } ],
+  },
+};
+
+sims_test "Pick a random parent out of multiple choices" => {
+  spec => {
+    Artist => [
+      { name => 'foo' },
+      { name => 'foo2' },
+    ],
+    Album => [
+      { name => 'bar' },
+    ],
+  },
+  expect => {
+    Artist => [ { id => 1, name => 'foo' }, { id => 2, name => 'foo2' } ],
+    Album  => [ { id => 1, name => 'bar', artist_id => re('1|2') } ],
+  },
+};
+
+sims_test "Multiple rows connect to the same available parent" => {
+  spec => {
+    Artist => [
+      { name => 'foo' },
+    ],
+    Album => [
+      { name => 'bar' },
+      { name => 'baz' },
+    ],
+  },
+  expect => {
+    Artist => [ { id => 1, name => 'foo' } ],
+    Album => [
+      { id => 1, name => 'bar', artist_id => 1 },
+      { id => 2, name => 'baz', artist_id => 1 },
+    ],
+  },
+};
+
+sims_test "Auto-generate a child with a value" => {
+  spec => {
+    Artist => {
+      name => 'foo',
+      albums => [ { name => 'bar' } ],
+    },
+  },
+  expect => {
+    Artist => [ { id => 1, name => 'foo' } ],
+    Album => [ { id => 1, name => 'bar', artist_id => 1 } ],
+  },
+  rv => sub { { Artist => shift->{expect}{Artist} } },
+};
+
+sims_test "Auto-generate a parent as necessary" => {
+  spec => {
+    Album => {},
+  },
+  expect => {
+    Artist => { id => 1, name => re('.+') },
+    Album => { id => 1, name => re('.+'), artist_id => 1 },
+  },
+  rv => sub { { Album => shift->{expect}{Album} } },
+};
+
+sims_test "Force the creation of a parent" => {
+  spec => {
+    Artist => [
+      { name => 'foo' },
+      { name => 'foo2' },
+    ],
+    Album => [
+      { name => 'bar', artist => { __META__ => { create => 1 } } },
+    ],
+  },
+  expect => {
+    Artist => [
+      { id => 1, name => 'foo' },
+      { id => 2, name => 'foo2' },
+      { id => 3, name => re('.+') },
+    ],
+    Album => { id => 1, name => 'bar', artist_id => 3 },
+  },
+  rv => {
+    Artist => [
+      { id => 1, name => 'foo' },
+      { id => 2, name => 'foo2' },
+    ],
+    Album => [
+      { id => 1, name => 'bar', artist_id => 3 },
+    ],
+  },
+};
+
+sims_test "Use a constraint to force a child row" => {
+  spec => [
+    {
+      Artist => {},
+    },
+    {
+      constraints => {
+        Artist => { albums => 1 },
+      },
+    },
+  ],
+  expect => {
+    Artist => { id => 1, name => re('.+') },
+    Album => { id => 1, name => re('.+'), artist_id => 1 },
+  },
+  rv => sub { { Artist => shift->{expect}{Artist} } },
+};
+
+sims_test "Use a constraint to force a child row (multiple parents)" => {
+  spec => [
+    {
+      Artist => 2,
+    },
+    {
+      constraints => {
+        Artist => { albums => 1 },
+      },
+    }
+  ],
+  expect => {
+    Artist => [
+      { id => 1, name => re('.+') },
+      { id => 2, name => re('.+') },
+    ],
+    Album => [
+      { id => 1, name => re('.+'), artist_id => 1 },
+      { id => 2, name => re('.+'), artist_id => 2 },
+    ],
+  },
+  rv => sub { { Artist => shift->{expect}{Artist} } },
+};
 
 done_testing;
 __END__
-
-subtest "Connect to a random parent" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
-
-  my $rv;
-  lives_ok {
-    $rv = Schema->load_sims(
-      {
-        Artist => [
-          { name => 'foo' },
-        ],
-        Album => [
-          { name => 'bar' },
-        ],
-      },
-    );
-  } "load_sims runs to completion";
-
-  is_fields [ 'id', 'name' ], Artist, [
-    [ 1, 'foo' ],
-  ], "Artist fields are right";
-  is_fields [ 'id', 'name', 'artist_id' ], Album, [
-    [ 1, 'bar', 1 ],
-  ], "Album fields are right";
-
-  cmp_deeply( $rv, {
-    Artist => [ methods(id => 1) ],
-    Album => [ methods(id => 1) ],
-  });
-};
-
-subtest "Pick a random parent out of multiple choices" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
-
-  my $rv;
-  lives_ok {
-    $rv = Schema->load_sims(
-      {
-        Artist => [
-          { name => 'foo' },
-          { name => 'foo2' },
-        ],
-        Album => [
-          { name => 'bar' },
-        ],
-      },
-    );
-  } "load_sims runs to completion";
-
-  is_fields [ 'id', 'name' ], Artist, [
-    [ 1, 'foo' ],
-    [ 2, 'foo2' ],
-  ], "Artist fields are right";
-
-  # This should work, but doesn't. Opened RT#87799 against Test::DBIx::Class.
-  #use Test::Deep;
-  #is_fields [ 'id', 'name', 'artist_id' ], Album, [
-  #  [ 1, 'bar', re('1|2') ],
-  #], "Album fields are right";
-
-  my ($row) = Album->all;
-  is($row->id, 1, "Album id is right");
-  is($row->name, 'bar', "Album name is right");
-  like($row->artist_id, qr/^[12]$/, "Album artist_id is in the right range");
-
-  cmp_deeply( $rv, {
-    Artist => [ methods(id => 1), methods(id => 2) ],
-    Album => [ methods(id => 1) ],
-  });
-};
-
-subtest "Multiple rows connect to the same available parent" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
-
-  my $rv;
-  lives_ok {
-    $rv = Schema->load_sims(
-      {
-        Artist => [
-          { name => 'foo' },
-        ],
-        Album => [
-          { name => 'bar' },
-          { name => 'baz' },
-        ],
-      },
-    );
-  } "load_sims runs to completion";
-
-  is_fields [ 'id', 'name' ], Artist, [
-    [ 1, 'foo' ],
-  ], "Artist fields are right";
-  is_fields [ 'id', 'name', 'artist_id' ], Album, [
-    [ 1, 'bar', 1 ],
-    [ 2, 'baz', 1 ],
-  ], "Album fields are right";
-
-  cmp_deeply( $rv, {
-    Artist => [ methods(id => 1) ],
-    Album => [ methods(id => 1), methods(id => 2) ],
-  });
-};
-
-subtest "Auto-generate a child with a value" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
-
-  my $rv;
-  lives_ok {
-    $rv = Schema->load_sims(
-      {
-        Artist => [
-          {
-            name => 'foo',
-            'albums' => [
-              { name => 'bar' },
-            ],
-          },
-        ],
-      },
-    );
-  } "load_sims runs to completion";
-
-  is_fields [ 'id', 'name' ], Artist, [
-    [ 1, 'foo' ],
-  ], "Artist fields are right";
-  is_fields [ 'id', 'name', 'artist_id' ], Album, [
-    [ 1, 'bar', 1 ],
-  ], "Album fields are right";
-
-  cmp_deeply( $rv, {
-    Artist => [ methods(id => 1) ],
-  });
-};
-
-# Specify that the names should be auto-generated if necessary.
-DBIx::Class::Sims->add_sim( Schema, 'Artist', 'name', {
-  func => sub { return 'abcd' },
-});
-DBIx::Class::Sims->add_sim( Schema, 'Album', 'name', {
-  func => sub { return 'efgh' },
-});
-
-subtest "Auto-generate a parent as necessary" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
-
-  my $rv;
-  lives_ok {
-    $rv = Schema->load_sims(
-      {
-        Album => [
-          {},
-        ],
-      },
-    );
-  } "load_sims runs to completion";
-
-  is_fields [ 'id', 'name' ], Artist, [
-    [ 1, 'abcd' ],
-  ], "Artist fields are right";
-  is_fields [ 'id', 'name', 'artist_id' ], Album, [
-    [ 1, 'efgh', 1 ],
-  ], "Album fields are right";
-
-  cmp_deeply( $rv, {
-    Album => [ methods(id => 1) ],
-  });
-};
-
-subtest "Force the creation of a parent" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
-
-  my $rv;
-  lives_ok {
-    $rv = Schema->load_sims(
-      {
-        Artist => [
-          { name => 'foo' },
-          { name => 'foo2' },
-        ],
-        Album => [
-          { name => 'bar', artist => { __META__ => { create => 1 } } },
-        ],
-      },
-    );
-  } "load_sims runs to completion";
-
-  is_fields [ 'id', 'name' ], Artist, [
-    [ 1, 'foo' ],
-    [ 2, 'foo2' ],
-    [ 3, 'abcd' ],
-  ], "Artist fields are right";
-
-  # This should work, but doesn't. Opened RT#87799 against Test::DBIx::Class.
-  is_fields [ 'id', 'name', 'artist_id' ], Album, [
-    [ 1, 'bar', 3 ],
-  ], "Album fields are right";
-
-  cmp_deeply( $rv, {
-    Artist => [ methods(id => 1), methods(id => 2) ],
-    Album => [ methods(id => 1) ],
-  });
-};
-
-subtest "Use a constraint to force a child row" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
-
-  my $rv;
-  lives_ok {
-    $rv = Schema->load_sims(
-      {
-        Artist => [
-          {},
-        ],
-      },
-      {
-        constraints => {
-          Artist => { albums => 1 },
-        },
-      }
-    );
-  } "load_sims runs to completion";
-
-  is_fields [ 'id', 'name' ], Artist, [
-    [ 1, 'abcd' ],
-  ], "Artist fields are right";
-  is_fields [ 'id', 'name', 'artist_id' ], Album, [
-    [ 1, 'efgh', 1 ],
-  ], "Album fields are right";
-
-  cmp_deeply( $rv, {
-    Artist => [ methods(id => 1) ],
-  });
-};
-
-subtest "Use a constraint to force a child row (multiple parents)" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
-
-  my $rv;
-  lives_ok {
-    $rv = Schema->load_sims(
-      {
-        Artist => [
-          {}, {},
-        ],
-      },
-      {
-        constraints => {
-          Artist => { albums => 1 },
-        },
-      }
-    );
-  } "load_sims runs to completion";
-
-  is_fields [ 'id', 'name' ], Artist, [
-    [ 1, 'abcd' ],
-    [ 2, 'abcd' ],
-  ], "Artist fields are right";
-  is_fields [ 'id', 'name', 'artist_id' ], Album, [
-    [ 1, 'efgh', 1 ],
-    [ 2, 'efgh', 2 ],
-  ], "Album fields are right";
-
-  cmp_deeply( $rv, {
-    Artist => [ methods(id => 1), methods(id => 2) ],
-  });
-};
 
 subtest "Use a constraint to force a child row (parent specific ID)" => sub {
   Schema->deploy({ add_drop_table => 1 });
