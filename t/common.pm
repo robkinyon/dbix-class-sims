@@ -56,7 +56,7 @@ sub sims_test ($$) {
 
       while (my ($name, $expect) = each %{$opts->{expect}}) {
         $expect = [ $expect ] unless ref($expect) eq 'ARRAY';
-        cmp_deeply(
+        cmp_bag(
           [ ResultSet($name)->all ],
           [ map { methods(%$_) } @$expect ],
           "Rows in database for $name are expected",

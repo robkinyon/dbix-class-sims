@@ -267,409 +267,181 @@ sims_test "Use a constraint to force a child row (multiple parents)" => {
   rv => sub { { Artist => shift->{expect}{Artist} } },
 };
 
-done_testing;
-__END__
-
-subtest "Use a constraint to force a child row (parent specific ID)" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
-
-  my $rv;
-  lives_ok {
-    $rv = Schema->load_sims(
-      {
-        Artist => [
-          { id => 20 },
-        ],
+sims_test "Use a constraint to force a child row (parent specific ID)" => {
+  spec => [
+    {
+      Artist => { id => 20 },
+    },
+    {
+      constraints => {
+        Artist => { albums => 1 },
       },
-      {
-        constraints => {
-          Artist => { albums => 1 },
-        },
-      }
-    );
-  } "load_sims runs to completion";
-
-  is_fields [ 'id', 'name' ], Artist, [
-    [ 20, 'abcd' ],
-  ], "Artist fields are right";
-  is_fields [ 'id', 'name', 'artist_id' ], Album, [
-    [ 1, 'efgh', 20 ],
-  ], "Album fields are right";
-
-  cmp_deeply( $rv, {
-    Artist => [ methods(id => 20) ],
-  });
+    }
+  ],
+  expect => {
+    Artist => { id => 20, name => re('.+') },
+    Album => { id => 1, name => re('.+'), artist_id => 20 },
+  },
+  rv => sub { { Artist => shift->{expect}{Artist} } },
 };
 
-subtest "Specify a child row and bypass the constraint" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
-
-  my $rv;
-  lives_ok {
-    $rv = Schema->load_sims(
-      {
-        Artist => [
-          { albums => [ { name => 'ijkl' } ] },
-        ],
+sims_test "Specify a child row and bypass the constraint" => {
+  spec => [
+    {
+      Artist => { albums => [ { name => 'ijkl' } ] },
+    },
+    {
+      constraints => {
+        Artist => { albums => 1 },
       },
-      {
-        constraints => {
-          Artist => { albums => 1 },
-        },
-      }
-    );
-  } "load_sims runs to completion";
-
-  is_fields [ 'id', 'name' ], Artist, [
-    [ 1, 'abcd' ],
-  ], "Artist fields are right";
-  is_fields [ 'id', 'name', 'artist_id' ], Album, [
-    [ 1, 'ijkl', 1 ],
-  ], "Album fields are right";
-
-  cmp_deeply( $rv, {
-    Artist => [ methods(id => 1) ],
-  });
+    }
+  ],
+  expect => {
+    Artist => { id => 1, name => re('.+') },
+    Album => { id => 1, name => 'ijkl', artist_id => 1 },
+  },
+  rv => sub { { Artist => shift->{expect}{Artist} } },
 };
 
-subtest "Specify many child rows and bypass the constraint" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
-
-  my $rv;
-  lives_ok {
-    $rv = Schema->load_sims(
-      {
-        Artist => [
-          {
-            id => 10,
-            albums => [ { name => 'ijkl' }, { name => 'mnop' } ],
-          },
-        ],
+sims_test "Autogenerate multiple children via constraint" => {
+  spec => [
+    {
+      Artist => {},
+    },
+    {
+      constraints => {
+        Artist => { albums => 2 },
       },
-      {
-        constraints => {
-          Artist => { albums => 1 },
-        },
-      }
-    );
-  } "load_sims runs to completion";
-
-  is_fields [ 'id', 'name' ], Artist, [
-    [ 10, 'abcd' ],
-  ], "Artist fields are right";
-  is_fields [ 'id', 'name', 'artist_id' ], Album, [
-    [ 1, 'ijkl', 10 ],
-    [ 2, 'mnop', 10 ],
-  ], "Album fields are right";
-
-  cmp_deeply( $rv, {
-    Artist => [ methods(id => 10) ],
-  });
+    },
+  ],
+  expect => {
+    Artist => { id => 1, name => re('.+') },
+    Album => [
+      { id => 1, name => re('.+'), artist_id => 1 },
+      { id => 2, name => re('.+'), artist_id => 1 },
+    ],
+  },
+  rv => sub { { Artist => shift->{expect}{Artist} } },
 };
 
-subtest "Specify various parent IDs and connect properly" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
-
-  my $rv;
-  lives_ok {
-    $rv = Schema->load_sims(
+sims_test "Specify various parent IDs and connect properly" => {
+  spec => {
+    Artist => [
       {
-        Artist => [
-          {
-            id => 20,
-            albums => [ { name => 'i20' }, { name => 'j20' } ],
-          },
-          {
-            id => 10,
-            albums => [ { name => 'i10' }, { name => 'j10' } ],
-          },
-        ],
-      },
-    );
-  } "load_sims runs to completion";
-
-  is_fields [ 'id', 'name' ], Artist, [
-    [ 10, 'abcd' ],
-    [ 20, 'abcd' ],
-  ], "Artist fields are right";
-  # Are these IDs in any specific order?
-  is_fields [ 'id', 'name', 'artist_id' ], Album, [
-    [ 1, 'i20', 20 ],
-    [ 2, 'j20', 20 ],
-    [ 3, 'i10', 10 ],
-    [ 4, 'j10', 10 ],
-  ], "Album fields are right";
-
-  cmp_deeply( $rv, {
-    Artist => [ methods(id => 20), methods(id => 10) ],
-  });
-};
-
-subtest "Autogenerate multiple children via constraint" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
-
-  my $rv;
-  lives_ok {
-    $rv = Schema->load_sims(
-      {
-        Artist => [
-          {},
-        ],
+        id => 20, albums => [ { name => 'i20' }, { name => 'j20' } ],
       },
       {
-        constraints => {
-          Artist => { albums => 2 },
-        },
-      }
-    );
-  } "load_sims runs to completion";
-
-  is_fields [ 'id', 'name' ], Artist, [
-    [ 1, 'abcd' ],
-  ], "Artist fields are right";
-  is_fields [ 'id', 'name', 'artist_id' ], Album, [
-    [ 1, 'efgh', 1 ],
-    [ 2, 'efgh', 1 ],
-  ], "Album fields are right";
-
-  cmp_deeply( $rv, {
-    Artist => [ methods(id => 1) ],
-  });
-};
-
-subtest "Only create one child even if specified two ways" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
-
-  my $rv;
-  lives_ok {
-    $rv = Schema->load_sims(
-      {
-        Artist => [
-          { albums => [ { name => 'Bob' } ] },
-        ],
-        Album => [
-          { name => 'Bob' },
-        ],
-      }
-    );
-  } "load_sims runs to completion";
-
-  is_fields [ 'id', 'name' ], Artist, [
-    [ 1, 'abcd' ],
-  ], "Artist fields are right";
-  is_fields [ 'id', 'name', 'artist_id' ], Album, [
-    [ 1, 'Bob', 1 ],
-  ], "Album fields are right";
-
-  cmp_deeply( $rv, {
-    Artist => [ methods(id => 1) ],
-    Album  => [ methods(id => 1, name => 'Bob') ],
-  });
-};
-
-subtest "Accept a number of children (1)" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
-
-  my $rv;
-  lives_ok {
-    $rv = Schema->load_sims(
-      {
-        Artist => [
-          {
-            name => 'foo',
-            albums => 1,
-          },
-        ],
+        id => 10, albums => [ { name => 'i10' }, { name => 'j10' } ],
       },
-    );
-  } "load_sims runs to completion";
-
-  is_fields [ 'id', 'name' ], Artist, [
-    [ 1, 'foo' ],
-  ], "Artist fields are right";
-  is_fields [ 'id', 'name', 'artist_id' ], Album, [
-    [ 1, 'efgh', 1 ],
-  ], "Album fields are right";
-
-  cmp_deeply( $rv, {
-    Artist => [ methods(id => 1) ],
-  });
+    ],
+  },
+  expect => {
+    Artist => [
+      { id => 20, name => re('.+') },
+      { id => 10, name => re('.+') },
+    ],
+    Album => [
+      { id => 1, name => 'i20', artist_id => 20 },
+      { id => 2, name => 'j20', artist_id => 20 },
+      { id => 3, name => 'i10', artist_id => 10 },
+      { id => 4, name => 'j10', artist_id => 10 },
+    ],
+  },
+  rv => sub { { Artist => shift->{expect}{Artist} } },
 };
 
-subtest "Accept a number of children (2)" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
-
-  my $rv;
-  lives_ok {
-    $rv = Schema->load_sims(
-      {
-        Artist => [
-          {
-            name => 'foo',
-            albums => 2,
-          },
-        ],
-      },
-    );
-  } "load_sims runs to completion";
-
-  is_fields [ 'id', 'name' ], Artist, [
-    [ 1, 'foo' ],
-  ], "Artist fields are right";
-  is_fields [ 'id', 'name', 'artist_id' ], Album, [
-    [ 1, 'efgh', 1 ],
-    [ 2, 'efgh', 1 ],
-  ], "Album fields are right";
-
-  cmp_deeply( $rv, {
-    Artist => [ methods(id => 1) ],
-  });
+sims_test "Only create one child even if specified two ways" => {
+  spec => {
+    Artist => { albums => [ { name => 'Bob' } ] },
+    Album => { name => 'Bob' },
+  },
+  expect => {
+    Artist => { id => 1, name => re('.+') },
+    Album => { id => 1, name => 'Bob', artist_id => 1 },
+  },
 };
 
-subtest "Accept a hashref for children" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
-
-  my $rv;
-  lives_ok {
-    $rv = Schema->load_sims(
-      {
-        Artist => [
-          {
-            name => 'foo',
-            albums => { name => 'foobar' },
-          },
-        ],
-      },
-    );
-  } "load_sims runs to completion";
-
-  is_fields [ 'id', 'name' ], Artist, [
-    [ 1, 'foo' ],
-  ], "Artist fields are right";
-  is_fields [ 'id', 'name', 'artist_id' ], Album, [
-    [ 1, 'foobar', 1 ],
-  ], "Album fields are right";
-
-  cmp_deeply( $rv, {
-    Artist => [ methods(id => 1) ],
-  });
+sims_test "Accept a number of children (1)" => {
+  spec => {
+    Artist => {
+      name => 'foo', albums => 1,
+    },
+  },
+  expect => {
+    Artist => { id => 1, name => 'foo' },
+    Album => { id => 1, name => re('.+'), artist_id => 1 },
+  },
+  rv => sub { { Artist => shift->{expect}{Artist} } },
 };
 
-subtest "Connect to the parent by reference" => sub {
-  Schema->deploy({ add_drop_table => 1 });
-
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
-
-  my $rv;
-  lives_ok {
-    $rv = Schema->load_sims(
-      {
-        Artist => 1,
-        Album  => {
-          name => 'foo',
-          artist => \"Artist[0]",
-        },
-      },
-    );
-  } "load_sims runs to completion";
-
-  is_fields [ 'id', 'name' ], Artist, [
-    [ 1, 'abcd' ],
-  ], "Artist fields are right";
-  is_fields [ 'id', 'name', 'artist_id' ], Album, [
-    [ 1, 'foo', 1 ],
-  ], "Album fields are right";
-
-  cmp_deeply( $rv, {
-    Artist => [ methods(id => 1) ],
-    Album  => [ methods(id => 1) ],
-  });
+sims_test "Accept a number of children (2)" => {
+  spec => {
+    Artist => {
+      name => 'foo', albums => 2,
+    },
+  },
+  expect => {
+    Artist => { id => 1, name => 'foo' },
+    Album => [
+      { id => 1, name => re('.+'), artist_id => 1 },
+      { id => 2, name => re('.+'), artist_id => 1 },
+    ],
+  },
+  rv => sub { { Artist => shift->{expect}{Artist} } },
 };
 
-subtest "Connect to the right parent by reference" => sub {
-  Schema->deploy({ add_drop_table => 1 });
+sims_test "Accept a hashref for children" => {
+  spec => {
+    Artist => {
+      name => 'foo', albums => { name => 'foobar' },
+    },
+  },
+  expect => {
+    Artist => { id => 1, name => 'foo' },
+    Album => { id => 1, name => 'foobar', artist_id => 1 },
+  },
+  rv => sub { { Artist => shift->{expect}{Artist} } },
+};
 
-  {
-    my $count = grep { $_ != 0 } map { ResultSet($_)->count } Schema->sources;
-    is $count, 0, "There are no tables loaded at first";
-  }
+sims_test "Connect to the parent by reference" => {
+  spec => {
+    Artist => 1,
+    Album  => {
+      name => 'foo',
+      artist => \"Artist[0]",
+    },
+  },
+  expect => {
+    Artist => { id => 1, name => re('.+') },
+    Album => { id => 1, name => 'foo', artist_id => 1 },
+  },
+};
 
-  my $rv;
-  lives_ok {
-    $rv = Schema->load_sims(
-      {
-        Artist => [
-          { name => 'first' },
-          { name => 'second' },
-          { name => 'third' },
-        ],
-        Album  => [
-          { artist => \"Artist[1]" },
-          { artist => \"Artist[2]" },
-          { artist => \"Artist[0]" },
-        ],
-      },
-    );
-  } "load_sims runs to completion";
-
-  is_fields [ 'id', 'name' ], Artist, [
-    [ 1, 'first' ],
-    [ 2, 'second' ],
-    [ 3, 'third' ],
-  ], "Artist fields are right";
-  is_fields [ 'id', 'name', 'artist_id' ], Album, [
-    [ 1, 'efgh', 2 ],
-    [ 2, 'efgh', 3 ],
-    [ 3, 'efgh', 1 ],
-  ], "Album fields are right";
+sims_test "Connect to the right parent by reference" => {
+  spec => {
+    Artist => [
+      { name => 'first' },
+      { name => 'second' },
+      { name => 'third' },
+    ],
+    Album  => [
+      { artist => \"Artist[1]" },
+      { artist => \"Artist[2]" },
+      { artist => \"Artist[0]" },
+    ],
+  },
+  expect => {
+    Artist => [
+      { id => 1, name => 'first' },
+      { id => 2, name => 'second' },
+      { id => 3, name => 'third' },
+    ],
+    Album => [
+      { id => 1, name => re('.+'), artist_id => 2 },
+      { id => 2, name => re('.+'), artist_id => 3 },
+      { id => 3, name => re('.+'), artist_id => 1 },
+    ],
+  },
 };
 
 done_testing;
