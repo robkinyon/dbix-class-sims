@@ -24,7 +24,6 @@ t/common.pm
 t/loader.pm
 t/column_defaults.t
 t/datetime.t
-t/default_values.t
 t/etc/schema.yml
 t/expand_dots.t
 t/grandchild.t
