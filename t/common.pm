@@ -89,6 +89,11 @@ sub sims_test ($$) {
         cmp_deeply($addl, $opts->{addl}, "Additional value is as expected");
       }
     }
+
+    foreach my $export (@{$opts->{export} // []}) {
+      my ($target, $rule) = @$export;
+      $$target = $rule->($rv, $addl);
+    }
   };
 }
 
