@@ -33,9 +33,9 @@ sub sims_test ($$) {
     if ($opts->{dies}) {
       my @args = ref($opts->{spec}//'') eq 'ARRAY'
         ? @{$opts->{spec}} : ($opts->{spec}//{});
-      dies_ok {
+      throws_ok {
         ($rv, $addl) = Schema->load_sims(@args)
-      } "load_sims does NOT run to completion";
+      } $opts->{dies};
     }
     else {
       if ($opts->{load_sims}) {
