@@ -12,8 +12,8 @@ our @EXPORT_OK = qw(
 use Test::More;
 use Test::Deep;
 use Test::Exception;
-use Test::Trap;
 use Test::Warn;
+use Test::Trap;
 
 use Test::DBIx::Class;
 
@@ -33,9 +33,11 @@ sub sims_test ($$) {
     if ($opts->{dies}) {
       my @args = ref($opts->{spec}//'') eq 'ARRAY'
         ? @{$opts->{spec}} : ($opts->{spec}//{});
-      throws_ok {
+      trap {
         ($rv, $addl) = Schema->load_sims(@args)
-      } $opts->{dies};
+      };
+      is $trap->leaveby, 'die', 'load_sims fails';
+      like $trap->die, $opts->{dies}, 'Error message as expected';
     }
     else {
       if ($opts->{load_sims}) {
@@ -86,6 +88,7 @@ sub sims_test ($$) {
         # Don't force me to set these things, unless I want to.
         $opts->{addl}{duplicates} //= {};
         $opts->{addl}{seed} //= re(qr/^[\d.]+$/);
+        $opts->{addl}{created} //= ignore();
         cmp_deeply($addl, $opts->{addl}, "Additional value is as expected");
       }
     }

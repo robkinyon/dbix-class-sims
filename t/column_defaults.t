@@ -1,10 +1,11 @@
 # vi:sw=2
-use strict;
-use warnings FATAL => 'all';
+use strictures 2;
 
 use Test::More;
 use Test::Exception;
 
+# This currently cannot be converted to build_schema() because the functions
+# are not coming across properly. Figure something out later.
 BEGIN {
   {
     package MyApp::Schema::Result::ColumnTests;

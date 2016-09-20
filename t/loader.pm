@@ -18,7 +18,7 @@ sub build_schema {
 
   my $pkg = '';
   my @packages;
-  while (my $name = shift @$def) {
+  while (my $name = shift @{$def//[]}) {
     my $defn = shift @$def;
 
     push @packages, $name;
@@ -32,6 +32,11 @@ sub build_schema {
 
     my $pks = join ',', map { "'$_'" } @{$defn->{primary_keys}};
     $pkg .= "  __PACKAGE__->set_primary_key($pks);\n";
+
+    foreach my $uk (@{$defn->{unique_constraints}//[]}) {
+      my $key = Dumper($uk);
+      $pkg .= "  __PACKAGE__->add_unique_constraint($key);\n";
+    }
 
     foreach my $rel_type (qw(has_many belongs_to)) {
       while (my ($name, $opts) = each %{$defn->{$rel_type}}) {
