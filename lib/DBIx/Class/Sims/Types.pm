@@ -24,7 +24,7 @@ use String::Random qw( random_regex random_string );
   sub email_address {
     my ($info) = @_;
 
-    my $size = $info->{size} || 7;
+    my $size = $info->{size} // 7;
     if ( $size < 7 ) {
       return '';
     }
@@ -185,7 +185,7 @@ sub us_phone {
   my ($info) = @_;
 
   # Assume a varchar-like column type.
-  my $length = $info->{size} || 8;
+  my $length = $info->{size} // 8;
   if ( $length < 7 ) {
     return '';
   }
@@ -206,7 +206,7 @@ sub us_phone {
   elsif ( $length == 13 ) {
     return '(' . random_regex('\d{3}') . ')' . random_regex('\d{3}-\d{4}');
   }
-  elsif ( $length >= 14 ) {
+  else { #if ( $length >= 14 ) {
     return '(' . random_regex('\d{3}') . ') ' . random_regex('\d{3}-\d{4}');
   }
 }
@@ -287,7 +287,7 @@ sub us_ssntin {
     my ($info) = @_;
 
     # Assume a varchar-like column type.
-    my $length = $info->{size} || 2;
+    my $length = $info->{size} // 2;
     if ( $length == 2 ) {
       return $states[rand @states][0];
     }
@@ -300,7 +300,7 @@ sub us_zipcode {
 
   my $datatype = $info->{data_type};
   if ( $datatype eq 'varchar' || $datatype eq 'char' ) {
-    my $length = $info->{size} || 9;
+    my $length = $info->{size} // 9;
     if ( $length < 5 ) {
       return '';
     }
