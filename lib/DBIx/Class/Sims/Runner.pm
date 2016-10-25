@@ -260,11 +260,11 @@ sub find_by_unique_constraints {
   }
 
   return unless keys %$searched;
-  my $row = $rs->first;
+  my $row = $rs->search(undef, { rows => 1 })->first;
   if ($row) {
     push @{$self->{duplicates}{$name}}, {
       criteria => $searched,
-      found    => $row,
+      found    => { $row->get_columns },
     };
     return $row;
   }

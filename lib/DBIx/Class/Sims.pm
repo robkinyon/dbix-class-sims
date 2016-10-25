@@ -5,12 +5,33 @@ use 5.010_002;
 
 use strictures 2;
 
+our $VERSION = '0.300400';
+
 {
   # Do **NOT** import a clone() function into the DBIx::Class::Schema namespace
   # because that will override DBIC's clone() method and break all the things.
   package MyCloner;
-  use Clone::Any qw(clone);
+
+  sub clone {
+    my ($data) = @_;
+
+    if (ref($data) eq 'HASH') {
+      return {
+        map { $_ => clone($data->{$_}) }
+        keys %$data
+      };
+    }
+    elsif (ref($data) eq 'ARRAY') {
+      return [
+        map { clone($_) }
+        @$data
+      ];
+    }
+
+    return $data;
+  }
 }
+
 
 {
   # The aliases in this block are done at BEGIN time so that the ::Types class
@@ -52,8 +73,6 @@ use DBIx::Class::TopoSort ();
 use Hash::Merge qw( merge );
 use List::MoreUtils qw( natatime );
 use Scalar::Util qw( blessed reftype );
-
-our $VERSION = '0.300300';
 
 use DBIx::Class::Sims::Runner;
 use DBIx::Class::Sims::Util;
