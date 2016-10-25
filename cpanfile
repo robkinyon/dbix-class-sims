@@ -11,7 +11,7 @@ requires 'List::MoreUtils';
 requires 'Scalar::Util';
 requires 'String::Random';
 requires 'YAML::Any'; # Removes a warning.
- 
+
 on test => sub {
   requires 'File::Temp'        => '0.01';
   requires 'Test::DBIx::Class' => '0.01';
