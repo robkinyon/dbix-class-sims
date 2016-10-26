@@ -1,5 +1,8 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300401 Oct 25 2016 19:00:00 PDT
+   - Add a minimum requirement on Data::Printer for np()
+
 0.300400 Oct 24 2016 20:00:00 PDT
    - THIS RELEASE CONTAINS A POTENTIALLY BREAKING CHANGE.
    - NOT NULL columns are now populated, not just those with a sims setting.
