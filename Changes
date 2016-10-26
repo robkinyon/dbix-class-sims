@@ -1,6 +1,17 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
-0.300300 Sep ?? 2016 ??:??:?? PDT
+0.300400 Oct 24 2016 20:00:00 PDT
+   - THIS RELEASE CONTAINS A POTENTIALLY BREAKING CHANGE.
+   - NOT NULL columns are now populated, not just those with a sims setting.
+       - This no longer throws an error if the column wasn't populated.
+       - This will skip columns in PK and UK declarations.
+   - Move the "our $VERSION" declaration to within the first 10 lines of lib/DBIx/Class/Sims.pm
+       - CPAN hasn't been indexing new versions since 0.300004.
+   - Use our own clone() function instead of Clone::Any
+       - Clone::Any may disconnect the schema if a Result object is passed in.
+   - Reporting of duplicates returns a copy of the row, not the row itself.
+
+0.300300 Sep 04 2016 14:00:00 PDT
    - Tests no longer output randomness (Apparently, p() != np() ... who knew?!)
    - Can provide a number or a hashref for a has_many relationship
    - Can provide the \"Table[idx]" back-reference syntax for belongs_to rels.

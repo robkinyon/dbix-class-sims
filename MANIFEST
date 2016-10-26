@@ -20,9 +20,10 @@ MANIFEST
 MANIFEST.SKIP
 META.yml
 MYMETA.json
+t/common.pm
+t/loader.pm
 t/column_defaults.t
 t/datetime.t
-t/default_values.t
 t/etc/schema.yml
 t/expand_dots.t
 t/grandchild.t
@@ -48,4 +49,3 @@ t/types/us_ssntin.t
 t/types/us_state.t
 t/types/us_zipcode.t
 t/unique_constraints.t
-t/unrelated_tables.t

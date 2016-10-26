@@ -9,6 +9,9 @@ use_ok 'DBIx::Class::Sims::Types';
 my $sub = DBIx::Class::Sims::Types->can('email_address');
 
 my @tests = (
+  # Default is 7
+  [ { data_type => 'varchar' }, qr/^[\w.+]+@[\w.]+$/ ],
+
   ( map {
     [ { data_type => 'varchar', size => $_ }, qr/^[\w.+]+@[\w.]+$/ ],
   } 7 .. 100 ),

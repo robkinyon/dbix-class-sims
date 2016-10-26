@@ -260,11 +260,11 @@ sub find_by_unique_constraints {
   }
 
   return unless keys %$searched;
-  my $row = $rs->first;
+  my $row = $rs->search(undef, { rows => 1 })->first;
   if ($row) {
     push @{$self->{duplicates}{$name}}, {
       criteria => $searched,
-      found    => $row,
+      found    => { $row->get_columns },
     };
     return $row;
   }
@@ -319,6 +319,24 @@ sub fix_columns {
   my ($name, $item) = @_;
 
   my $source = $self->schema->source($name);
+
+  my %is = (
+    in_pk => sub {
+      my $n = shift;
+      grep {
+        $_ eq $n
+      } $source->primary_columns;
+    },
+    in_uk => sub {
+      my $n = shift;
+      grep {
+        $_ eq $n
+      } map {
+        $source->unique_constraint_columns($_)
+      } $source->unique_constraint_names;
+    },
+  );
+
   foreach my $col_name ( $source->columns ) {
     my $sim_spec;
     if ( exists $item->{$col_name} ) {
@@ -336,7 +354,7 @@ sub fix_columns {
 
     $sim_spec //= $info->{sim};
     if ( ref($sim_spec // '') eq 'HASH' ) {
-      if ( exists $sim_spec->{null_chance} && !$info->{nullable} ) {
+      if ( exists $sim_spec->{null_chance} && !$info->{is_nullable} ) {
         # Add check for not a number
         if ( rand() < $sim_spec->{null_chance} ) {
           $item->{$col_name} = undef;
@@ -374,12 +392,34 @@ sub fix_columns {
         }
       }
     }
+    # If it's not nullable, doesn't have a default value and isn't part of a
+    # primary key (could be auto-increment) or part of a unique key or part of a
+    # foreign key, then generate a value for it.
+    elsif (
+      !$info->{is_nullable} &&
+      !exists $info->{default_value} &&
+      !$is{in_pk}->($col_name) &&
+      !$is{in_uk}->($col_name) &&
+      !$self->{is_fk}{$name}{$col_name}
+    ) {
+      if ( $info->{data_type} eq 'int' ) {
+        my $min = 0;
+        my $max = 100;
+        $item->{$col_name} = int(rand($max-$min))+$min;
+      }
+      elsif ( $info->{data_type} eq 'varchar' ) {
+        my $min = 1;
+        my $max = $info->{data_length} // 255;
+        $item->{$col_name} = random_regex(
+          '\w' . "{$min,$max}"
+        );
+      }
+    }
   }
 }
 
 sub create_item {
   my $self = shift;
-
   my ($name, $item) = @_;
 
   #warn "Starting with $name (".np($item).")\n";

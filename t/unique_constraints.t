@@ -1,185 +1,124 @@
 # vi:sw=2
-use strict;
-use warnings FATAL => 'all';
+use strictures 2;
 
 use Test::More;
 use Test::Deep;
-use Test::Exception;
-use Test::Trap;
-use Test::Warn;
 
 BEGIN {
-  {
-    package MyApp::Schema::Result::Artist;
-    use base 'DBIx::Class::Core';
-    __PACKAGE__->table('artists');
-    __PACKAGE__->add_columns(
-      id => {
-        data_type => 'int',
-        is_nullable => 0,
-        is_auto_increment => 1,
+  use t::loader qw(build_schema);
+  build_schema([
+    Artist => {
+      table => 'artists',
+      columns => {
+        id => {
+          data_type => 'int',
+          is_nullable => 0,
+          is_auto_increment => 1,
+        },
+        first_name => {
+          data_type => 'varchar',
+          size => 128,
+          is_nullable => 0,
+        },
+        last_name => {
+          data_type => 'varchar',
+          size => 128,
+          is_nullable => 0,
+        },
       },
-      first_name => {
-        data_type => 'varchar',
-        size => 128,
-        is_nullable => 0,
-      },
-      last_name => {
-        data_type => 'varchar',
-        size => 128,
-        is_nullable => 0,
-      },
-    );
-    __PACKAGE__->set_primary_key('id');
-    __PACKAGE__->add_unique_constraint(['first_name', 'last_name']);
-    __PACKAGE__->add_unique_constraint(['last_name']);
-  }
-
-  {
-    package MyApp::Schema;
-    use base 'DBIx::Class::Schema';
-    __PACKAGE__->register_class(Artist => 'MyApp::Schema::Result::Artist');
-    __PACKAGE__->load_components('Sims');
-  }
+      primary_keys => [ 'id' ],
+      unique_constraints => [
+        [ 'first_name', 'last_name' ],
+        [ 'last_name' ],
+      ],
+    },
+  ]);
 }
 
-use Test::DBIx::Class qw(:resultsets);
+use t::common qw(sims_test Schema);
 
 subtest "Load and retrieve a row by multi-col UK" => sub {
-  Schema->deploy({ add_drop_table => 1 });
+  my $spec = {
+    Artist => { first_name => 'Taylor', last_name => 'Swift' },
+  };
 
-  {
-    is Artist->count, 0, "There are no artists loaded at first";
-    my ($rv, $addl);
-    lives_ok {
-      ($rv, $addl) = Schema->load_sims(
-        {
-          Artist => [
-            { first_name => 'Taylor', last_name => 'Swift' },
-          ],
-        },
-      );
-    } "Everything loads ok the first call";
+  sims_test "Create the row" => {
+    spec => $spec,
+    expect => {
+      Artist => { id => 1, first_name => 'Taylor', last_name => 'Swift' },
+    },
+    addl => {
+      duplicates => {},
+    },
+  };
 
-    is_fields [ 'id', 'first_name', 'last_name' ], Artist, [
-      [ 1, 'Taylor', 'Swift' ],
-    ], "Artist columns are right";
-
-    cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
-    cmp_deeply( $addl->{duplicates}, {} );
-  }
-
-  {
-    is Artist->count, 1, "There is one artist loaded now";
-    my ($rv, $addl);
-    lives_ok {
-      ($rv, $addl) = Schema->load_sims(
-        {
-          Artist => [
-            { first_name => 'Taylor', last_name => 'Swift' },
-          ],
-        },
-      );
-    } "Everything loads ok the second call";
-
-    is_fields [ 'id', 'first_name', 'last_name' ], Artist, [
-      [ 1, 'Taylor', 'Swift' ],
-    ], "Artist columns are still right";
-
-    cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
-    cmp_deeply($addl->{duplicates}, {
-      Artist => [{
-        criteria => {
-          first_name => 'Taylor',
-          last_name => 'Swift',
-        },
-        found => ignore()
-      }]
-    });
-  }
+  sims_test "Find the row" => {
+    deploy => 0,
+    loaded => {
+      Artist => 1,
+    },
+    spec => $spec,
+    expect => {
+      Artist => { id => 1, first_name => 'Taylor', last_name => 'Swift' },
+    },
+    addl => {
+      duplicates => {
+        Artist => [{
+          criteria => {
+            first_name => 'Taylor',
+            last_name => 'Swift',
+          },
+          found => ignore()
+        }],
+      },
+    },
+  };
 };
 
 subtest "Don't specify enough to find by multi-col UK" => sub {
-  Schema->deploy({ add_drop_table => 1 });
+  sims_test "Create the row" => {
+    spec => {
+      Artist => { first_name => 'Taylor', last_name => 'Swift' },
+    },
+    expect => {
+      Artist => { id => 1, first_name => 'Taylor', last_name => 'Swift' },
+    },
+  };
 
-  {
-    is Artist->count, 0, "There are no artists loaded at first";
-    my $rv;
-    lives_ok {
-      $rv = Schema->load_sims(
-        {
-          Artist => [
-            { first_name => 'Taylor', last_name => 'Swift' },
-          ],
-        },
-      );
-    } "Everything loads ok the first call";
-
-    is_fields [ 'id', 'first_name', 'last_name' ], Artist, [
-      [ 1, 'Taylor', 'Swift' ],
-    ], "Artist columns are right";
-
-    cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
-  }
-
-  {
-    is Artist->count, 1, "There is one artist loaded now";
-    my $rv;
-    trap {
-      $rv = Schema->load_sims(
-        {
-          Artist => [
-            { first_name => 'Taylor2', last_name => 'Swift' },
-          ],
-        },
-      );
-    };
-    is $trap->leaveby, 'die', "load_sims fails";
-    is $trap->stdout, '', "No STDOUT";
-    like $trap->die, qr/UNIQUE constraint failed/, "Didn't specify enough in the request";
-  }
+  sims_test "Throw an error finding the row" => {
+    deploy => 0,
+    loaded => {
+      Artist => 1,
+    },
+    spec => {
+      Artist => { first_name => 'Taylor2', last_name => 'Swift' },
+    },
+    dies => qr/UNIQUE constraint failed/,
+  };
 };
 
 subtest "Load and retrieve a row by PK" => sub {
-  Schema->deploy({ add_drop_table => 1 });
+  sims_test "Create the row" => {
+    spec => {
+      Artist => { first_name => 'Taylor', last_name => 'Swift' },
+    },
+    expect => {
+      Artist => { id => 1, first_name => 'Taylor', last_name => 'Swift' },
+    },
+  };
 
-  {
-    is Artist->count, 0, "There are no artists loaded at first";
-    my $rv;
-    lives_ok {
-      $rv = Schema->load_sims(
-        {
-          Artist => [
-            { first_name => 'Taylor', last_name => 'Swift' },
-          ],
-        },
-      );
-    } "Everything loads ok the first call";
-
-    is_fields [ 'id', 'first_name', 'last_name' ], Artist, [
-      [ 1, 'Taylor', 'Swift' ],
-    ], "Artist columns are right";
-
-    cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
-  }
-
-  {
-    is Artist->count, 1, "There is one artist loaded now";
-    my $rv;
-    lives_ok {
-      $rv = Schema->load_sims(
-        {
-          Artist => [ { id => 1 } ],
-        },
-      );
-    } "Everything loads ok the second call";
-
-    is_fields [ 'id', 'first_name', 'last_name' ], Artist, [
-      [ 1, 'Taylor', 'Swift' ],
-    ], "Artist columns are still right";
-
-    cmp_deeply( $rv, { Artist => [ methods(id => 1) ] } );
-  }
+  sims_test "Find the row" => {
+    deploy => 0,
+    loaded => {
+      Artist => 1,
+    },
+    spec => {
+      Artist => { id => 1 },
+    },
+    expect => {
+      Artist => { id => 1, first_name => 'Taylor', last_name => 'Swift' },
+    },
+  };
 };
 
 done_testing

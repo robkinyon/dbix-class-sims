@@ -1,10 +1,11 @@
 # vi:sw=2
-use strict;
-use warnings FATAL => 'all';
+use strictures 2;
 
 use Test::More;
 use Test::Exception;
 
+# This currently cannot be converted to build_schema() because the functions
+# are not coming across properly. Figure something out later.
 BEGIN {
   {
     package MyApp::Schema::Result::ColumnTests;
@@ -91,6 +92,20 @@ BEGIN {
           type => 'us_zipcode',
         },
       },
+      us_zipcode_as_char => {
+        data_type => 'char',
+        data_length => 9,
+        sim => {
+          type => 'us_zipcode',
+        },
+      },
+      us_zipcode_as_int => {
+        data_type => 'int',
+        data_length => 9,
+        sim => {
+          type => 'us_zipcode',
+        },
+      },
     );
     __PACKAGE__->set_primary_key('id');
   }
@@ -150,5 +165,7 @@ like( $row->varchar_nolimit, qr/\w{1,255}/, 'varchar_nolimit of right length' );
 is( $row->varchar_with_func, 'abcd', 'sim_varchar_with_func is abcd' );
 
 like( $row->us_zipcode, qr/^\d{9}$/, 'us_zipcode is correct' );
+like( $row->us_zipcode_as_char, qr/^\d{9}$/, 'us_zipcode is correct' );
+like( $row->us_zipcode_as_int, qr/^\d{5}$/, 'us_zipcode is correct' );
 
 done_testing;

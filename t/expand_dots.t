@@ -1,22 +1,18 @@
-use strict;
-use warnings FATAL => 'all';
+# vi:sw=2
+use strictures 2;
 
 use Test::More;
 use Test::Deep;
 
-use_ok 'DBIx::Class::Sims';
-
-my $sub = \&DBIx::Class::Sims::massage_input;
-
 BEGIN {
-  {
-    package MyApp::Schema;
-    use base 'DBIx::Class::Schema';
-    __PACKAGE__->load_components('Sims');
-  }
+  use t::loader qw(build_schema);
+  build_schema();
 }
 
-use Test::DBIx::Class qw(:resultsets);
+use t::common qw(Schema);
+
+use_ok 'DBIx::Class::Sims';
+my $sub = \&DBIx::Class::Sims::massage_input;
 
 my @tests = (
   {

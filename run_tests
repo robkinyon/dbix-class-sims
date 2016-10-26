@@ -1,12 +1,7 @@
 #!/bin/bash
 
-if [[ -z $1 ]]; then
-  TESTFILES="t"
-else
-  TESTFILES="$@"
-fi
-
+MSYS_NO_PATHCONV=1 \
 docker run --rm \
   -v $(pwd):/app \
-  sims \
-  $TESTFILES
+  sims_test \
+  "$@"
