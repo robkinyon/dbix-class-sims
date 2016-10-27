@@ -409,7 +409,7 @@ sub fix_columns {
       }
       elsif ( $info->{data_type} eq 'varchar' ) {
         my $min = 1;
-        my $max = $info->{data_length} // 255;
+        my $max = $info->{data_length} // $info->{size} // 1;
         $item->{$col_name} = random_regex(
           '\w' . "{$min,$max}"
         );
