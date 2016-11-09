@@ -5,7 +5,7 @@ use 5.010_002;
 
 use strictures 2;
 
-our $VERSION = '0.300402';
+our $VERSION = '0.300403';
 
 {
   # Do **NOT** import a clone() function into the DBIx::Class::Schema namespace
@@ -57,7 +57,10 @@ our $VERSION = '0.300402';
   sub sim_type {
     shift;
 
-    return if @_ == 0;
+    # If no specific type requested, then return the complete list of all
+    # registered types.
+    return sort keys(%sim_types) if @_ == 0;
+
     return $sim_types{$_[0]} if @_ == 1;
     return map { $sim_types{$_} } @_;
   }
@@ -439,6 +442,14 @@ This method may be called as a class or object method.
 This method returns nothing.
 
 C<set_sim_types()> is an alias to this method.
+
+=head2 sim_types
+
+C<< $class_or_obj->sim_types(); >>
+
+This method will return a sorted list of all registered sim types.
+
+This method may be called as a class or object method.
 
 =head1 SPECIFICATION
 
