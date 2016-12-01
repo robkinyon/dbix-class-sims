@@ -2,6 +2,7 @@
 use strictures 2;
 
 use Test::More;
+use Test::Deep;
 
 BEGIN {
   use t::loader qw(build_schema);
@@ -115,6 +116,29 @@ sims_test "A scalarref is unknown" => {
   },
   warning => qr/^Skipping Artist - I don't know what to do!/,
   expect => {},
+};
+
+Schema->source('Artist')->column_info('name')->{sim}{value} = [ 'george', 'bill' ];
+
+sims_test "See that a set of values works" => {
+  spec => {
+    Artist => 1,
+  },
+  expect => {
+    Artist => { id => 1, name => any(qw/george bill/), hat_color => 'purple' },
+  },
+};
+
+delete Schema->source('Artist')->column_info('name')->{sim}{value};
+Schema->source('Artist')->column_info('name')->{sim}{values} = [ 'george', 'bill' ];
+
+sims_test "See that a set of values works" => {
+  spec => {
+    Artist => 1,
+  },
+  expect => {
+    Artist => { id => 1, name => any(qw/george bill/), hat_color => 'purple' },
+  },
 };
 
 done_testing;

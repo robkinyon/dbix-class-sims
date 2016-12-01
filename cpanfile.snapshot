@@ -582,7 +582,6 @@ DISTRIBUTIONS
       Class::Accessor::Grouped 0
       DBD::SQLite 1.11
       DBIx::Class 0.07005
-      Data::UUID 0
       ExtUtils::MakeMaker 6.42
       perl 5.008001
   Data-Dump-1.23

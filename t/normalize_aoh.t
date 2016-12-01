@@ -1,5 +1,4 @@
 # vi:sw=2
-use 5.010_002;
 use strictures 2;
 
 use Test::More;

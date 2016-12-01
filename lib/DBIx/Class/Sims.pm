@@ -1,11 +1,11 @@
 # vim: set sw=2 ft=perl:
 package DBIx::Class::Sims;
 
-use 5.010_002;
+use 5.010_001;
 
 use strictures 2;
 
-our $VERSION = '0.300403';
+our $VERSION = '0.300404';
 
 {
   # Do **NOT** import a clone() function into the DBIx::Class::Schema namespace
@@ -688,7 +688,7 @@ column_info for that column. The sim entry is a hash that can have the following
 
 =over 4
 
-=item * value
+=item * value / values
 
 This behaves just like default_value would behave, but doesn't require setting a
 default value on the column.
@@ -696,6 +696,9 @@ default value on the column.
   sim => {
       value => 'The value to always use',
   },
+
+This can be either a string, number, or an arrayref of strings or numbers. If it
+is an arrayref, then a random choice from that array will be selected.
 
 =item * type
 

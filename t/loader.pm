@@ -22,7 +22,7 @@ sub build_schema {
     my $defn = shift @$def;
 
     push @packages, $name;
-    $pkg .= "package ${prefix}::$name {\n  use base 'DBIx::Class::Core';\n";
+    $pkg .= "{ package ${prefix}::$name;\n  use base 'DBIx::Class::Core';\n";
 
     $pkg .= "  __PACKAGE__->table('$defn->{table}');\n";
 
@@ -54,7 +54,7 @@ sub build_schema {
     $pkg .= "}\n";
   }
 
-  $pkg .= "package $schema {\n  use base 'DBIx::Class::Schema';\n";
+  $pkg .= "{ package $schema;\n  use base 'DBIx::Class::Schema';\n";
   $pkg .= "  __PACKAGE__->register_class($_ => '${prefix}::$_');\n"
     for @packages;
   $pkg .= "  __PACKAGE__->load_components('Sims');\n}\n";

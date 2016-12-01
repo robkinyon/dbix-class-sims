@@ -1,5 +1,10 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300404 Dec 01 2016 12:00:00 PDT
+   - Support arrays for the "value" sim option
+     - "values" is now synonymous with "value"
+   - Fixed RT#118517, RT#118518 (Thanks SREZIC!)
+
 0.300403 Nov 09 2016 12:00:00 PDT
    - Add a sim_types() method that returns the list of all registered types.
 

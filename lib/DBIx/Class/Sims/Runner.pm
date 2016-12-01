@@ -1,6 +1,6 @@
 package DBIx::Class::Sims::Runner;
 
-use 5.010_002;
+use 5.010_001;
 
 use strictures 2;
 
@@ -362,11 +362,21 @@ sub fix_columns {
         }
       }
 
+      if (exists $sim_spec->{values}) {
+        $sim_spec->{value} = delete $sim_spec->{values};
+      }
+
       if ( ref($sim_spec->{func} // '') eq 'CODE' ) {
         $item->{$col_name} = $sim_spec->{func}->($info);
       }
       elsif ( exists $sim_spec->{value} ) {
-        $item->{$col_name} = $sim_spec->{value};
+        if (ref($sim_spec->{value} // '') eq 'ARRAY') {
+          my @v = @{$sim_spec->{value}};
+          $item->{$col_name} = $v[rand @v];
+        }
+        else {
+          $item->{$col_name} = $sim_spec->{value};
+        }
       }
       elsif ( $sim_spec->{type} ) {
         my $meth = $self->{parent}->sim_type($sim_spec->{type});

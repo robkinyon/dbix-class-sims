@@ -1,7 +1,7 @@
 # vim: set sw=2 ft=perl:
 package DBIx::Class::Sims::Util;
 
-use 5.010_002;
+use 5.010_001;
 
 use strictures 2;
 

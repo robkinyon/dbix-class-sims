@@ -1,4 +1,4 @@
-use 5.010_002;
+use 5.010_001;
 
 use strict;
 use warnings FATAL => 'all';
@@ -12,7 +12,7 @@ resources 'repository'  => 'https://github.com/robkinyon/dbix-class-sims',
 resources 'MailingList' => 'http://lists.scsys.co.uk/cgi-bin/mailman/listinfo/dbix-class';
 resources 'bugtracker'  => 'http://rt.cpan.org/NoAuth/Bugs.html?Dist=DBIx-Class-Sims';
 
-perl_version '5.010_002';
+perl_version '5.010_001';
 all_from 'lib/DBIx/Class/Sims.pm';
 
 requires 'Clone::Any';
