@@ -20,3 +20,4 @@ MYMETA.json
 *.tar.gz
 local/
 Dockerfile.5*
+.pause

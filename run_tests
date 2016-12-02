@@ -39,11 +39,40 @@ elif [[ "$1" == "test" ]]; then
   done
 elif [[ "$1" == "upload" ]]; then
   shift
-  >&2 echo "upload Unimplemented"
-  exit 1
 
-  # within a container, do "perl Makefile.PL && cpan-upload"
+  if [[ ! -f ~/.pause ]]; then
+    >&2 echo "No ~/.pause file found."
+    exit 1
+  fi
+
+  # Because of an interaction between Docker-toolbox and Git-bash, we have to
+  # copy the .pause here out of $HOME.
+  cp ~/.pause .
+
+  tag=5.22
+  if [[ -z $(docker images -q ${container}:${tag}) ]]; then
+    $me build ${tag}
+  fi
+
+  files_dirs_to_map=(
+    lib t
+    Changes LICENSE
+    MANIFEST MANIFEST.SKIP
+    MYMETA.json MYMETA.yml
+  )
+
+  volumes=(-v $(pwd)/.pause:/root/.pause)
+  for item in ${files_dirs_to_map[@]}; do
+    volumes+=(-v $(pwd)/$item:/app/$item)
+  done
+
+  docker run \
+    --rm \
+    "${volumes[@]}" \
+    --entrypoint bash \
+    ${container}:${tag} #\
+      -c "carton exec perl Makefile.PL && make dist && cpan-upload"
 else
-  >&2 echo "${me}: <pull | build | test> [version, ...]"
+  >&2 echo "${me}: <pull | build | test | upload> [version, ...]"
   exit 1
 fi
