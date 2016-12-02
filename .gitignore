@@ -19,3 +19,4 @@ META.json
 MYMETA.json
 *.tar.gz
 local/
+Dockerfile.5*

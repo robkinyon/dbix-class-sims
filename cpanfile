@@ -1,5 +1,3 @@
-requires 'perl', '5.20.0';
-
 requires 'Clone::Any';
 requires 'Data::Printer';
 requires 'Data::Walk';

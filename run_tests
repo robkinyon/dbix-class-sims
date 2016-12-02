@@ -1,9 +1,49 @@
 #!/bin/bash
 
+set -e
+
+me="${BASH_SOURCE[0]}"
+mydir=$(cd $(dirname $me) && pwd)
+cd $mydir
+
+container="dbix-class-sims-test"
+all_versions="5.10 5.12 5.14 5.16 5.18 5.20 5.22"
+
 export MSYS_NO_PATHCONV=1
 
-docker run \
-  --rm -it \
-  -v $(pwd):/app \
-  sims_test \
-  "$@"
+if [[ "$1" == "pull" ]]; then
+  shift
+  versions=${@:-"${all_versions}"}
+  for version in ${versions}; do
+    docker pull perl:${version}
+  done
+elif [[ "$1" == "build" ]]; then
+  shift
+  versions=${@:-"${all_versions}"}
+  for version in ${versions}; do
+    echo "Running build for perl-${version}"
+    cat Dockerfile.test | sed "s/{{version}}/${version}/" \
+      > Dockerfile.${version}
+    docker build -t ${container}:${version} -f Dockerfile.${version} .
+  done
+elif [[ "$1" == "test" ]]; then
+  shift
+  versions=${@:-"${all_versions}"}
+  for version in ${versions}; do
+    echo "Running tests against perl-${version}"
+    docker run \
+      --rm \
+      -v $(pwd)/lib:/app/lib \
+      -v $(pwd)/t:/app/t \
+      ${container}:${version}
+  done
+elif [[ "$1" == "upload" ]]; then
+  shift
+  >&2 echo "upload Unimplemented"
+  exit 1
+
+  # within a container, do "perl Makefile.PL && cpan-upload"
+else
+  >&2 echo "${me}: <pull | build | test> [version, ...]"
+  exit 1
+fi
