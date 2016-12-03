@@ -165,7 +165,7 @@ like( $row->varchar_nolimit, qr/\w{1,255}/, 'varchar_nolimit of right length' );
 is( $row->varchar_with_func, 'abcd', 'sim_varchar_with_func is abcd' );
 
 like( $row->us_zipcode, qr/^\d{4,9}$/, 'us_zipcode is correct' );
-like( $row->us_zipcode_as_char, qr/^\d{4,9}$/, 'us_zipcode is correct' );
-like( $row->us_zipcode_as_int, qr/^\d{4,5}$/, 'us_zipcode is correct' );
+like( $row->us_zipcode_as_char, qr/^\d{1,9}$/, 'us_zipcode is correct' );
+like( $row->us_zipcode_as_int, qr/^\d{1,5}$/, 'us_zipcode is correct' );
 
 done_testing;
