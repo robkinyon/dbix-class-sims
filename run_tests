@@ -29,6 +29,7 @@ elif [[ "$1" == "build" ]]; then
       cat Dockerfile.test | sed "s/{{version}}/${version}/" \
         > Dockerfile.${version}
       docker build -t ${container}:${version} -f Dockerfile.${version} .
+      rm Dockerfile.${version}
     )&>build_log/${version}.log
     set -e
   done
