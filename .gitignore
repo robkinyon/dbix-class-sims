@@ -21,3 +21,4 @@ MYMETA.json
 local/
 Dockerfile.5*
 .pause
+build_log

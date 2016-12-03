@@ -6,8 +6,9 @@ me="${BASH_SOURCE[0]}"
 mydir=$(cd $(dirname $me) && pwd)
 cd $mydir
 
-container="dbix-class-sims-test"
-all_versions="5.10 5.12 5.14 5.16 5.18 5.20 5.22"
+container="robkinyon/dbix-class-sims-test"
+# Broken: 5.12
+all_versions="5.10 5.14 5.16 5.18 5.20 5.22"
 
 export MSYS_NO_PATHCONV=1
 
@@ -19,12 +20,17 @@ if [[ "$1" == "pull" ]]; then
   done
 elif [[ "$1" == "build" ]]; then
   shift
+  mkdir -p build_log
   versions=${@:-"${all_versions}"}
   for version in ${versions}; do
     echo "Running build for perl-${version}"
-    cat Dockerfile.test | sed "s/{{version}}/${version}/" \
-      > Dockerfile.${version}
-    docker build -t ${container}:${version} -f Dockerfile.${version} .
+    set +e
+    (
+      cat Dockerfile.test | sed "s/{{version}}/${version}/" \
+        > Dockerfile.${version}
+      docker build -t ${container}:${version} -f Dockerfile.${version} .
+    )&>build_log/${version}.log
+    set -e
   done
 elif [[ "$1" == "test" ]]; then
   shift
