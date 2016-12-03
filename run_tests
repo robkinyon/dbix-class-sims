@@ -63,6 +63,7 @@ elif [[ "$1" == "upload" ]]; then
   files_dirs_to_map=(
     lib t
     Changes LICENSE
+    Makefile.PL inc
     MANIFEST MANIFEST.SKIP
     MYMETA.json MYMETA.yml
   )
@@ -76,8 +77,8 @@ elif [[ "$1" == "upload" ]]; then
     --rm \
     "${volumes[@]}" \
     --entrypoint bash \
-    ${container}:${tag} #\
-      -c "carton exec perl Makefile.PL && make dist && cpan-upload"
+    ${container}:${tag} \
+      -c "carton exec perl Makefile.PL && make dist && cpan-upload *.tar.gz"
 else
   >&2 echo "${me}: <pull | build | test | upload> [version, ...]"
   exit 1
