@@ -6,6 +6,7 @@ use strictures 2;
 
 use DDP;
 
+use Data::Compare qw( Compare );
 use Hash::Merge qw( merge );
 use Scalar::Util qw( blessed reftype );
 use String::Random qw( random_regex );
@@ -55,7 +56,31 @@ sub initialize {
   $self->{created}    = {};
   $self->{duplicates} = {};
 
+  $self->{create_stack} = [];
+
   return;
+}
+
+sub has_item {
+  my $self = shift;
+  my ($name, $item) = @_;
+
+  foreach my $comp (@{$self->{create_stack}}) {
+    next unless $name eq $comp->[0];
+    next unless Compare($item, $comp->[1]);
+    return 1;
+  }
+  return;
+}
+sub add_item {
+  my $self = shift;
+  my ($name, $item) = @_;
+  push @{$self->{create_stack}}, [ $name, MyCloner::clone($item) ];
+}
+sub remove_item {
+  my $self = shift;
+  my ($name, $item) = @_;
+  pop @{$self->{create_stack}};
 }
 
 sub schema { shift->{schema} }
@@ -432,7 +457,13 @@ sub create_item {
   my $self = shift;
   my ($name, $item) = @_;
 
-  #warn "Starting with $name (".np($item).")\n";
+  # If, in the current stack of in-flight items, we've attempted to make this
+  # exact item, die because we've obviously entered an infinite loop.
+  if ($self->has_item($name, $item)) {
+    die "ERROR: $name (".np($item).") was seen more than once\n";
+  }
+  $self->add_item($name, $item);
+
   $self->fix_columns($name, $item);
 
   my $source = $self->schema->source($name);
@@ -456,6 +487,8 @@ sub create_item {
   $self->fix_child_dependencies($name, $row, $child_deps);
 
   $self->{hooks}{postprocess}->($name, $source, $row);
+
+  $self->remove_item($name, $item);
 
   return $row;
 }

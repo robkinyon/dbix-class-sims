@@ -1,5 +1,9 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300406 Dec 12 2016 18:00:00 PDT
+   - Applied pull/26 (Thanks, manwar!)
+   - Added a check for accidental recursive creation (aka, self-referential tables).
+
 0.300405 Dec 02 2016 12:00:00 PDT
    - Re-fixed RT#118518 (Thanks SREZIC!)
 

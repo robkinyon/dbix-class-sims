@@ -1,5 +1,8 @@
 [X] Hoist the number/hashref->arrayref conversion to all levels
 [X] Add references in strings for relationship names
+[X] Catch circular references
+    [X] Successive attempts to create the same thing (maintain a stack?)
+[ ] Don't require cycle-breaking with nullable FKs
 [ ] Add children to meet to level of constraint
     [ ] Document constraints better (?)
 [ ] Fix depth search in Runner::create_search()

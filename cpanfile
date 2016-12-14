@@ -1,4 +1,5 @@
 requires 'Clone::Any';
+requires 'Data::Compare';
 requires 'Data::Printer';
 requires 'Data::Walk';
 requires 'DateTime';

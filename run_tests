@@ -42,7 +42,7 @@ elif [[ "$1" == "test" ]]; then
       --rm \
       -v $(pwd)/lib:/app/lib \
       -v $(pwd)/t:/app/t \
-      ${container}:${version}
+      ${container}:${version} #prove -lv t/self_referential.t
   done
 elif [[ "$1" == "upload" ]]; then
   shift
