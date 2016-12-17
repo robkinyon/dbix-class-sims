@@ -23,6 +23,7 @@ META.json
 t/common.pm
 t/loader.pm
 t/column_defaults.t
+t/column_types.t
 t/datetime.t
 t/etc/schema.yml
 t/expand_dots.t

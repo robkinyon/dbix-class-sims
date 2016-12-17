@@ -5,7 +5,7 @@ use 5.010_001;
 
 use strictures 2;
 
-our $VERSION = '0.300406';
+our $VERSION = '0.300500';
 
 {
   # Do **NOT** import a clone() function into the DBIx::Class::Schema namespace

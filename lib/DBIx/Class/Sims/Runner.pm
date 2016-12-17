@@ -339,6 +339,40 @@ sub fix_child_dependencies {
   }
 }
 
+my %types = (
+  numeric => {( map { $_ => 1 } qw(
+    tinyint smallint mediumint bigint
+    int integer int1 int2 int3 int4 int8 middleint
+    bool boolean
+  ))},
+  decimal => {( map { $_ => 1 } qw(
+    float float4 float8
+    real
+    double
+    decimal dec
+    numeric
+    fixed
+  ))},
+  string => {( map { $_ => 1 } qw(
+    char varchar varchar2
+    binary varbinary
+    text tinytext mediumtext longtext long
+    blob tinyblob mediumblob longblob
+  ))},
+  # These will be unhandled
+  #datetime => [qw(
+  #  date
+  #  datetime
+  #  timestamp
+  #  year
+  #)],
+  #unknown => [qw(
+  #  enum set bit json
+  #  geometry point linestring polygon
+  #  multipoint multilinestring multipolygon geometrycollection
+  #)],
+);
+
 sub fix_columns {
   my $self = shift;
   my ($name, $item) = @_;
@@ -361,6 +395,12 @@ sub fix_columns {
       } $source->unique_constraint_names;
     },
   );
+  foreach my $type (keys %types) {
+    $is{$type} = sub {
+      my $t = shift;
+      return exists $types{$type}{$t};
+    };
+  }
 
   foreach my $col_name ( $source->columns ) {
     my $sim_spec;
@@ -413,14 +453,19 @@ sub fix_columns {
         }
       }
       else {
-        if ( $info->{data_type} eq 'int' ) {
+        if ( $is{numeric}->($info->{data_type})) {
           my $min = $sim_spec->{min} // 0;
           my $max = $sim_spec->{max} // 100;
           $item->{$col_name} = int(rand($max-$min))+$min;
         }
-        elsif ( $info->{data_type} eq 'varchar' ) {
+        elsif ( $is{decimal}->($info->{data_type})) {
+          my $min = $sim_spec->{min} // 0;
+          my $max = $sim_spec->{max} // 100;
+          $item->{$col_name} = rand($max-$min)+$min;
+        }
+        elsif ( $is{string}->($info->{data_type})) {
           my $min = $sim_spec->{min} // 1;
-          my $max = $sim_spec->{max} // $info->{data_length} // 255;
+          my $max = $sim_spec->{max} // $info->{data_length} // $info->{size} // $min;
           $item->{$col_name} = random_regex(
             '\w' . "{$min,$max}"
           );
@@ -437,17 +482,25 @@ sub fix_columns {
       !$is{in_uk}->($col_name) &&
       !$self->{is_fk}{$name}{$col_name}
     ) {
-      if ( $info->{data_type} eq 'int' ) {
+      if ( $is{numeric}->($info->{data_type})) {
         my $min = 0;
         my $max = 100;
         $item->{$col_name} = int(rand($max-$min))+$min;
       }
-      elsif ( $info->{data_type} eq 'varchar' ) {
+      elsif ( $is{decimal}->($info->{data_type})) {
+        my $min = 0;
+        my $max = 100;
+        $item->{$col_name} = rand($max-$min)+$min;
+      }
+      elsif ( $is{string}->($info->{data_type})) {
         my $min = 1;
-        my $max = $info->{data_length} // $info->{size} // 1;
+        my $max = $info->{data_length} // $info->{size} // $min;
         $item->{$col_name} = random_regex(
           '\w' . "{$min,$max}"
         );
+      }
+      else {
+        die "ERROR: $name\.$col_name is not nullable, but I don't know how to handle $info->{data_type}\n";
       }
     }
   }

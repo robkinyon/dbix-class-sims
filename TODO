@@ -2,6 +2,16 @@
 [X] Add references in strings for relationship names
 [X] Catch circular references
     [X] Successive attempts to create the same thing (maintain a stack?)
+[X] Generalize handling of column types to numeric, decimal, and character.
+    * Right now, only "int" and "varchar" are handled.
+    * Also error out when a non-NULL column with an unknown type happens
+[ ] Add auto-generation of:
+    [ ] negative values
+    [ ] datetime values
+    [ ] enum/set (based on values from database)
+    [ ] json (is this even reasonable?)
+[ ] Add a test where the table's PK has no auto-increment
+    * This should be handled by not-null + unique, but just verify.
 [ ] Don't require cycle-breaking with nullable FKs
 [ ] Add children to meet to level of constraint
     [ ] Document constraints better (?)
