@@ -10,6 +10,7 @@
     [ ] datetime values
     [ ] enum/set (based on values from database)
     [ ] json (is this even reasonable?)
+[ ] Oracle RAW(16) doesn't get read correctly.
 [ ] Add a test where the table's PK has no auto-increment
     * This should be handled by not-null + unique, but just verify.
 [ ] Don't require cycle-breaking with nullable FKs

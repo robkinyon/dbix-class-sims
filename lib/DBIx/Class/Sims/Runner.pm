@@ -84,6 +84,7 @@ sub remove_item {
 }
 
 sub schema { shift->{schema} }
+sub driver { shift->schema->storage->dbh->{Driver}{Name} }
 
 sub create_search {
   my $self = shift;
@@ -503,6 +504,21 @@ sub fix_columns {
         die "ERROR: $name\.$col_name is not nullable, but I don't know how to handle $info->{data_type}\n";
       }
     }
+  }
+
+  # Oracle does not allow the "INSERT INTO x DEFAULT VALUES" syntax that DBIC
+  # wants to use. Therefore, find a PK column and set it to NULL. If there
+  # isn't one, complain loudly.
+  if ($self->driver eq 'Oracle' && keys(%$item) == 0) {
+    my @pk_columns = grep {
+      $is{in_pk}->($_)
+    } $source->columns;
+
+    die "Must specify something about some column or have a PK in Oracle"
+      unless @pk_columns;
+
+    # This will work even if there are multiple columns in the PK.
+    $item->{$pk_columns[0]} = undef;
   }
 }
 

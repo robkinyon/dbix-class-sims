@@ -1,5 +1,8 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300501 Dec 29 2016 11:00:00 PDT
+   - Ensure we are specifying at least one column when inserting into Oracle.
+
 0.300500 Dec 17 2016 18:00:00 PDT
    - Many more column types have default values set when not null.
       - If a column type is unknown, an error will be thrown instead of silently
