@@ -44,7 +44,7 @@ elif [[ "$1" == "test" ]]; then
       -v $(pwd)/t:/app/t \
       ${container}:${version} #prove -lv t/column_types.t
   done
-elif [[ "$1" == "upload" ]]; then
+elif [[ "$1" == "release" ]]; then
   shift
 
   if [[ ! -f ~/.pause ]]; then
@@ -81,6 +81,6 @@ elif [[ "$1" == "upload" ]]; then
     ${container}:${tag} \
       -c "carton exec perl Makefile.PL && make dist && cpan-upload *.tar.gz"
 else
-  >&2 echo "${me}: <pull | build | test | upload> [version, ...]"
+  >&2 echo "${me}: <pull | build | test | release> [version, ...]"
   exit 1
 fi
