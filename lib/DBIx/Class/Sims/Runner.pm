@@ -85,6 +85,7 @@ sub remove_item {
 
 sub schema { shift->{schema} }
 sub driver { shift->schema->storage->dbh->{Driver}{Name} }
+sub datetime_parser { shift->schema->storage->datetime_parser }
 
 sub create_search {
   my $self = shift;
@@ -274,8 +275,7 @@ sub find_by_unique_constraints {
       my $value = $item->{$colname};
       my $classname = blessed($value);
       if ( $classname && $classname->isa('DateTime') ) {
-        my $dtf = $self->schema->storage->datetime_parser;
-        $value = $dtf->format_datetime($value);
+        $value = $self->datetime_parser->format_datetime($value);
       }
 
       $criteria{$colname} = $value;
@@ -447,7 +447,7 @@ sub fix_columns {
       elsif ( $sim_spec->{type} ) {
         my $meth = $self->{parent}->sim_type($sim_spec->{type});
         if ( $meth ) {
-          $item->{$col_name} = $meth->($info);
+          $item->{$col_name} = $meth->($info, $self);
         }
         else {
           warn "Type '$sim_spec->{type}' is not loaded";

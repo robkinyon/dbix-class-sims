@@ -1,5 +1,9 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300600 Mar 05 2017 11:00:00 PDT
+   - Pass the runner into the sim types generator.
+      - This will enable types to get access to the schema and storage objects.
+
 0.300501 Dec 29 2016 11:00:00 PDT
    - Ensure we are specifying at least one column when inserting into Oracle.
 
