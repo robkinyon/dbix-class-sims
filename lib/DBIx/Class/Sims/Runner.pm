@@ -447,7 +447,7 @@ sub fix_columns {
       elsif ( $sim_spec->{type} ) {
         my $meth = $self->{parent}->sim_type($sim_spec->{type});
         if ( $meth ) {
-          $item->{$col_name} = $meth->($info, $self);
+          $item->{$col_name} = $meth->($info, $sim_spec, $self);
         }
         else {
           warn "Type '$sim_spec->{type}' is not loaded";

@@ -38,6 +38,7 @@ elif [[ "$1" == "test" ]]; then
   versions=${@:-"${all_versions}"}
   for version in ${versions}; do
     echo "Running tests against perl-${version}"
+    MSYS_NO_PATHCONV=1 \
     docker run \
       --rm \
       -v $(pwd)/lib:/app/lib \

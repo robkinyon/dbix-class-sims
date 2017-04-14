@@ -5,7 +5,7 @@ use 5.010_001;
 
 use strictures 2;
 
-our $VERSION = '0.300600';
+our $VERSION = '0.300700';
 
 {
   # Do **NOT** import a clone() function into the DBIx::Class::Schema namespace
@@ -32,50 +32,75 @@ our $VERSION = '0.300600';
   }
 }
 
-
-{
-  # The aliases in this block are done at BEGIN time so that the ::Types class
-  # can use them when it is loaded through `use`.
-
-  my %sim_types;
-
-  sub set_sim_type {
-    shift;
-    my $types = shift;
-    return unless ref($types//'') eq 'HASH';
-
-    while ( my ($name, $meth) = each(%$types) ) {
-      next unless ref($meth) eq 'CODE';
-
-      $sim_types{$name} = $meth;
-    }
-
-    return;
-  }
-  BEGIN { *set_sim_types = \&set_sim_type; }
-
-  sub sim_type {
-    shift;
-
-    # If no specific type requested, then return the complete list of all
-    # registered types.
-    return sort keys(%sim_types) if @_ == 0;
-
-    return $sim_types{$_[0]} if @_ == 1;
-    return map { $sim_types{$_} } @_;
-  }
-  BEGIN { *sim_types = \&sim_type; }
-}
-use DBIx::Class::Sims::Types;
-
 use DDP;
 
 use Data::Walk qw( walk );
 use DateTime;
 use DBIx::Class::TopoSort ();
 use Hash::Merge qw( merge );
+use List::Util qw( first );
 use List::MoreUtils qw( natatime );
 use Scalar::Util qw( blessed reftype );
+
+{
+  # The aliases in this block are done at BEGIN time so that the ::Types class
+  # can use them when it is loaded through `use`.
+
+  my @sim_names;
+  my %sim_types;
+  my @sim_matchers;
+
+  sub set_sim_type {
+    shift;
+    my $types = shift // '';
+
+    if (ref($types) eq 'HASH') {
+      while ( my ($name, $meth) = each(%$types) ) {
+        next unless ref($meth) eq 'CODE';
+
+        $sim_types{$name} = $meth;
+        push @sim_names, $name;
+      }
+    }
+    elsif (ref($types) eq 'ARRAY') {
+      foreach my $item (@$types) {
+        next unless ref($item->[2]) eq 'CODE';
+
+        push @sim_names, $item->[0];
+        push @sim_matchers, [ qr/^$item->[1]$/, $item->[2] ];
+      }
+    }
+
+    return;
+  }
+  BEGIN { *set_sim_types = \&set_sim_type; }
+
+  sub __find_sim_type {
+    my ($str) = @_;
+
+    unless (exists $sim_types{$str}) {
+      my $item = first { $str =~ $_->[0] } @sim_matchers;
+      if ($item) {
+        $sim_types{$str} = $item->[1];
+      }
+    }
+
+    return $sim_types{$str};
+  }
+
+  sub sim_type {
+    shift;
+
+    # If no specific type requested, then return the complete list of all
+    # registered types.
+    return sort @sim_names if @_ == 0;
+
+    return __find_sim_type($_[0]) if @_ == 1;
+    return map { __find_sim_type($_) } @_;
+  }
+  BEGIN { *sim_types = \&sim_type; }
+}
+use DBIx::Class::Sims::Types;
 
 use DBIx::Class::Sims::Runner;
 use DBIx::Class::Sims::Util;
@@ -432,10 +457,18 @@ B<NOT> be stable across different runs unless the same C<< seed >> is used.
 =head2 set_sim_type
 
 C<< $class_or_obj->set_sim_type({ $name => $handler, ... }); >>
+C<< $class_or_obj->set_sim_type([ [ $name, $regex, $handler ], ... ]); >>
 
-This method will set the handler for the C<$name> sim type. The handler must be
-a reference to a subroutine. You may pass in as many name/handler pairs as you
+This method will set the handler for the C<$name> sim type. The C<$handler> must
+be a reference to a subroutine. You may pass in as many name/handler pairs as you
 like.
+
+You may alternately pass in an arrayref of triplets. This allows you to use a
+regex to match the provided type. C<$name> will be returned when the user
+introspects the list of loaded sim types. C<$regex> will be used when finding the
+type to handle this column. C<$handler> must be a reference to a subroutine.
+
+You cannot set pairs and triplets in the same invocation.
 
 This method may be called as a class or object method.
 
