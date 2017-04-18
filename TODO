@@ -7,7 +7,7 @@
     * Also error out when a non-NULL column with an unknown type happens
 [ ] Add auto-generation of:
     [ ] negative values
-    [ ] datetime values
+    [X] datetime values
     [ ] enum/set (based on values from database)
     [ ] json (is this even reasonable?)
 [ ] Oracle RAW(16) doesn't get read correctly.
