@@ -2,8 +2,8 @@
 
 set -e
 
-me="${BASH_SOURCE[0]}"
-mydir=$(cd $(dirname $me) && pwd)
+ME="${BASH_SOURCE[0]}"
+mydir=$(cd $(dirname $ME) && pwd)
 cd $mydir
 
 container="robkinyon/dbix-class-sims-test"
@@ -57,9 +57,9 @@ elif [[ "$1" == "release" ]]; then
   # copy the .pause here out of $HOME.
   cp ~/.pause .
 
-  tag=5.22
+  tag=5.24
   if [[ -z $(docker images -q ${container}:${tag}) ]]; then
-    $me build ${tag}
+    $ME build ${tag}
   fi
 
   files_dirs_to_map=(
@@ -82,6 +82,6 @@ elif [[ "$1" == "release" ]]; then
     ${container}:${tag} \
       -c "carton exec perl Makefile.PL && make dist && cpan-upload *.tar.gz"
 else
-  >&2 echo "${me}: <pull | build | test | release> [version, ...]"
+  >&2 echo "${ME}: <pull | build | test | release> [version, ...]"
   exit 1
 fi
