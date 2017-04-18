@@ -67,7 +67,6 @@ elif [[ "$1" == "release" ]]; then
     Changes LICENSE
     Makefile.PL inc
     MANIFEST MANIFEST.SKIP
-    MYMETA.json MYMETA.yml
   )
 
   volumes=(-v $(pwd)/.pause:/root/.pause)
