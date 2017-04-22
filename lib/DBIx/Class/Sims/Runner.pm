@@ -97,7 +97,9 @@ sub create_search {
     (map {
       $_ => $cond->{$_}
     } grep {
-      exists $cols{$_}
+      # Make sure this column exists and is an actual value. Assumption is that
+      # a non-reference is a value and a reference is a sims-spec.
+      exists $cols{$_} && !reftype($cond->{$_})
     } keys %$cond)
   };
   $rs = $rs->search($search);
@@ -406,9 +408,17 @@ sub fix_columns {
   foreach my $col_name ( $source->columns ) {
     my $sim_spec;
     if ( exists $item->{$col_name} ) {
+      # This is the original way of specifying an override with a HASHREFREF.
+      # Reflection has realized it was an unnecessary distinction to a parent
+      # specification. Either it's a relationship hashref or a simspec hashref.
+      # We can never have both. It will be deprecated.
       if ((reftype($item->{$col_name}) // '') eq 'REF' &&
         (reftype(${$item->{$col_name}}) // '') eq 'HASH' ) {
+        warn "DEPRECATED: Use a regular HASHREF for overriding simspec. HASHREFREF will be removed in a future release.";
         $sim_spec = ${ delete $item->{$col_name} };
+      }
+      elsif ((reftype($item->{$col_name}) // '') eq 'HASH') {
+        $sim_spec = delete $item->{$col_name};
       }
       # Pass the value along to DBIC - we don't know how to deal with it.
       else {

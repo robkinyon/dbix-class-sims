@@ -1,5 +1,10 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.300800 Apr 21 2017 19:00:00 PDT
+   - Use a hashref instead of a hashrefref when setting a sims-spec within a
+     column.
+     - This does not conflict with describing a parent's attributes.
+
 0.300700 Apr 10 2017 11:00:00 PDT
    - Allow sim types authors to use a regex to match multiple strings to the same
      type handler.

@@ -56,7 +56,8 @@ sub sims_test ($$) {
         else {
           lives_ok {
             ($rv, $addl) = Schema->load_sims(@args)
-          } "load_sims runs to completion";
+          } "load_sims runs to completion"
+            or return; # Don't continue the test if we die unexpectedly.
         }
       }
 

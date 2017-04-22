@@ -62,7 +62,7 @@ sims_test "Load multiple rows" => {
 
 sims_test "Pass in a sim_type" => {
   spec => {
-    Artist => { name => \{ value => 'george' } },
+    Artist => { name => { value => 'george' } },
   },
   expect => {
     Artist => { id => 1, name => 'george', hat_color => 'purple' },
@@ -71,9 +71,19 @@ sims_test "Pass in a sim_type" => {
 
 Schema->source('Artist')->column_info('name')->{sim}{value} = 'george';
 
-sims_test "Override a sim_type" => {
+sims_test "Override a sim_type with a HASHREFREF (deprecated)" => {
   spec => {
     Artist => { name => \{ value => 'bill' } },
+  },
+  expect => {
+    Artist => { id => 1, name => 'bill', hat_color => 'purple' },
+  },
+  warning => qr/DEPRECATED: Use a regular HASHREF/,
+};
+
+sims_test "Override a sim_type with a HASHREF" => {
+  spec => {
+    Artist => { name => { value => 'bill' } },
   },
   expect => {
     Artist => { id => 1, name => 'bill', hat_color => 'purple' },

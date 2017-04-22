@@ -5,7 +5,7 @@ use 5.010_001;
 
 use strictures 2;
 
-our $VERSION = '0.300700';
+our $VERSION = '0.300800';
 
 {
   # Do **NOT** import a clone() function into the DBIx::Class::Schema namespace
@@ -511,19 +511,23 @@ parent-child relationship. (Otherwise, a random choice will be made as to which
 parent to use, creating one as necessary if possible.) The dots will be followed
 as far as necessary.
 
-If a column's value is a reference to a hashref, then that will be treated as a
-sim entry. Example:
+If a column's value is a hashref, then that will be treated as a sim entry.
+Example:
 
   {
     Artist => [
       {
-        name => \{ type => 'us_name' },
+        name => { type => 'us_name' },
       },
     ],
   }
 
 That will use the provided sim type 'us_name'. This will override any sim entry
 specified on the column. See L</SIM ENTRY> for more information.
+
+Note: Before 0.300800, this behavior was triggered by a reference to a hashref.
+That will still work, but is deprecated, throws a warning, and will be removed
+in a future release.
 
 Columns that have not been specified will be populated in one of two ways. The
 first is if the database has a default value for it. Otherwise, you can specify

@@ -136,6 +136,18 @@ sims_test "Connect to a random parent" => {
   },
 };
 
+sims_test "Specify a parent and override a sims-spec" => {
+  spec => {
+    Album => {
+      artist => { name => { type => 'us_firstname' } },
+      name => { type => 'us_lastname' },
+    },
+  },
+  expect => {
+    Album => [ { id => 1, name => re('.+'), artist_id => 1 } ],
+  },
+};
+
 sims_test "Pick a random parent out of multiple choices" => {
   spec => {
     Artist => [

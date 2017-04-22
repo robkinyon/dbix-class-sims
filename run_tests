@@ -43,7 +43,7 @@ elif [[ "$1" == "test" ]]; then
       --rm \
       -v $(pwd)/lib:/app/lib \
       -v $(pwd)/t:/app/t \
-      ${container}:${version} #prove -lv t/column_types.t
+      ${container}:${version} #prove -l t/parent_child.t
   done
 elif [[ "$1" == "release" ]]; then
   shift
