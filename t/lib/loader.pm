@@ -1,6 +1,6 @@
 # vi:sw=2
 package # Hide from PAUSE
-  t::loader;
+  loader;
 
 use strictures 2;
 
