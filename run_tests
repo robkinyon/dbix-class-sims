@@ -22,6 +22,9 @@ elif [[ "$1" == "build" ]]; then
   shift
   mkdir -p build_log
   versions=${@:-"${all_versions}"}
+  if which dos2unix &>/dev/null; then
+    dos2unix devops/within_carton
+  fi
   for version in ${versions}; do
     echo "Running build for perl-${version}"
     set +e
@@ -41,6 +44,7 @@ elif [[ "$1" == "test" ]]; then
     MSYS_NO_PATHCONV=1 \
     docker run \
       --rm \
+      -it \
       -v $(pwd)/lib:/app/lib \
       -v $(pwd)/t:/app/t \
       ${container}:${version} #prove -l t/parent_child.t
