@@ -12,6 +12,17 @@ all_versions="5.10 5.14 5.16 5.18 5.20 5.22 5.24 5.26"
 
 export MSYS_NO_PATHCONV=1
 
+files_dirs_to_map=(
+    lib t
+    Changes LICENSE
+    Makefile.PL inc
+    MANIFEST MANIFEST.SKIP
+)
+volumes=(-v $(pwd)/.pause:/app/.pause)
+for item in ${files_dirs_to_map[@]}; do
+    volumes+=(-v $(pwd)/$item:/app/$item)
+done
+
 if [[ "$1" == "pull" ]]; then
   shift
   versions=${@:-"${all_versions}"}
@@ -43,11 +54,28 @@ elif [[ "$1" == "test" ]]; then
     echo "Running tests against perl-${version}"
     MSYS_NO_PATHCONV=1 \
     docker run \
-      --rm \
-      -it \
-      -v $(pwd)/lib:/app/lib \
-      -v $(pwd)/t:/app/t \
-      ${container}:${version} #prove -l t/parent_child.t
+      -it --rm \
+      "${volumes[@]}" \
+      ${container}:${version} prove -lv t/set_sim_type_array.t
+  done
+elif [[ "$1" == "cover" ]]; then
+  shift
+  versions=${@:-"${all_versions}"}
+  for version in ${versions}; do
+    echo "Running test coverage against perl-${version}"
+
+    rm -rf cover_db cover_db_${version}
+    mkdir cover_db
+
+    MSYS_NO_PATHCONV=1 \
+    docker run \
+      -it --rm \
+      "${volumes[@]}" \
+      -v "$(pwd)/cover_db:/app/cover_db" \
+      ${container}:${version} \
+          cover
+
+    mv cover_db cover_db_${version}
   done
 elif [[ "$1" == "release" ]]; then
   shift

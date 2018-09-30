@@ -21,3 +21,4 @@ local/
 Dockerfile.5*
 .pause
 build_log
+cover_db*
