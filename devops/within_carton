@@ -15,5 +15,5 @@ if [[ $1 == "cover" ]]; then
   HARNESS_PERL_SWITCHES=-MDevel::Cover=+inc,local/lib/perl5,+ignore,'^t/' carton exec -- prove -lrs "$@"
   carton exec -- cover
 else
-  carton exec -- "$@"
+  carton exec -- prove -lrs "$@"
 fi

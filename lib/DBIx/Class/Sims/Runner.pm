@@ -346,6 +346,7 @@ sub fix_child_dependencies {
     # Need to ensure that $child_deps >= $self->{reqs}
 
     foreach my $child (@children) {
+      $self->{allow_pk_set_value} = 1;
       $child->{$fkcol} = $row->get_column($col);
       $self->add_child($fk_name, $fkcol, $child, $name);
     }
@@ -418,6 +419,19 @@ sub fix_columns {
   foreach my $col_name ( $source->columns ) {
     my $sim_spec;
     if ( exists $item->{$col_name} ) {
+      if (
+           $is{in_pk}->($col_name)
+        && !$self->{allow_pk_set_value}
+        && !$source->column_info($col_name)->{is_nullable}
+        && $source->column_info($col_name)->{is_auto_increment}
+      ) {
+        my $msg = sprintf(
+          "Primary-key autoincrement non-null columns should not be hardcoded in tests (%s.%s = %s)",
+          $name, $col_name, $item->{$col_name},
+        );
+        warn $msg;
+      }
+
       # This is the original way of specifying an override with a HASHREFREF.
       # Reflection has realized it was an unnecessary distinction to a parent
       # specification. Either it's a relationship hashref or a simspec hashref.

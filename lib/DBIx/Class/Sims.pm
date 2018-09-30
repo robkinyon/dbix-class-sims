@@ -173,7 +173,7 @@ sub load_sims {
     $additional->{seed} = $opts->{seed} //= rand(time & $$);
     srand($opts->{seed});
 
-    my @toposort =  DBIx::Class::TopoSort->toposort(
+    my @toposort = DBIx::Class::TopoSort->toposort(
       $schema,
       %{$opts->{toposort} // {}},
     );
@@ -186,6 +186,9 @@ sub load_sims {
       spec => $spec,
       hooks => $hooks,
       reqs => $reqs,
+      # Set this to false to throw a warning if a non-null auto-increment column
+      # has a value set. It defaults to false. Set to true to disable.
+      allow_pk_set_value => $opts->{allow_pk_set_value} // 0,
     );
 
     $rows = eval {
@@ -451,6 +454,23 @@ row in the database that was found.
 
 The list will be ordered by when the duplicate was found, but that ordering will
 B<NOT> be stable across different runs unless the same C<< seed >> is used.
+
+=item * allow_set_pk_value
+
+If this is false or omitted, then a warning will be emitted if a sims spec sets
+a value for a column that is:
+
+=over 4
+
+=item * in a primary key (either alone or with other columns)
+
+=item * NOT NULLL
+
+=item * set to auto_increment
+
+=back
+
+If this is true, then the warning is suppressed.
 
 =back
 

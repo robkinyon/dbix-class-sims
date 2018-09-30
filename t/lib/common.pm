@@ -55,7 +55,7 @@ sub sims_test ($$) {
             ($rv, $addl) = $opts->{as_class_method}
               ? DBIx::Class::Sims->load_sims(Schema, @args)
               : Schema->load_sims(@args);
-          } $opts->{warning};
+          } $opts->{warning}, "Warning as expected";
         }
         else {
           lives_ok {
