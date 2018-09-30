@@ -34,7 +34,9 @@ sub sims_test ($$) {
       my @args = ref($opts->{spec}//'') eq 'ARRAY'
         ? @{$opts->{spec}} : ($opts->{spec}//{});
       trap {
-        ($rv, $addl) = Schema->load_sims(@args)
+        ($rv, $addl) = $opts->{as_class_method}
+          ? DBIx::Class::Sims->load_sims(Schema, @args)
+          : Schema->load_sims(@args);
       };
       is $trap->leaveby, 'die', 'load_sims fails';
       like $trap->die, $opts->{dies}, 'Error message as expected';
@@ -50,12 +52,16 @@ sub sims_test ($$) {
           ? @{$opts->{spec}} : ($opts->{spec}//{});
         if ($opts->{warning}) {
           warning_like {
-            ($rv, $addl) = Schema->load_sims(@args)
+            ($rv, $addl) = $opts->{as_class_method}
+              ? DBIx::Class::Sims->load_sims(Schema, @args)
+              : Schema->load_sims(@args);
           } $opts->{warning};
         }
         else {
           lives_ok {
-            ($rv, $addl) = Schema->load_sims(@args)
+            ($rv, $addl) = $opts->{as_class_method}
+              ? DBIx::Class::Sims->load_sims(Schema, @args)
+              : Schema->load_sims(@args);
           } "load_sims runs to completion"
             or return; # Don't continue the test if we die unexpectedly.
         }

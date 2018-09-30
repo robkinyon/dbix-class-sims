@@ -56,7 +56,7 @@ elif [[ "$1" == "test" ]]; then
     docker run \
       -it --rm \
       "${volumes[@]}" \
-      ${container}:${version} prove -lv t/set_sim_type_array.t
+      ${container}:${version} #prove -lv t/add_sims.t
   done
 elif [[ "$1" == "cover" ]]; then
   shift

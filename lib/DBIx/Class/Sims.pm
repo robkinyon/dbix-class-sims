@@ -484,6 +484,15 @@ This method will return a sorted list of all registered sim types.
 
 This method may be called as a class or object method.
 
+=head2 add_sims
+
+Given a C<< $schema >>, source name, and pairs of column/sim_type info, this
+method will decorate the source's columns with appropriate sim types. This is
+in lieu of adding the sim information to the column definition.
+
+This method is only meant for usage as a class method. Do not use this method if
+you load Sims as a component.
+
 =head1 SPECIFICATION
 
 The specification can be passed along as a filename that contains YAML or JSON,
