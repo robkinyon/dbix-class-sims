@@ -346,7 +346,8 @@ sub fix_child_dependencies {
     # Need to ensure that $child_deps >= $self->{reqs}
 
     foreach my $child (@children) {
-      $self->{allow_pk_set_value} = 1;
+      #$self->{allow_pk_set_value} = 1;
+      ($child->{__META__} //= {})->{allow_pk_set_value} = 1;
       $child->{$fkcol} = $row->get_column($col);
       $self->add_child($fk_name, $fkcol, $child, $name);
     }
@@ -421,7 +422,7 @@ sub fix_columns {
     if ( exists $item->{$col_name} ) {
       if (
            $is{in_pk}->($col_name)
-        && !$self->{allow_pk_set_value}
+        && !($item->{__META__}//{})->{allow_pk_set_value}
         && !$source->column_info($col_name)->{is_nullable}
         && $source->column_info($col_name)->{is_auto_increment}
       ) {
@@ -578,6 +579,7 @@ sub create_item {
   my $row = $self->find_by_unique_constraints($name, $item);
   unless ($row) {
     $row = eval {
+      delete $item->{__META__};
       $self->schema->resultset($name)->create($item);
     }; if ($@) {
       my $e = $@;
@@ -607,6 +609,9 @@ sub run {
         next unless $self->{spec}{$name};
 
         while ( my $item = shift @{$self->{spec}{$name}} ) {
+          if ($self->{allow_pk_set_value}) {
+            ($item->{__META__} //= {})->{allow_pk_set_value} = 1;
+          }
           my $row = $self->create_item($name, $item);
 
           if ($self->{initial_spec}{$name}{$item}) {
