@@ -1,3 +1,10 @@
+ZR fixes:
+[ ] fix_deferred_fk
+[ ] fix_fk_dependencies
+[ ] info->{nullable} vs !info->{is_nullable}
+[ ] create_item() local$@
+
+
 [X] Hoist the number/hashref->arrayref conversion to all levels
 [X] Add references in strings for relationship names
 [X] Catch circular references

@@ -21,7 +21,13 @@ sub sims_test ($$) {
   my ($name, $opts) = @_;
 
   subtest $name => sub {
+    Schema->storage->dbh_do(sub {
+      my ($st, $dbh) = @_; $dbh->do('PRAGMA foreign_keys = OFF');
+    });
     Schema->deploy({ add_drop_table => 1 }) if $opts->{deploy} // 1;
+    Schema->storage->dbh_do(sub {
+      my ($st, $dbh) = @_; $dbh->do('PRAGMA foreign_keys = ON');
+    });
 
     foreach my $name (Schema->sources) {
       my $c = ResultSet($name)->count;

@@ -145,16 +145,17 @@ sub fix_fk_dependencies {
   #   b. If rows don't exist, $create_item->($fksrc, {})
   my %child_deps;
   my $source = $self->schema->source($name);
+  RELATIONSHIP:
   foreach my $rel_name ( $source->relationships ) {
     my $rel_info = $source->relationship_info($rel_name);
     unless ( $is_fk->($rel_info) ) {
       if ($item->{$rel_name}) {
         $child_deps{$rel_name} = delete $item->{$rel_name};
       }
-      next;
+      next RELATIONSHIP;
     }
 
-    next unless $self->{reqs}{$name}{$rel_name};
+    next RELATIONSHIP unless $self->{reqs}{$name}{$rel_name};
 
     my $col = $self_fk_col->($rel_info);
     my $fkcol = $foreign_fk_col->($rel_info);
@@ -202,7 +203,7 @@ sub fix_fk_dependencies {
       $rs = $self->create_search($rs, $fk_name, $cond);
     }
     elsif ( $col_info->{is_nullable} ) {
-      next;
+      next RELATIONSHIP;
     }
     else {
       $cond = {};
@@ -346,7 +347,6 @@ sub fix_child_dependencies {
     # Need to ensure that $child_deps >= $self->{reqs}
 
     foreach my $child (@children) {
-      #$self->{allow_pk_set_value} = 1;
       ($child->{__META__} //= {})->{allow_pk_set_value} = 1;
       $child->{$fkcol} = $row->get_column($col);
       $self->add_child($fk_name, $fkcol, $child, $name);
