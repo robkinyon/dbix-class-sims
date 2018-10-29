@@ -218,7 +218,10 @@ sub fix_fk_dependencies {
       $parent = $rs->search(undef, { rows => 1 })->first;
     }
     unless ($parent) {
-      $parent = $self->create_item($fk_name, $cond);
+      my $fk_item = MyCloner::clone($cond);
+      ($fk_item->{__META__} //= {})->{allow_pk_set_value}
+        = ($item->{__META__} // {})->{allow_pk_set_value};
+      $parent = $self->create_item($fk_name, $fk_item);
     }
     $item->{$col} = $parent->get_column($fkcol);
   }
