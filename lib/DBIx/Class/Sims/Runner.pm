@@ -143,7 +143,7 @@ sub fix_fk_dependencies {
   # 2. If we don't have something and the column is non-nullable, then:
   #   a. If rows exists, pick a random one.
   #   b. If rows don't exist, $create_item->($fksrc, {})
-  my %child_deps;
+  my (%child_deps, %deferred_fks);
   my $source = $self->schema->source($name);
   RELATIONSHIP:
   foreach my $rel_name ( $source->relationships ) {
@@ -216,6 +216,17 @@ sub fix_fk_dependencies {
     my $parent;
     unless ($meta->{create}) {
       $parent = $rs->search(undef, { rows => 1 })->first;
+
+      # This occurs when a FK condition was specified, but the column is
+      # nullable. We want to defer these because self-referential values need
+      # to be set after creation.
+      if (!$parent && $col_info->{is_nullable}) {
+        $item->{$col} = undef;
+        ($cond->{__META__} //= {})->{allow_pk_set_value}
+          = ($item->{__META__} // {})->{allow_pk_set_value};
+        $deferred_fks{$rel_name} = $cond;
+        next RELATIONSHIP;
+      }
     }
     unless ($parent) {
       my $fk_item = MyCloner::clone($cond);
@@ -226,7 +237,7 @@ sub fix_fk_dependencies {
     $item->{$col} = $parent->get_column($fkcol);
   }
 
-  return \%child_deps;
+  return \%child_deps, \%deferred_fks;
 }
 
 {
@@ -355,6 +366,30 @@ sub fix_child_dependencies {
       $self->add_child($fk_name, $fkcol, $child, $name);
     }
   }
+}
+
+sub fix_deferred_fks {
+  my ($self, $name, $row, $deferred_fks) = @_;
+
+  my $source = $self->schema->source($name);
+  while (my ($rel_name, $cond) = each %$deferred_fks) {
+    my $cond = $deferred_fks->{$rel_name};
+
+    my $rel_info = $source->relationship_info($rel_name);
+
+    my $col = $self_fk_col->($rel_info);
+    my $fkcol = $foreign_fk_col->($rel_info);
+    my $fk_name = $short_source->($rel_info);
+
+    my $rs = $self->schema->resultset($fk_name);
+    $rs = $self->create_search($rs, $fk_name, $cond);
+
+    my $parent = $rs->search(undef, { rows => 1 })->first;
+    $parent = $self->create_item($fk_name, $cond) unless $parent;
+
+    $row->$col($parent->get_column($fkcol));
+  }
+  $row->update;
 }
 
 my %types = (
@@ -576,7 +611,7 @@ sub create_item {
   my $source = $self->schema->source($name);
   $self->{hooks}{preprocess}->($name, $source, $item);
 
-  my $child_deps = $self->fix_fk_dependencies($name, $item);
+  my ($child_deps, $deferred_fks) = $self->fix_fk_dependencies($name, $item);
 
   #warn "Creating $name (".np($item).")\n";
   my $row = $self->find_by_unique_constraints($name, $item);
@@ -594,6 +629,7 @@ sub create_item {
   }
 
   $self->fix_child_dependencies($name, $row, $child_deps);
+  $self->fix_deferred_fks($name, $row, $deferred_fks);
 
   $self->{hooks}{postprocess}->($name, $source, $row);
 

@@ -4,6 +4,7 @@ Revision history for DBIx::Class::Sims (ordered by revision number).
    All fixes below graciously provided by ZipRecruiter.
    - Warn when a not-null autoincrement primary key has a value set.
      - Set the allow_pk_set_value parameter to disable the warning.
+   - Defer handling of nullable FKs to enable self-referential rows.
 
 0.301000 Nov 26 2017 19:30:00 PDT
    - Remove a section of code that takes parentage into account when looking for
