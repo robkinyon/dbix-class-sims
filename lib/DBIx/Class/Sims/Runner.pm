@@ -119,12 +119,14 @@ sub create_search {
   # 2. Keeping it in breaks the test in t/parent_child_parent.t named
   #     "Auto-generate other children of parent by amount"
   # 3. It's unclear if the functionality is even desirable.
+  #
   # The goal of this section looked to be to find the best match, including any
   # parentage. The best element in the tree of parentage is a good goal, but it
   # does require that we have converted the FK relationships first. We need a
   # test before this section can be re-enabled.
   #
   # In any case, it definitely won't be in this form.
+  #
   #foreach my $rel_name ($source->relationships) {
   #  next unless exists $cond->{$rel_name};
   #  next unless reftype($cond->{$rel_name}) eq 'HASH';
@@ -135,6 +137,28 @@ sub create_search {
   #    # Nested relationships are automagically handled. q.v. t/t5.t
   #    !ref $cond->{$rel_name}{$_}
   #  } keys %{$cond->{$rel_name}};
+  #
+  #  $rs = $rs->search(\%search, { join => $rel_name });
+  #}
+  #
+  # ZR's version:
+  # foreach my $rel_name ($source->relationships) {
+  #  next unless exists $cond->{$rel_name};
+  #  next unless (reftype($cond->{$rel_name}) || '') eq 'HASH';
+  #
+  #  # This will not work with nested relationships.
+  #  my %search = map {
+  #    ;"$rel_name.$_" => $cond->{$rel_name}{$_}
+  #  } keys %{$cond->{$rel_name}};
+  #
+  # # my %search;
+  # # while (my ($col, $val) = each %{$cond->{$rel_name}}) {
+  # #   next if $col eq '__META__';
+  # #   if (ref $val) {
+  # #     die "ERROR: Cannot handle reference value for $rel_name.$col";
+  # #   }
+  # #   $search{"$rel_name.$col"} = $val;
+  # # }
   #
   #  $rs = $rs->search(\%search, { join => $rel_name });
   #}
@@ -149,7 +173,9 @@ sub fix_fk_dependencies {
   # 1. If we have something, then:
   #   a. If it's a scalar, then, COND = { $fk => scalar }
   #   b. Look up the row by COND
-  #   c. If the row is not there, then $create_item->($fksrc, COND)
+  #   c. If the row is not there and the FK is nullable, defer til later.
+  #      This let's us deal with self-referential FKs
+  #   d. If the row is not there and it is NOT nullable, then $create_item
   # 2. If we don't have something and the column is non-nullable, then:
   #   a. If rows exists, pick a random one.
   #   b. If rows don't exist, $create_item->($fksrc, {})
