@@ -87,6 +87,16 @@ sub schema { shift->{schema} }
 sub driver { shift->schema->storage->dbh->{Driver}{Name} }
 sub datetime_parser { shift->schema->storage->datetime_parser }
 
+sub set_allow_pk_to {
+  my ($target, $source) = @_;
+  if (ref $source) {
+    ($target->{__META__} //= {})->{allow_pk_set_value}
+      = ($source->{__META__} // {})->{allow_pk_set_value};
+  } else {
+    ($target->{__META__} //= {})->{allow_pk_set_value} = $source;
+  }
+}
+
 sub create_search {
   my $self = shift;
   my ($rs, $name, $cond) = @_;
@@ -222,16 +232,14 @@ sub fix_fk_dependencies {
       # to be set after creation.
       if (!$parent && $col_info->{is_nullable}) {
         $item->{$col} = undef;
-        ($cond->{__META__} //= {})->{allow_pk_set_value}
-          = ($item->{__META__} // {})->{allow_pk_set_value};
+        set_allow_pk_to($cond, $item);
         $deferred_fks{$rel_name} = $cond;
         next RELATIONSHIP;
       }
     }
     unless ($parent) {
       my $fk_item = MyCloner::clone($cond);
-      ($fk_item->{__META__} //= {})->{allow_pk_set_value}
-        = ($item->{__META__} // {})->{allow_pk_set_value};
+      set_allow_pk_to($fk_item, $item);
       $parent = $self->create_item($fk_name, $fk_item);
     }
     $item->{$col} = $parent->get_column($fkcol);
@@ -361,7 +369,7 @@ sub fix_child_dependencies {
     # Need to ensure that $child_deps >= $self->{reqs}
 
     foreach my $child (@children) {
-      ($child->{__META__} //= {})->{allow_pk_set_value} = 1;
+      set_allow_pk_to($child, 1);
       $child->{$fkcol} = $row->get_column($col);
       $self->add_child($fk_name, $fkcol, $child, $name);
     }
@@ -617,8 +625,9 @@ sub create_item {
   my $row = $self->find_by_unique_constraints($name, $item);
   unless ($row) {
     $row = eval {
-      delete $item->{__META__};
-      $self->schema->resultset($name)->create($item);
+      my $to_create = MyCloner::clone($item);
+      delete $to_create->{__META__};
+      $self->schema->resultset($name)->create($to_create);
     }; if ($@) {
       my $e = $@;
       warn "ERROR Creating $name (".np($item).")\n";
@@ -649,7 +658,7 @@ sub run {
 
         while ( my $item = shift @{$self->{spec}{$name}} ) {
           if ($self->{allow_pk_set_value}) {
-            ($item->{__META__} //= {})->{allow_pk_set_value} = 1;
+            set_allow_pk_to($item, 1);
           }
           my $row = $self->create_item($name, $item);
 
