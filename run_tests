@@ -14,11 +14,8 @@ export MSYS_NO_PATHCONV=1
 
 files_dirs_to_map=(
     lib t
-    Changes LICENSE
-    Makefile.PL inc
-    MANIFEST MANIFEST.SKIP
 )
-volumes=(-v $(pwd)/.pause:/app/.pause)
+volumes=()
 for item in ${files_dirs_to_map[@]}; do
     volumes+=(-v $(pwd)/$item:/app/$item)
 done
@@ -89,7 +86,7 @@ elif [[ "$1" == "release" ]]; then
   # copy the .pause here out of $HOME.
   cp ~/.pause .
 
-  tag=5.24
+  tag=5.26
   if [[ -z $(docker images -q ${container}:${tag}) ]]; then
     $ME build ${tag}
   fi
@@ -111,7 +108,7 @@ elif [[ "$1" == "release" ]]; then
     "${volumes[@]}" \
     --entrypoint bash \
     ${container}:${tag} \
-      -c "carton exec perl Makefile.PL && make dist && cpan-upload *.tar.gz"
+      -c "carton exec perl -I. Makefile.PL && make dist && cpan-upload *.tar.gz"
 else
   >&2 echo "${ME}: <pull | build | test | release> [version, ...]"
   exit 1
