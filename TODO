@@ -1,3 +1,8 @@
+ZR fixes (as part of 0.302000):
+[ ] info->{nullable} vs !info->{is_nullable}
+[ ] create_item() local$@
+
+
 [X] Hoist the number/hashref->arrayref conversion to all levels
 [X] Add references in strings for relationship names
 [X] Catch circular references
@@ -5,7 +10,8 @@
 [X] Generalize handling of column types to numeric, decimal, and character.
     * Right now, only "int" and "varchar" are handled.
     * Also error out when a non-NULL column with an unknown type happens
-[ ] Add auto-generation of:
+[X] Don't require cycle-breaking with nullable FKs
+[-] Add auto-generation of:
     [ ] negative values
     [X] datetime values
     [ ] enum/set (based on values from database)
@@ -13,7 +19,6 @@
 [ ] Oracle RAW(16) doesn't get read correctly.
 [ ] Add a test where the table's PK has no auto-increment
     * This should be handled by not-null + unique, but just verify.
-[ ] Don't require cycle-breaking with nullable FKs
 [ ] Add children to meet to level of constraint
     [ ] Document constraints better (?)
 [ ] Fix depth search in Runner::create_search()

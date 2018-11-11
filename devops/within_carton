@@ -12,8 +12,8 @@ if [[ $1 == "cover" ]]; then
   shift
   carton exec -- cover -delete
   # Ignore the Carton-created library and ignore our test files.
-  HARNESS_PERL_SWITCHES=-MDevel::Cover=+inc,local/lib/perl5,+ignore,'^t/' carton exec -- prove "$@"
-  carton exec -- cover
+  HARNESS_PERL_SWITCHES=-MDevel::Cover=+inc,local/lib/perl5,+ignore,'^t/' carton exec -- prove -lrs "$@"
+  carton exec -- cover -coverage default,-pod
 else
-  carton exec -- "$@"
+  carton exec -- prove -lrs "$@"
 fi
