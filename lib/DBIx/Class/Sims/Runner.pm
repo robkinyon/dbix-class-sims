@@ -134,31 +134,9 @@ sub create_search {
   #  my %search = map {
   #    ;"$rel_name.$_" => $cond->{$rel_name}{$_}
   #  } grep {
-  #    # Nested relationships are automagically handled. q.v. t/t5.t
+  #    # Nested relationships are "automagically handled."
   #    !ref $cond->{$rel_name}{$_}
   #  } keys %{$cond->{$rel_name}};
-  #
-  #  $rs = $rs->search(\%search, { join => $rel_name });
-  #}
-  #
-  # ZR's version:
-  # foreach my $rel_name ($source->relationships) {
-  #  next unless exists $cond->{$rel_name};
-  #  next unless (reftype($cond->{$rel_name}) || '') eq 'HASH';
-  #
-  #  # This will not work with nested relationships.
-  #  my %search = map {
-  #    ;"$rel_name.$_" => $cond->{$rel_name}{$_}
-  #  } keys %{$cond->{$rel_name}};
-  #
-  # # my %search;
-  # # while (my ($col, $val) = each %{$cond->{$rel_name}}) {
-  # #   next if $col eq '__META__';
-  # #   if (ref $val) {
-  # #     die "ERROR: Cannot handle reference value for $rel_name.$col";
-  # #   }
-  # #   $search{"$rel_name.$col"} = $val;
-  # # }
   #
   #  $rs = $rs->search(\%search, { join => $rel_name });
   #}

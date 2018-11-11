@@ -1,6 +1,4 @@
-ZR fixes:
-[ ] fix_deferred_fk
-[ ] fix_fk_dependencies
+ZR fixes (as part of 0.302000):
 [ ] info->{nullable} vs !info->{is_nullable}
 [ ] create_item() local$@
 
