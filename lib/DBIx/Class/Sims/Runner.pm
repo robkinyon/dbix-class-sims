@@ -492,7 +492,7 @@ sub fix_columns {
         warn "DEPRECATED: Use a regular HASHREF for overriding simspec. HASHREFREF will be removed in a future release.";
         $sim_spec = ${ delete $item->{$col_name} };
       }
-      elsif ((reftype($item->{$col_name}) // '') eq 'HASH') {
+      elsif (!blessed($item->{$col_name}) && (reftype($item->{$col_name}) // '') eq 'HASH') {
         $sim_spec = delete $item->{$col_name};
       }
       # Pass the value along to DBIC - we don't know how to deal with it.
