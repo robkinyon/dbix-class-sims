@@ -36,7 +36,7 @@ BEGIN {
 
 use common qw(sims_test Schema);
 
-sims_test "Table doesn't exist" => {
+sims_test "Table doesn't exist (strict off)" => {
   spec => [
     { NotThere => 1 },
     { strict_mode => 0 },
@@ -53,6 +53,20 @@ sims_test "Table doesn't exist (strict mode)" => {
 sims_test "Tables don't exist (strict mode) - shows sorting" => {
   spec => { NotThere => 1, AlsoNotThere => 1 },
   dies => qr/DBIx::Class::Sims::Runner::run\(\): The following names are in the spec, but not the schema:.AlsoNotThere,NotThere./s,
+};
+
+sims_test "Column doesn't exist" => {
+  spec => [
+    { Artist => { whatever => 1 } },
+  ],
+  dies => qr/No such column 'whatever' on MyApp::Schema::Result::Artist/,
+};
+
+sims_test "Relationship doesn't exist" => {
+  spec => [
+    { Artist => { whatever => { xyz => 1 } } },
+  ],
+  dies => qr/No such column 'whatever' on MyApp::Schema::Result::Artist/,
 };
 
 done_testing;
