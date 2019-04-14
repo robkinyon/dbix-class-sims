@@ -112,7 +112,7 @@ needs better.
 
 This method will load the rows requested in `$spec`, plus any additional rows
 necessary to make those rows work. This includes any parent rows (as defined by
-`belongs_to`) and per any constraints defined in `$opts-`{constraints}>. If
+`belongs_to`) and per any constraints defined in `$opts->{constraints}`. If
 need-be, you can pass in hooks (as described below) to manipulate the data.
 
 load\_sims does all of its work within a call to ["txn\_do" in DBIx::Class::Schema](https://metacpan.org/pod/DBIx::Class::Schema#txn_do).
@@ -165,17 +165,6 @@ contain:
 
     The list will be ordered by when the duplicate was found, but that ordering will
     **NOT** be stable across different runs unless the same `seed` is used.
-
-- allow\_set\_pk\_value
-
-    If this is false or omitted, then a warning will be emitted if a sims spec sets
-    a value for a column that is:
-
-    - in a primary key (either alone or with other columns)
-    - NOT NULLL
-    - set to auto\_increment
-
-    If this is true, then the warning is suppressed.
 
 ## set\_sim\_type
 
@@ -388,6 +377,17 @@ before all children, the Sims cannot back-reference into children.
 
 There are several possible options.
 
+## allow\_set\_pk\_value
+
+If this is false or omitted, then a warning will be emitted if a sims spec sets
+a value for a column that is:
+
+- in a primary key (either alone or with other columns)
+- NOT NULLL
+- set to auto\_increment
+
+If this is true, then the warning is suppressed.
+
 ## constraints
 
 The constraints can be passed along as a filename that contains YAML or JSON, a
@@ -434,7 +434,7 @@ hooks:
 - preprocess
 
     This receives `$name, $source, $spec` and expects nothing in return. `$spec`
-    is the hashref that will be passed to `<$schema-`resultset($name)->create()>>.
+    is the hashref that will be passed to `$schema->resultset($name)->create()`.
     This hook is expected to modify `$spec` as needed.
 
 - postprocess
@@ -512,11 +512,12 @@ When an item is created, the following actions are taken (in this order):
 
 - 1 All foreign keys are resolved.
 
-    If it's a parent relationship, the parent row will be found or created. All
-    parent rows will go through the same sequence of events as described here.
+    If it's a parent relationship, the parent row will be found or created. If
+    created, all parent rows will go through the same sequence of events as
+    described here.
 
-    If it's a child relationship, creation of the child rows will be deferred until
-    later.
+    If it's a child relationship, creation of the child rows will be deferred
+    until later.
 
 - 1 The row is found or created.
 
@@ -525,12 +526,12 @@ When an item is created, the following actions are taken (in this order):
 - 1 All child relationships are handled
 
     Because they're a child relationship, they are deferred until the time that
-    model is handled in the toposorted graph. They are not created now because they
-    might associate with a different parent that has not been created yet.
+    model is handled in the toposorted graph. They are not created now because
+    they might associate with a different parent that has not been created yet.
 
 - 1 The postprocess hook fires.
 
-    Note that any child rows are not guaranteed to exist yet.
+    Note that child rows are not guaranteed to exist yet.
 
 # TODO
 
@@ -548,6 +549,8 @@ Sometimes, a column should alter its behavior based on other columns. A fullname
 column may have the firstname and lastname columns concatenated, with other
 things thrown in. Or, a zipcode column should only generate a zipcode that're
 legal for the state.
+
+Currently, the best place to handle this case is a preprocess hook.
 
 # BUGS/SUGGESTIONS
 
