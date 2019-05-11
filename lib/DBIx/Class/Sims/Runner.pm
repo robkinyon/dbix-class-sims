@@ -181,18 +181,11 @@ sub fix_fk_dependencies {
       }
       # Use a referenced row
       elsif (ref($proto) eq 'SCALAR') {
-        my ($table, $idx) = ($$proto =~ /(.+)\[(\d+)\]$/);
-        unless ($table && defined $idx) {
-          die "Unsure what to do about $name->$rel_name():" . np($proto);
-        }
-        unless (exists $self->{rows}{$table}) {
-          die "No rows in $table to reference\n";
-        }
-        unless (exists $self->{rows}{$table}[$idx]) {
-          die "Not enough ($idx) rows in $table to reference\n";
-        }
-
-        $cond = { $fkcol => $self->{rows}{$table}[$idx]->$fkcol };
+        $cond = {
+          $fkcol => $self->convert_backreference(
+            $name, $rel_name, $$proto, $fkcol,
+          ),
+        };
       }
       else {
         die "Unsure what to do about $name->$rel_name():" . np($proto);
@@ -381,6 +374,49 @@ sub find_by_unique_constraints {
     return $row;
   }
   return;
+}
+
+sub convert_backreference {
+  my $self = shift;
+  my ($name, $attr, $proto, $default_method) = @_;
+
+  my ($table, $idx, $methods) = ($proto =~ /(.+)\[(\d+)\](?:\.(.+))?$/);
+  unless ($table && defined $idx) {
+    die "Unsure what to do about $name->$attr => $proto\n";
+  }
+  unless (exists $self->{rows}{$table}) {
+    die "No rows in $table to reference\n";
+  }
+  unless (exists $self->{rows}{$table}[$idx]) {
+    die "Not enough ($idx) rows in $table to reference\n";
+  }
+
+  if ($methods) {
+    my @chain = split '\.', $methods;
+    my $obj = $self->{rows}{$table}[$idx];
+    $obj = $obj->$_ for @chain;
+    return $obj;
+  }
+  elsif ($default_method) {
+    return $self->{rows}{$table}[$idx]->$default_method;
+  }
+  else {
+    die "No method to call at $name->$attr => $proto\n";
+  }
+}
+
+sub fix_values {
+  my $self = shift;
+  my ($name, $item) = @_;
+
+  while (my ($attr, $value) = each %{$item}) {
+    # Decode a backreference
+    if (ref($value) eq 'SCALAR') {
+      $item->{$attr} = $self->convert_backreference(
+        $name, $attr, $$value,
+      );
+    }
+  }
 }
 
 sub fix_child_dependencies {
@@ -677,6 +713,7 @@ sub create_item {
   $self->{hooks}{preprocess}->($name, $source, $item);
 
   my ($child_deps, $deferred_fks) = $self->fix_fk_dependencies($name, $item);
+  $self->fix_values($name, $item);
 
   #warn "Creating $name (".np($item).")\n";
   my $row = $self->find_by_unique_constraints($name, $item);

@@ -2,6 +2,7 @@ Revision history for DBIx::Class::Sims (ordered by revision number).
 
 0.320000 May 11 2019 12:30:00 PDT
    - Handle the case where a FK is also a UK
+   - Add method traversal for backreferences
 
 0.310001 Apr 14 2019 12:30:00 PDT
    - Documentation fixes.

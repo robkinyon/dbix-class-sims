@@ -437,15 +437,19 @@ sims_test "Accept a hashref for children" => {
 
 sims_test "Connect to the parent by reference" => {
   spec => {
-    Artist => 1,
+    Artist => 3,
     Album  => {
       name => 'foo',
-      artist => \"Artist[0]",
+      artist => \"Artist[1]",
     },
   },
   expect => {
-    Artist => { id => 1, name => re('.+') },
-    Album => { id => 1, name => 'foo', artist_id => 1 },
+    Artist => [
+      { id => 1, name => re('.+') },
+      { id => 2, name => re('.+') },
+      { id => 3, name => re('.+') },
+    ],
+    Album => { id => 1, name => 'foo', artist_id => 2 },
   },
 };
 

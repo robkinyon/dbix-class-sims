@@ -4,7 +4,7 @@
 [ ] Create a test that has the parent in multiple UK's
 [ ] Create a test that has multiple has_many back (dies)
 [ ] Create a test that has no has_many back (dies)
-[ ] Add ability to use relationships of Sims references
+[X] Add ability to use relationships of Sims references
   * \'Foo[0].rel1.meth1.rel2.meth2'
 [ ] Add option to use random parent instead of first parent
 [ ] Add optional error when using column of a relationship

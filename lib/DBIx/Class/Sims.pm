@@ -670,6 +670,41 @@ back from the C<< load_sims() >> call.
 This also only works for belongs_to relationships. Since all parents are created
 before all children, the Sims cannot back-reference into children.
 
+=head3 Methods of References
+
+Let's say you want to create something where an attribute needs to have the same
+value as a parent's attribute. You can do it as so:
+
+  {
+      Parent => {
+          name => 'foo',
+          Child => {
+              name => \"Parent[0].name",
+          },
+      },
+  }
+
+All the rules of back-references apply. This will only work for method calls
+that do not require parameters.
+
+You can chain method calls as well. For example:
+
+  {
+      Artist => {
+          name => 'They Might Be Giants',
+      },
+      Album => {
+          artist => \'Artist[0]',
+          name => 'Flood',
+      },
+      Track => {
+          album => \'Album[0]',
+          name => \'Album[0].artist.name',
+      },
+  }
+
+(Yes, TMBG released a song called "TMBG". If only the album was also "TMBG" ...)
+
 =head2 Notes
 
 =over 4
