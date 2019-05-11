@@ -49,8 +49,6 @@ BEGIN {
       primary_keys => [ 'id' ],
       unique_constraints => [
         [ 'artist_id' ],
-        # Why is this constraint also required to force the UK violation?
-        [ 'name' ],
       ],
       belongs_to => {
         artist => { Artist => 'artist_id' },

@@ -1,6 +1,6 @@
 0.320000
 [X] Handle the case where a FK is also a UK
-[ ] Create a test that has the parent in a multi-column UK
+[?] Create a test that has the parent in a multi-column UK
 [ ] Create a test that has the parent in multiple UK's
 [ ] Create a test that has multiple has_many back (dies)
 [ ] Create a test that has no has_many back (dies)

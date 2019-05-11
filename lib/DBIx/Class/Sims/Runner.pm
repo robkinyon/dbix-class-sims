@@ -196,7 +196,6 @@ sub fix_fk_dependencies {
     # we cannot pick a parent that's already being used.
     my @constraints = $self->unique_constraints_containing($name, $col);
     if (@constraints) {
-      #warn np(@constraints), $/;
       # First, find the inverse relationship. If it doesn't exist or if there
       # is more than one, then die.
       my @inverse = $self->find_inverse_relationships(
@@ -210,7 +209,7 @@ sub fix_fk_dependencies {
       }
 
       # We cannot add this relationship to the $cond because that would result
-      # in an infinite loop.
+      # in an infinite loop. So, restrict the $rs here.
       $rs = $rs->search(
         { join('.', $inverse[0]->{rel}, $inverse[0]->{col}) => undef },
         { join => $inverse[0]->{rel} },
