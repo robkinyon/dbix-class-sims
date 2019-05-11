@@ -2,7 +2,12 @@ Revision history for DBIx::Class::Sims (ordered by revision number).
 
 0.320000 May 11 2019 12:30:00 PDT
    - Handle the case where a FK is also a UK
+       - Note: This currently only works for a single-column UK containing the
+         FK where there is 1-and-only-1 inverse relationship from the parent
+         Anything more complex may be undecidable in all cases.
    - Add method traversal for backreferences
+   - Add a random_parent option (defaults to false)
+       - Select a random parent instead of the first parent
 
 0.310001 Apr 14 2019 12:30:00 PDT
    - Documentation fixes.

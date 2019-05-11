@@ -6,8 +6,8 @@
 [ ] Create a test that has no has_many back (dies)
 [X] Add ability to use relationships of Sims references
   * \'Foo[0].rel1.meth1.rel2.meth2'
-[ ] Add option to use random parent instead of first parent
-[ ] Add optional error when using column of a relationship
+[-] Add option to use random parent instead of first parent
+[X] Add optional error when using column of a relationship
 
 
 ZR fixes (as part of 0.302000):

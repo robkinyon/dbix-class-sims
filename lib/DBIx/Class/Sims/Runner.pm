@@ -233,7 +233,12 @@ sub fix_fk_dependencies {
 
     my $parent;
     unless ($meta->{create}) {
-      $parent = $rs->search(undef, { rows => 1 })->first;
+      if ($self->{random_parent}) {
+        $parent = $rs->search(undef, { rows => 1 })->first;
+      }
+      else {
+        $parent = $rs->search(undef, { rows => 1 })->first;
+      }
 
       # This occurs when a FK condition was specified, but the column is
       # nullable. We want to defer these because self-referential values need

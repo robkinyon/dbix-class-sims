@@ -190,6 +190,7 @@ sub load_sims {
       # has a value set. It defaults to false. Set to true to disable.
       allow_pk_set_value => $opts->{allow_pk_set_value} // 0,
       strict_mode => $opts->{strict_mode} // 1,
+      random_parent => $opts->{random_parent} // 0,
     );
 
     $rows = eval {
@@ -400,7 +401,7 @@ C<< $rv, $addl? = DBIx::Class::Sims->load_sims( $schema, $spec, ?$opts ) >>
 
 This method will load the rows requested in C<$spec>, plus any additional rows
 necessary to make those rows work. This includes any parent rows (as defined by
-C<belongs_to>) and per any constraints defined in C<$opts->{constraints}>. If
+C<belongs_to>) and per any constraints defined in C<< $opts->{constraints} >>. If
 need-be, you can pass in hooks (as described below) to manipulate the data.
 
 load_sims does all of its work within a call to L<DBIx::Class::Schema/txn_do>.
@@ -763,6 +764,14 @@ If set to 0, this will ignore table names that don't exist in the schema.
 
 This defaults to 1.
 
+=head2 random_parent
+
+If set to 1, this will select a random parent instead of the first parent if a
+parent row will be selected. This has no effect if a parent row is created, if
+a back-reference is used, or if a parent is directly set in any other way.
+
+This defaults to 0.
+
 =head2 toposort
 
 This is passed directly to the call to C<< DBIx::Class::TopoSort->toposort >>.
@@ -778,13 +787,13 @@ hooks:
 
 =item * preprocess
 
-This receives C<$name, $source, $spec> and expects nothing in return. C<$spec>
-is the hashref that will be passed to C<<$schema->resultset($name)->create()>>.
+This receives C<$name, $source, $spec> and ignores any return value. C<$spec>
+is the hashref that will be passed to C<< $schema->resultset($name)->create() >>.
 This hook is expected to modify C<$spec> as needed.
 
 =item * postprocess
 
-This receives C<$name, $source, $row> and expects nothing in return. This hook
+This receives C<$name, $source, $row> and ignores any return value. This hook
 is expected to modify the newly-created row object as needed.
 
 =back
