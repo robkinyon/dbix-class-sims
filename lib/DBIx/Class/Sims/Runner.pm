@@ -105,7 +105,7 @@ sub create_search {
   my %cols = map { $_ => 1 } $source->columns;
   my $search = {
     (map {
-      $_ => $cond->{$_}
+      'me.' . $_ => $cond->{$_}
     } grep {
       # Make sure this column exists and is an actual value. Assumption is that
       # a non-reference is a value and a reference is a sims-spec.
@@ -199,6 +199,31 @@ sub fix_fk_dependencies {
       }
     }
 
+    # If the child's column is within a UK, add a check to the $rs that ensures
+    # we cannot pick a parent that's already being used.
+    my @constraints = $self->unique_constraints_containing($name, $col);
+    if (@constraints) {
+      #warn np(@constraints), $/;
+      # First, find the inverse relationship. If it doesn't exist or if there
+      # is more than one, then die.
+      my @inverse = $self->find_inverse_relationships(
+        $fk_name, $rel_name, $fkcol,
+      );
+      if (@inverse == 0) {
+        die "Cannot find an inverse relationship for ${name}->${rel_name}\n";
+      }
+      elsif (@inverse > 1) {
+        die "Too many inverse relationships for ${name}->${rel_name}\n";
+      }
+
+      # We cannot add this relationship to the $cond because that would result
+      # in an infinite loop.
+      $rs = $rs->search(
+        { join('.', $inverse[0]->{rel}, $inverse[0]->{col}) => undef },
+        { join => $inverse[0]->{rel} },
+      );
+    }
+
     my $col_info = $source->column_info($col);
     if ( $cond ) {
       $rs = $self->create_search($rs, $fk_name, $cond);
@@ -278,6 +303,41 @@ sub fix_fk_dependencies {
   sub has_pending { keys %pending != 0; }
   sub delete_pending { delete $pending{$_[1]}; }
   sub clear_pending { %pending = (); }
+}
+
+sub find_inverse_relationships {
+  my $self = shift;
+  my ($name, $rel_name, $fkcol) = @_;
+
+  my $source = $self->schema->source($name);
+
+  my @inverses;
+  foreach my $rel_name ( $source->relationships ) {
+    my $rel_info = $source->relationship_info($rel_name);
+    next if $is_fk->($rel_info);
+
+    push @inverses, {
+      rel => $rel_name,
+      col => $foreign_fk_col->($rel_info),
+    };
+  }
+
+  return @inverses;
+}
+
+sub unique_constraints_containing {
+  my $self = shift;
+  my ($name, $column) = @_;
+
+  my $source = $self->schema->source($name);
+  my @uniques = map {
+    [ $source->unique_constraint_columns($_) ]
+  } $source->unique_constraint_names();
+
+  return grep {
+    my $coldef = $_;
+    grep { $column eq $_ } @$coldef
+  } @uniques;
 }
 
 sub find_by_unique_constraints {
