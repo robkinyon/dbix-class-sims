@@ -190,7 +190,6 @@ sub load_sims {
       # has a value set. It defaults to false. Set to true to disable.
       allow_pk_set_value => $opts->{allow_pk_set_value} // 0,
       strict_mode => $opts->{strict_mode} // 1,
-      random_parent => $opts->{random_parent} // 0,
     );
 
     $rows = eval {
@@ -758,19 +757,38 @@ This defaults to 1.
 
 If set, this will be the srand() seed used for this invocation.
 
-=head2 strict_mode
+=head2 ignore_unknown_tables
 
-If set to 0, this will ignore table names that don't exist in the schema.
+If set to 1, this will ignore table names that don't exist in the schema.
+Otherwise, it will raise an error.
+
+This defaults to 0.
+
+=head2 allow_relationship_column_names
+
+If set to 0, this will raise an error if relationship is specified with the
+column name instead of the relationship name.
+
+If they are the same, this will not raise an error. (This is generally a bad
+idea, but some schemas do this.)
 
 This defaults to 1.
 
-=head2 random_parent
+=head2 strict_mode
 
-If set to 1, this will select a random parent instead of the first parent if a
-parent row will be selected. This has no effect if a parent row is created, if
-a back-reference is used, or if a parent is directly set in any other way.
+This sets the following options:
 
-This defaults to 0.
+=over 4
+
+=item * C<< ignore_unknown_tables => 0 >>
+
+=item * C<< allow_relationship_column_names => 0 >>
+
+=item * C<< die_on_failure => 1 >>
+
+=back
+
+If you have explicitly set one of these options, it will override strict_mode.
 
 =head2 toposort
 

@@ -6,8 +6,11 @@ Revision history for DBIx::Class::Sims (ordered by revision number).
          FK where there is 1-and-only-1 inverse relationship from the parent
          Anything more complex may be undecidable in all cases.
    - Add method traversal for backreferences
-   - Add a random_parent option (defaults to false)
-       - Select a random parent instead of the first parent
+   - strict_mode renamed to ignore_unknown_tables (defaults to false)
+   - Add a allow_relationship_column_names option (defaults to false)
+   - strict_mode is now a compilation of other options
+       - ignore_unknown_tables = false
+       - allow_relationship_column_names = false
 
 0.310001 Apr 14 2019 12:30:00 PDT
    - Documentation fixes.
