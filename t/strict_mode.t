@@ -39,7 +39,7 @@ use common qw(sims_test Schema);
 sims_test "Table doesn't exist (strict off)" => {
   spec => [
     { NotThere => 1 },
-    { strict_mode => 0 },
+    { ignore_unknown_tables => 1 },
   ],
   expect => {
   },

@@ -1,6 +1,19 @@
-ZR fixes (as part of 0.302000):
+0.320000
+[X] Handle the case where a FK is also a UK
+[?] Create a test that has the parent in a multi-column UK
+[X] Add ability to use relationships of Sims references
+  * \'Foo[0].rel1.meth1.rel2.meth2'
+[X] Add optional error when using column of a relationship
+
+
+
+ZR fixes (as part of 0.321000):
+[ ] Add option to use random parent instead of first parent
 [ ] info->{nullable} vs !info->{is_nullable}
 [ ] create_item() local$@
+[ ] Create a test that has the parent in multiple UK's
+[ ] Create a test that has multiple has_many back (dies)
+[ ] Create a test that has no has_many back (dies)
 
 
 [X] Hoist the number/hashref->arrayref conversion to all levels
