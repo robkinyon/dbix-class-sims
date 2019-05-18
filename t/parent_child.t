@@ -56,7 +56,6 @@ BEGIN {
 
 use common qw(sims_test);
 
-=pod
 sims_test "Connect parent/child by lookup" => {
   spec => {
     Artist => [ map { { name => "foo$_" } } 1..4 ],
@@ -480,7 +479,19 @@ sims_test "Connect to the right parent by reference" => {
     ],
   },
 };
-=cut
+
+sims_test "Connect to the parent by reference" => {
+  spec => {
+    Artist => { name => 'foo' },
+    Album  => { name => \'Artist[0].name', artist => \'Artist[0]' },
+  },
+  expect => {
+    Artist => [
+      { id => 1, name => 'foo' },
+    ],
+    Album => { id => 1, name => 'foo', artist_id => 1 },
+  },
+};
 
 # These tests verify the allow_relationship_column_name parameter
 sims_test "Can use column name" => {

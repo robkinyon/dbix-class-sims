@@ -14,7 +14,6 @@ ZR fixes (as part of 0.321000):
 [ ] Create a test that has the parent in multiple UK's
 [ ] Create a test that has multiple has_many back (dies)
 [ ] Create a test that has no has_many back (dies)
-[ ] Add ability to use back-references in normal columns
 
 
 [X] Hoist the number/hashref->arrayref conversion to all levels
