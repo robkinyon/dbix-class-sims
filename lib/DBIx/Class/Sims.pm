@@ -178,6 +178,13 @@ sub load_sims {
       %{$opts->{toposort} // {}},
     );
 
+    my $strict_mode = $opts->{strict_mode} // 0;
+    if ($strict_mode) {
+      $opts->{ignore_unknown_tables} //= 0;
+      $opts->{allow_relationship_column_names} //= 0;
+      $opts->{die_on_failure} //= 1;
+    }
+
     my $runner = DBIx::Class::Sims::Runner->new(
       parent => $self,
       schema => $schema,
@@ -189,7 +196,8 @@ sub load_sims {
       # Set this to false to throw a warning if a non-null auto-increment column
       # has a value set. It defaults to false. Set to true to disable.
       allow_pk_set_value => $opts->{allow_pk_set_value} // 0,
-      strict_mode => $opts->{strict_mode} // 1,
+      ignore_unknown_tables => $opts->{ignore_unknown_tables} // 0,
+      allow_relationship_column_names => $opts->{allow_relationship_column_names} // 1,
     );
 
     $rows = eval {

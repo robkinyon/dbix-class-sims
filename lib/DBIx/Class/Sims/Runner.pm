@@ -164,6 +164,12 @@ sub fix_fk_dependencies {
     my $fk_name = $short_source->($rel_info);
     my $rs = $self->schema->resultset($fk_name);
 
+    if (!$self->{allow_relationship_column_names}) {
+      if ($col ne $rel_name && exists $item->{$col}) {
+        die "Cannot use column $col - use relationship $rel_name";
+      }
+    }
+
     my $cond;
     my $proto = delete($item->{$rel_name}) // delete($item->{$col});
     if ($proto) {
@@ -770,7 +776,7 @@ sub run {
     }
 
     # Things were passed in, but don't exist in the schema.
-    if ($self->{strict_mode} && %still_to_use) {
+    if (!$self->{ignore_unknown_tables} && %still_to_use) {
       my $msg = "The following names are in the spec, but not the schema:\n";
       $msg .= join ',', sort keys %still_to_use;
       $msg .= "\n";

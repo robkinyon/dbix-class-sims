@@ -56,6 +56,7 @@ BEGIN {
 
 use common qw(sims_test);
 
+=pod
 sims_test "Connect parent/child by lookup" => {
   spec => {
     Artist => [ map { { name => "foo$_" } } 1..4 ],
@@ -478,6 +479,36 @@ sims_test "Connect to the right parent by reference" => {
       { id => 3, name => re('.+'), artist_id => 1 },
     ],
   },
+};
+=cut
+
+# These tests verify the allow_relationship_column_name parameter
+sims_test "Can use column name" => {
+  spec => {
+    Artist => { name => 'bar' },
+    Album => {
+      name => 'foo',
+      artist_id => 1,
+    },
+  },
+  expect => {
+    Artist => { id => 1, name => 'bar' },
+    Album => { id => 1, name => 'foo', artist_id => 1 },
+  },
+};
+
+sims_test "Cannot use column name" => {
+  spec => [
+    {
+      Artist => { name => 'bar' },
+      Album => {
+        name => 'foo',
+        artist_id => 1,
+      },
+    },
+    { allow_relationship_column_names => 0 },
+  ],
+  dies => qr/DBIx::Class::Sims::Runner::run\(\): Cannot use column artist_id - use relationship artist/s,
 };
 
 done_testing;
