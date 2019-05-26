@@ -26,6 +26,7 @@ BEGIN {
       primary_keys => [ 'id' ],
       has_many => {
         albums => { Album => 'artist_id' },
+        mansions => { Mansion => 'artist_id' },
       },
     },
     Album => {
@@ -50,6 +51,29 @@ BEGIN {
       unique_constraints => [
         [ 'artist_id' ],
       ],
+      belongs_to => {
+        artist => { Artist => 'artist_id' },
+      },
+    },
+    Mansion => {
+      table => 'mansions',
+      columns => {
+        id => {
+          data_type => 'int',
+          is_nullable => 0,
+          is_auto_increment => 1,
+        },
+        artist_id => {
+          data_type => 'int',
+          is_nullable => 0,
+        },
+        name => {
+          data_type => 'varchar',
+          size => 128,
+          is_nullable => 0,
+        },
+      },
+      primary_keys => [ 'id' ],
       belongs_to => {
         artist => { Artist => 'artist_id' },
       },

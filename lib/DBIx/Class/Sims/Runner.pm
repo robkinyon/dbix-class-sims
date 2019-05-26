@@ -205,7 +205,7 @@ sub fix_fk_dependencies {
       # First, find the inverse relationship. If it doesn't exist or if there
       # is more than one, then die.
       my @inverse = $self->find_inverse_relationships(
-        $fk_name, $rel_name, $fkcol,
+        $name, $rel_name, $fk_name, $fkcol,
       );
       if (@inverse == 0) {
         die "Cannot find an inverse relationship for ${name}->${rel_name}\n";
@@ -305,14 +305,20 @@ sub fix_fk_dependencies {
 
 sub find_inverse_relationships {
   my $self = shift;
-  my ($name, $rel_name, $fkcol) = @_;
+  my ($parent, $rel_to_child, $child, $fkcol) = @_;
 
-  my $source = $self->schema->source($name);
+  my $fksource = $self->schema->source($child);
 
   my @inverses;
-  foreach my $rel_name ( $source->relationships ) {
-    my $rel_info = $source->relationship_info($rel_name);
-    next if $is_fk->($rel_info);
+  foreach my $rel_name ( $fksource->relationships ) {
+    my $rel_info = $fksource->relationship_info($rel_name);
+
+    # Skip relationships that aren't back towards the table we're coming from.
+    next unless $short_source->($rel_info) eq $parent;
+
+    # Assumption: We don't need to verify the $fkcol because there shouldn't be
+    # multiple relationships on different columns between the same tables. This
+    # is likely to be violated, but only by badly-designed schemas.
 
     push @inverses, {
       rel => $rel_name,
