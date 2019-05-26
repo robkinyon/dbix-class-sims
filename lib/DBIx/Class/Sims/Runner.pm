@@ -21,10 +21,24 @@ my $short_source = sub {
   return $x;
 };
 
+my $cond = sub {
+  my $x = $_[0]{cond};
+  if (reftype($x) eq 'CODE') {
+    $x = $x->({
+      foreign_alias => 'foreign',
+      self_alias => 'self',
+    });
+  }
+  if (reftype($x) ne 'HASH') {
+    die "cond is not a HASH\n" . np($_[0]);
+  }
+  return $x;
+};
+
 # ribasushi says: at least make sure the cond is a hashref (not guaranteed)
-my $self_fk_cols = sub { map {/^self\.(.*)/; $1} values %{$_[0]{cond}} };
+my $self_fk_cols = sub { map {/^self\.(.*)/; $1} values %{$cond->($_[0])} };
 my $self_fk_col  = sub { ($self_fk_cols->(@_))[0] };
-my $foreign_fk_cols = sub { map {/^foreign\.(.*)/; $1} keys %{$_[0]{cond}} };
+my $foreign_fk_cols = sub { map {/^foreign\.(.*)/; $1} keys %{$cond->($_[0])} };
 my $foreign_fk_col  = sub { ($foreign_fk_cols->(@_))[0] };
 ###### TO HERE ######
 
@@ -211,7 +225,7 @@ sub fix_fk_dependencies {
         die "Cannot find an inverse relationship for ${name}->${rel_name}\n";
       }
       elsif (@inverse > 1) {
-        die "Too many inverse relationships for ${name}->${rel_name}\n";
+        die "Too many inverse relationships for ${name}->${rel_name} ($fk_name / $fkcol)\n" . np(@inverse);
       }
 
       # We cannot add this relationship to the $cond because that would result

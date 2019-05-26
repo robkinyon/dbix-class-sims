@@ -3,6 +3,9 @@ Revision history for DBIx::Class::Sims (ordered by revision number).
 0.330000 May 25 2019 12:30:00 PDT
    - Fix a nasty bug when the FK is also a UK and there is more than one
      relationship emanating from the child table.
+   - Add support for relationships defined by subroutines
+       - The assumption that all relationships are single-column is likely to
+         have to be dealt with soon. but, not yet.
 
 0.320000 May 11 2019 12:30:00 PDT
    - Handle the case where a FK is also a UK

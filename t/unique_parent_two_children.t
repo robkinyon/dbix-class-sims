@@ -83,10 +83,6 @@ BEGIN {
 
 use common qw(sims_test Schema);
 
-# TODO: Need a test for the situation where we have multiple inverse
-# relationships. The code doesn't actually see which are the inverse
-# relationships, causing issues.
-
 subtest "Create a unique parent" => sub {
   sims_test "Create a parent" => {
     spec => {

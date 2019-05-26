@@ -47,11 +47,11 @@ BEGIN {
         },
       },
       primary_keys => [ 'id' ],
-      unique_constraints => [
-        [ 'artist_id' ],
-      ],
       belongs_to => {
-        artist => { Artist => 'artist_id' },
+        artist => { Artist => 'sub {
+          my $args = shift;
+          {"$args->{foreign_alias}.id" => "$args->{self_alias}.artist_id"}
+        }' },
       },
     },
   ]);
@@ -59,35 +59,13 @@ BEGIN {
 
 use common qw(sims_test Schema);
 
-subtest "Create a unique parent" => sub {
-  sims_test "Create a parent" => {
-    spec => {
-      Album => { name => 'foo' },
-    },
-    expect => {
-      Album => { id => 1, artist_id => 1, name => 'foo' },
-    },
-  };
-
-  sims_test "Create the second parent" => {
-    deploy => 0,
-    loaded => {
-      Artist => 1,
-      Album  => 1,
-    },
-    spec => {
-      Album => { name => 'bar' },
-    },
-    expect => {
-      Album => [
-        { id => 1, artist_id => 1, name => 'foo' },
-        { id => 2, artist_id => 2, name => 'bar' },
-      ],
-    },
-    rv => {
-      Album => { id => 2, artist_id => 2, name => 'bar' },
-    },
-  };
+sims_test "Create a child via rel by subroutine" => {
+  spec => {
+    Artist => { name => 'foo', albums => { name => 'bar' } },
+  },
+  expect => {
+    Artist => { id => 1, name => 'foo' },
+  },
 };
 
 done_testing
