@@ -352,9 +352,15 @@ sub unique_constraints_containing {
     [ $source->unique_constraint_columns($_) ]
   } $source->unique_constraint_names();
 
+  # Only return true if the unique constraint is solely built from the column.
+  # When we handle multi-column relationships, then we will need to handle the
+  # situation where the relationship's columns are the UK.
+  #
+  # The situation where the UK has multiple columns, one of which is the the FK,
+  # is potentially undecideable.
   return grep {
     my $coldef = $_;
-    grep { $column eq $_ } @$coldef
+    ! grep { $column ne $_ } @$coldef
   } @uniques;
 }
 
