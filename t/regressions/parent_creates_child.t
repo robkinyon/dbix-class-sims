@@ -71,15 +71,10 @@ sims_test "parent builds a child, but we're creating a child" => {
   ],
   expect => {
     Artist => { id => 1, name => re('.+') },
-    Album  => [
-      { id => 1, name => 'bar', artist_id => 1 },
-      { id => 2, name => re('.+'), artist_id => 1 },
-    ],
+    Album  => { artist_id => 1, name => 'bar' },
   },
   rv => {
-    Album  => [
-      { id => 1, name => 'bar', artist_id => 1 },
-    ],
+    Album  => { artist_id => 1, name => 'bar' },
   },
 };
 

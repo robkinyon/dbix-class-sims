@@ -231,8 +231,8 @@ sub fix_fk_dependencies {
       # We cannot add this relationship to the $cond because that would result
       # in an infinite loop. So, restrict the $rs here.
       $rs = $rs->search(
-        { join('.', $inverse[0]->{rel}, $inverse[0]->{col}) => undef },
-        { join => $inverse[0]->{rel} },
+        { join('.', $inverse[0]{rel}, $inverse[0]{col}) => undef },
+        { join => $inverse[0]{rel} },
       );
     }
 
@@ -740,15 +740,20 @@ sub create_item {
 
   $self->fix_columns($name, $item);
 
+  # Don't keep going if we have already satisfy all UKs
+  my $row = $self->find_by_unique_constraints($name, $item);
+  return $row if $row;
+
   my $source = $self->schema->source($name);
   $self->{hooks}{preprocess}->($name, $source, $item);
 
   my ($child_deps, $deferred_fks) = $self->fix_fk_dependencies($name, $item);
   $self->fix_values($name, $item);
 
-  #warn "Creating $name (".np($item).")\n";
-  my $row = $self->find_by_unique_constraints($name, $item);
+  #warn "Ensuring $name (".np($item).")\n";
+  $row = $self->find_by_unique_constraints($name, $item);
   unless ($row) {
+    #warn "Creating $name (".np($item).")\n";
     $row = eval {
       my $to_create = MyCloner::clone($item);
       delete $to_create->{__META__};
