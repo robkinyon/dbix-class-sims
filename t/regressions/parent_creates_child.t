@@ -78,4 +78,17 @@ sims_test "parent builds a child, but we're creating a child" => {
   },
 };
 
+sims_test "child refers to parent by backref" => {
+  spec => [
+    {
+      Artist => 1,
+      Album => { artist_id => \'Artist[0].id' },
+    },
+  ],
+  expect => {
+    Artist => { id => 1, name => re('.+') },
+    Album  => { artist_id => 1, name => re('.+') },
+  },
+};
+
 done_testing;

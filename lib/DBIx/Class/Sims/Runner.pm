@@ -145,6 +145,25 @@ sub create_search {
   return $rs;
 }
 
+sub find_child_dependencies {
+  my $self = shift;
+  my ($name, $item) = @_;
+
+  my (%child_deps);
+  my $source = $self->schema->source($name);
+  RELATIONSHIP:
+  foreach my $rel_name ( $source->relationships ) {
+    my $rel_info = $source->relationship_info($rel_name);
+    unless ( $is_fk->($rel_info) ) {
+      if ($item->{$rel_name}) {
+        $child_deps{$rel_name} = delete $item->{$rel_name};
+      }
+    }
+  }
+
+  return \%child_deps;
+}
+
 sub fix_fk_dependencies {
   my $self = shift;
   my ($name, $item) = @_;
@@ -158,15 +177,12 @@ sub fix_fk_dependencies {
   # 2. If we don't have something and the column is non-nullable, then:
   #   a. If rows exists, pick a random one.
   #   b. If rows don't exist, $create_item->($fksrc, {})
-  my (%child_deps, %deferred_fks);
+  my (%deferred_fks);
   my $source = $self->schema->source($name);
   RELATIONSHIP:
   foreach my $rel_name ( $source->relationships ) {
     my $rel_info = $source->relationship_info($rel_name);
     unless ( $is_fk->($rel_info) ) {
-      if ($item->{$rel_name}) {
-        $child_deps{$rel_name} = delete $item->{$rel_name};
-      }
       next RELATIONSHIP;
     }
 
@@ -249,7 +265,7 @@ sub fix_fk_dependencies {
 
     my $meta = delete $cond->{__META__} // {};
 
-    #warn "Looking for $name->$rel_name(".np($cond).")\n";
+    warn "Looking for $name->$rel_name(".np($cond).")\n" if $ENV{SIMS_DEBUG};
 
     my $parent;
     unless ($meta->{create}) {
@@ -273,7 +289,7 @@ sub fix_fk_dependencies {
     $item->{$col} = $parent->get_column($fkcol);
   }
 
-  return \%child_deps, \%deferred_fks;
+  return \%deferred_fks;
 }
 
 {
@@ -383,6 +399,11 @@ sub find_by_unique_constraints {
     my %criteria;
     foreach my $colname (@{$unique}) {
       my $value = $item->{$colname};
+      if (ref($value) eq 'SCALAR') {
+        $value = $self->convert_backreference(
+          $name, $colname, $$value,
+        );
+      }
       my $classname = blessed($value);
       if ( $classname && $classname->isa('DateTime') ) {
         $value = $self->datetime_parser->format_datetime($value);
@@ -742,33 +763,36 @@ sub create_item {
 
   # Don't keep going if we have already satisfy all UKs
   my $row = $self->find_by_unique_constraints($name, $item);
-  return $row if $row;
 
   my $source = $self->schema->source($name);
   $self->{hooks}{preprocess}->($name, $source, $item);
 
-  my ($child_deps, $deferred_fks) = $self->fix_fk_dependencies($name, $item);
-  $self->fix_values($name, $item);
-
-  #warn "Ensuring $name (".np($item).")\n";
-  $row = $self->find_by_unique_constraints($name, $item);
+  my ($child_deps) = $self->find_child_dependencies($name, $item);
   unless ($row) {
-    #warn "Creating $name (".np($item).")\n";
-    $row = eval {
-      my $to_create = MyCloner::clone($item);
-      delete $to_create->{__META__};
-      $self->schema->resultset($name)->create($to_create);
-    }; if ($@) {
-      my $e = $@;
-      warn "ERROR Creating $name (".np($item).")\n";
-      die $e;
+    my ($deferred_fks) = $self->fix_fk_dependencies($name, $item);
+    $self->fix_values($name, $item);
+
+    warn "Ensuring $name (".np($item).")\n" if $ENV{SIMS_DEBUG};
+    $row = $self->find_by_unique_constraints($name, $item);
+    unless ($row) {
+      warn "Creating $name (".np($item).")\n" if $ENV{SIMS_DEBUG};
+      $row = eval {
+        my $to_create = MyCloner::clone($item);
+        delete $to_create->{__META__};
+        $self->schema->resultset($name)->create($to_create);
+      }; if ($@) {
+        my $e = $@;
+        warn "ERROR Creating $name (".np($item).")\n";
+        die $e;
+      }
+      # This tracks everything that was created, not just what was requested.
+      $self->{created}{$name}++;
     }
-    # This tracks everything that was created, not just what was requested.
-    $self->{created}{$name}++;
+
+    $self->fix_deferred_fks($name, $row, $deferred_fks);
   }
 
   $self->fix_child_dependencies($name, $row, $child_deps);
-  $self->fix_deferred_fks($name, $row, $deferred_fks);
 
   $self->{hooks}{postprocess}->($name, $source, $row);
 

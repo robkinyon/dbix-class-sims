@@ -4,6 +4,7 @@
 [X] Add ability to use relationships of Sims references
   * \'Foo[0].rel1.meth1.rel2.meth2'
 [X] Add optional error when using column of a relationship
+[X] Add UKFK that is a backref
 
 
 
