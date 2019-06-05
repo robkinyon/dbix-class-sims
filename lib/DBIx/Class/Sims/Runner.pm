@@ -497,7 +497,7 @@ sub fix_child_dependencies {
     if ($child_deps->{$rel_name}) {
       my $n = DBIx::Class::Sims::Util->normalize_aoh($child_deps->{$rel_name});
       unless ($n) {
-        die "Don't know what to do with $name->{$rel_name}\n\t".np($row);
+        die "Don't know what to do with $name\->{$rel_name}\n\t".np($row);
       }
       @children = @{$n};
     }
