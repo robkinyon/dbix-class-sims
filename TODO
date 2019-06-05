@@ -4,16 +4,18 @@
 [X] Add ability to use relationships of Sims references
   * \'Foo[0].rel1.meth1.rel2.meth2'
 [X] Add optional error when using column of a relationship
+[X] Add UKFK that is a backref
 
 
 
-ZR fixes (as part of 0.321000):
+ZR fixes (as part of 0.323000):
 [ ] Add option to use random parent instead of first parent
 [ ] info->{nullable} vs !info->{is_nullable}
 [ ] create_item() local$@
 [ ] Create a test that has the parent in multiple UK's
 [ ] Create a test that has multiple has_many back (dies)
 [ ] Create a test that has no has_many back (dies)
+[ ] Test for a relationship with a subroutine
 
 
 [X] Hoist the number/hashref->arrayref conversion to all levels
