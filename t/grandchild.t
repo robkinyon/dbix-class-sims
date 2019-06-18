@@ -114,4 +114,30 @@ sims_test "Create ancestors via unmet grandparent specification" => {
   rv => sub { { Track => shift->{expect}{Track} } },
 };
 
+sims_test "Find grandparent by DBIC row" => {
+  spec => {
+    Track => {
+      album => {
+        artist => { name => 'cdef' },
+      },
+    },
+  },
+  load_sims => sub {
+    my ($schema) = @_;
+    my $rv = $schema->load_sims({
+      Artist => 1,
+    });
+
+    return $schema->load_sims({
+      Track => { album => { artist => $rv->{Artist}[0] } },
+    });
+  },
+  expect => {
+    Artist => { id => 1, name => 'abcd' },
+    Album => { id => 1, name => 'efgh', artist_id => 1 },
+    Track => { id => 1, name => 'ijkl', album_id => 1 },
+  },
+  rv => sub { { Track => shift->{expect}{Track} } },
+};
+
 done_testing;
