@@ -2,6 +2,7 @@ Revision history for DBIx::Class::Sims (ordered by revision number).
 
 0.401000 Jun 09 2019 12:30:00 PDT
    - Provide a nice way to print DateTime objects in SIMS_DEBUG mode.
+   - Upgrade Toposort to 0.060000 for `add_dependencies` option
 
 0.400000 May 25 2019 12:30:00 PDT
    - THIS RELEASE CONTAINS A POTENTIALLY BREAKING BEHAVIOR CHANGE.

@@ -4,7 +4,7 @@ requires 'Data::Compare';
 requires 'Data::Printer';
 requires 'Data::Walk';
 requires 'DateTime';
-requires 'DBIx::Class::TopoSort' => '0.050001';
+requires 'DBIx::Class::TopoSort' => '0.060000';
 requires 'Hash::Merge';
 requires 'List::Util';
 requires 'List::MoreUtils';
@@ -14,6 +14,7 @@ requires 'YAML::Any'; # Removes a warning.
 
 on test => sub {
   requires 'File::Temp'        => '0.01';
+  requires 'JSON'              => '0.01';
   requires 'Test::DBIx::Class' => '0.01';
   requires 'Test::Exception'   => '0.21';
   requires 'Test::More'        => '0.88'; # done_testing

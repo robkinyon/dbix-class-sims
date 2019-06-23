@@ -1,10 +1,10 @@
 0.410000
-[ ] Add additional relationships in load_sims call
+[X] Add additional relationships in load_sims call
 [ ] Subroutine as a value
 [ ] __META__ => { label => 'bar' } ---> Foo{bar}
 
 ZR fixes
-[?] Create a test that has the parent in a multi-column UK
+[ ] Create a test that has the parent in a multi-column UK
 [ ] Add option to use random parent instead of first parent
 [ ] info->{nullable} vs !info->{is_nullable}
 [ ] create_item() local$@
