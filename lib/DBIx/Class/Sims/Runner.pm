@@ -120,7 +120,9 @@ sub create_search {
   #
   # XXX: Do we need to receive the deferred_fks() here? What should we do with
   # them if we do? Why can we ignore them if we don't?
-  $self->fix_fk_dependencies($name, $cond);
+  #
+  # This is commented out because of explanation below.
+  #$self->fix_fk_dependencies($name, $cond);
 
   my $source = $self->schema->source($name);
   my %cols = map { $_ => 1 } $source->columns;
@@ -134,6 +136,22 @@ sub create_search {
     } keys %$cond)
   };
   $rs = $rs->search($search);
+
+  # This for-loop shouldn't exist. Instead, we should be able to use
+  # fix_fk_dependencies() above. However, that breaks in mysterious ways.
+  foreach my $rel_name ($source->relationships) {
+    next unless exists $cond->{$rel_name};
+    next unless (reftype($cond->{$rel_name}) // '') eq 'HASH';
+
+    my %search = map {
+      ;"$rel_name.$_" => $cond->{$rel_name}{$_}
+    } grep {
+      # Nested relationships are "automagically handled."
+      !ref $cond->{$rel_name}{$_}
+    } keys %{$cond->{$rel_name}};
+
+    $rs = $rs->search(\%search, { join => $rel_name });
+  }
 
   return $rs;
 }
