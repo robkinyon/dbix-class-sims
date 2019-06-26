@@ -115,6 +115,15 @@ sub create_search {
   my $self = shift;
   my ($rs, $name, $cond) = @_;
 
+  # Handle the FKs, particularly the FKs of the FKs. Tests for this line:
+  # * t/grandchild.t "Find grandparent by DBIC row"
+  #
+  # XXX: Do we need to receive the deferred_fks() here? What should we do with
+  # them if we do? Why can we ignore them if we don't?
+  #
+  # This is commented out because of explanation below.
+  #$self->fix_fk_dependencies($name, $cond);
+
   my $source = $self->schema->source($name);
   my %cols = map { $_ => 1 } $source->columns;
   my $search = {
@@ -128,6 +137,8 @@ sub create_search {
   };
   $rs = $rs->search($search);
 
+  # This for-loop shouldn't exist. Instead, we should be able to use
+  # fix_fk_dependencies() above. However, that breaks in mysterious ways.
   foreach my $rel_name ($source->relationships) {
     next unless exists $cond->{$rel_name};
     next unless (reftype($cond->{$rel_name}) // '') eq 'HASH';
@@ -759,10 +770,17 @@ sub create_item {
   }
   $self->add_item($name, $item);
 
+  my $before_fix = np($item);
   $self->fix_columns($name, $item);
+  my $after_fix = np($item);
 
   # Don't keep going if we have already satisfy all UKs
   my $row = $self->find_by_unique_constraints($name, $item);
+  if ($row && $ENV{SIMS_DEBUG}) {
+    warn "Found duplicate in $name:\n"
+      . "\tbefore fix_columns (".np($before_fix).")\n"
+      . "\tafter fix_columns (".np($after_fix).")\n";
+  }
 
   my $source = $self->schema->source($name);
   $self->{hooks}{preprocess}->($name, $source, $item);
@@ -816,7 +834,17 @@ sub run {
           if ($self->{allow_pk_set_value}) {
             set_allow_pk_to($item, 1);
           }
-          my $row = $self->create_item($name, $item);
+
+          my $row = do {
+            no strict;
+
+            # DateTime objects print too big in SIMS_DEBUG mode, so provide a
+            # good way for DDP to print them nicely.
+            local *{'DateTime::_data_printer'} = sub { shift->iso8601 }
+              unless DateTime->can('_data_printer');
+
+            $self->create_item($name, $item);
+          };
 
           if ($self->{initial_spec}{$name}{$item}) {
             push @{$self->{rows}{$name} //= []}, $row;

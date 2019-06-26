@@ -1,23 +1,39 @@
-0.320000
-[X] Handle the case where a FK is also a UK
-[?] Create a test that has the parent in a multi-column UK
-[X] Add ability to use relationships of Sims references
-  * \'Foo[0].rel1.meth1.rel2.meth2'
-[X] Add optional error when using column of a relationship
-[X] Add UKFK that is a backref
+0.410000
+[X] Add additional relationships in load_sims call
+[ ] Subroutine as a value
+[ ] __META__ => { label => 'bar' } ---> Foo{bar}
 
-
-
-ZR fixes (as part of 0.323000):
+ZR fixes
+[ ] Create a test that has the parent in a multi-column UK
 [ ] Add option to use random parent instead of first parent
+    * There's a stash entry for this
 [ ] info->{nullable} vs !info->{is_nullable}
 [ ] create_item() local$@
 [ ] Create a test that has the parent in multiple UK's
 [ ] Create a test that has multiple has_many back (dies)
 [ ] Create a test that has no has_many back (dies)
-[ ] Test for a relationship with a subroutine
 
+General fixes
+[ ] Add auto-generation of:
+    [ ] negative values
+    [ ] enum/set (based on values from database)
+    [ ] json (is this even reasonable?)
+[ ] Oracle RAW(16) doesn't get read correctly.
+[ ] Add a test where the table's PK has no auto-increment
+    * This should be handled by not-null + unique, but just verify.
+[ ] Add children to meet to level of constraint
+    [ ] Document constraints better (?)
+[ ] Provide a sim function that can use back-references
+    [ ] to other columns of this row
 
+[X] Test for a relationship with a subroutine
+[X] Add auto-generation of:
+    [X] datetime values
+[X] Handle the case where a FK is also a UK
+[X] Add ability to use relationships of Sims references
+  * \'Foo[0].rel1.meth1.rel2.meth2'
+[X] Add optional error when using column of a relationship
+[X] Add UKFK that is a backref
 [X] Hoist the number/hashref->arrayref conversion to all levels
 [X] Add references in strings for relationship names
 [X] Catch circular references
@@ -26,18 +42,3 @@ ZR fixes (as part of 0.323000):
     * Right now, only "int" and "varchar" are handled.
     * Also error out when a non-NULL column with an unknown type happens
 [X] Don't require cycle-breaking with nullable FKs
-[-] Add auto-generation of:
-    [ ] negative values
-    [X] datetime values
-    [ ] enum/set (based on values from database)
-    [ ] json (is this even reasonable?)
-[ ] Oracle RAW(16) doesn't get read correctly.
-[ ] Add a test where the table's PK has no auto-increment
-    * This should be handled by not-null + unique, but just verify.
-[ ] Add children to meet to level of constraint
-    [ ] Document constraints better (?)
-[ ] Fix depth search in Runner::create_search()
-    [ ] NO FAILING TEST??!
-[ ] Provide a sim function that can use back-references
-    [ ] to created rows
-    [ ] to other columns of this row

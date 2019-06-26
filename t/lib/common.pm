@@ -22,6 +22,8 @@ sub sims_test ($$) {
   my ($name, $opts) = @_;
 
   subtest $name => sub {
+    plan(skip_all => $opts->{skip}) if $opts->{skip};
+
     Schema->storage->dbh_do(sub {
       my ($st, $dbh) = @_; $dbh->do('PRAGMA foreign_keys = OFF');
     });

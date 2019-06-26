@@ -114,4 +114,41 @@ sims_test "Create ancestors via unmet grandparent specification" => {
   rv => sub { { Track => shift->{expect}{Track} } },
 };
 
+sims_test "Find grandparent by DBIC row" => {
+  skip => "Currently broken because of missing test below.",
+  spec => {
+    Track => {
+      album => {
+        artist => { name => 'cdef' },
+      },
+    },
+  },
+  load_sims => sub {
+    my ($schema) = @_;
+    my $rv = $schema->load_sims({
+      Artist => 1,
+    });
+
+    return $schema->load_sims({
+      Track => { album => { artist => $rv->{Artist}[0] } },
+    });
+  },
+  expect => {
+    Artist => { id => 1, name => 'abcd' },
+    Album => { id => 1, name => 'efgh', artist_id => 1 },
+    Track => { id => 1, name => 'ijkl', album_id => 1 },
+  },
+  rv => sub { { Track => shift->{expect}{Track} } },
+};
+
+# Create a test that specifies the value of a parent by ID in spec, then
+# that parent has two UKs, one which is multi-key, thus the grandparents end up
+# creating a UK violation. What should've happened is the parent should have
+# been found immediately.
+# Notes:
+#   * Org->service_currency(1)
+#   * ServiceCurrency->(id, (currency_code, service_id))
+#     * ServiceCurrency->currency (FK)
+#     * ServiceCurrency->service (FK)
+
 done_testing;
