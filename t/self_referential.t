@@ -9,7 +9,6 @@ BEGIN {
   use loader qw(build_schema);
   build_schema([
     Company => {
-      table => 'companies',
       columns => {
         id => {
           data_type => 'int',

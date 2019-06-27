@@ -10,7 +10,6 @@ BEGIN {
   use loader qw(build_schema);
   build_schema([
     Artist => {
-      table => 'artists',
       columns => {
         id => {
           data_type => 'int',
@@ -132,7 +131,7 @@ sims_test "A scalarref is unknown" => {
 
 Schema->source('Artist')->column_info('name')->{sim}{value} = [ 'george', 'bill' ];
 
-sims_test "See that a set of values works" => {
+sims_test "See that a set of values (singular) works" => {
   spec => {
     Artist => 1,
   },
@@ -144,7 +143,7 @@ sims_test "See that a set of values works" => {
 delete Schema->source('Artist')->column_info('name')->{sim}{value};
 Schema->source('Artist')->column_info('name')->{sim}{values} = [ 'george', 'bill' ];
 
-sims_test "See that a set of values works" => {
+sims_test "See that a set of values (plural) works" => {
   spec => {
     Artist => 1,
   },

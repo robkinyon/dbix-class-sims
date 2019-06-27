@@ -10,7 +10,6 @@ BEGIN {
   use loader qw(build_schema);
   build_schema([
     Artist => {
-      table => 'artists',
       columns => {
         id => {
           data_type => 'int',
@@ -29,7 +28,6 @@ BEGIN {
       },
     },
     Album => {
-      table => 'albums',
       columns => {
         id => {
           data_type => 'int',
@@ -55,7 +53,6 @@ BEGIN {
       },
     },
     Track => {
-      table => 'tracks',
       columns => {
         id => {
           data_type => 'int',

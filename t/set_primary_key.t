@@ -9,7 +9,6 @@ BEGIN {
   use loader qw(build_schema);
   build_schema([
     Country => {
-      table => 'countries',
       columns => {
         code => {
           data_type   => 'char',
