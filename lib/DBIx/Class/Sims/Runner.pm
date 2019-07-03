@@ -35,7 +35,6 @@ my $cond = sub {
   return $x;
 };
 
-# ribasushi says: at least make sure the cond is a hashref (not guaranteed)
 my $self_fk_cols = sub { map {/^self\.(.*)/; $1} values %{$cond->($_[0])} };
 my $self_fk_col  = sub { ($self_fk_cols->(@_))[0] };
 my $foreign_fk_cols = sub { map {/^foreign\.(.*)/; $1} keys %{$cond->($_[0])} };
@@ -99,6 +98,7 @@ sub remove_item {
 
 sub schema { shift->{schema} }
 sub driver { shift->schema->storage->dbh->{Driver}{Name} }
+sub is_oracle { shift->driver eq 'Oracle' }
 sub datetime_parser { shift->schema->storage->datetime_parser }
 
 sub set_allow_pk_to {
@@ -746,7 +746,7 @@ sub fix_columns {
   # Oracle does not allow the "INSERT INTO x DEFAULT VALUES" syntax that DBIC
   # wants to use. Therefore, find a PK column and set it to NULL. If there
   # isn't one, complain loudly.
-  if ($self->driver eq 'Oracle' && keys(%$item) == 0) {
+  if ($self->is_oracle && keys(%$item) == 0) {
     my @pk_columns = grep {
       $is{in_pk}->($_)
     } $source->columns;
@@ -818,6 +818,84 @@ sub create_item {
 
   return $row;
 }
+
+=pod
+sub resolve_columns {
+  my $self = shift;
+  my ($name, $initial, $spec, %opts) = @_;
+  my $source = $self->schema->source($name);
+
+  my %is = (
+    in_pk => sub {
+      my $n = shift;
+      grep {
+        $_ eq $n
+      } $source->primary_columns;
+    },
+    in_uk => sub {
+      my $n = shift;
+      grep {
+        $_ eq $n
+      } map {
+        $source->unique_constraint_columns($_)
+      } $source->unique_constraint_names;
+    },
+  );
+
+  foreach my $col_name ( $source->columns ) {
+    if ($opts{in_uk}) {
+      next unless $is{in_pk}->($col_name) || $is{in_uk}->($col_name);
+    }
+
+    # asdf
+  }
+
+  return;
+}
+
+sub NEW_create_item {
+  my $self = shift;
+  my ($name, $initial) = @_;
+
+  # If, in the current stack of in-flight items, we've attempted to make this
+  # exact item, die because we've obviously entered an infinite loop.
+  if ($self->has_item($name, $initial)) {
+    die "ERROR: $name (".np($initial).") was seen more than once\n";
+  }
+  $self->add_item($name, $initial);
+
+  # 1. Pre-process the row
+  my $source = $self->schema->source($name);
+  $self->{hooks}{preprocess}->($name, $source, $initial);
+
+  my $item = {};
+
+  # 2. Resolve all the columns in UKs.
+  $self->resolve_columns($name, $initial, $item, in_uk => 1);
+
+  # 3. See if there would be a match by all UKs together.
+  #   b. If so, see if the row matches the initial spec. If not, die.
+  #   a. If not, see if there's a match by any of the UKs. If so, die.
+
+  # 4. Resolve all parents.
+
+  # 5. Resolve all values.
+
+  # 6. Create the row.
+  my $row = undef;
+
+  # 7. Fix deferred FKs.
+
+  # 8. Resolve all children.
+
+  # 9. Post-process the row
+  $self->{hooks}{postprocess}->($name, $source, $row);
+
+  $self->remove_item($name, $initial);
+
+  return $row;
+}
+=cut
 
 sub run {
   my $self = shift;
