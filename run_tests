@@ -52,6 +52,7 @@ elif [[ "$1" == "test" ]]; then
     MSYS_NO_PATHCONV=1 \
     docker run \
       -it --rm \
+      -e SIMS_DEBUG \
       "${volumes[@]}" \
       ${container}:${version} ${TESTS_TO_RUN:-"t"}
   done

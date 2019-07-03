@@ -11,6 +11,7 @@ use Hash::Merge qw( merge );
 use Scalar::Util qw( blessed reftype );
 use String::Random qw( random_regex );
 
+use DBIx::Class::Sims::Item;
 use DBIx::Class::Sims::Util ();
 
 ###### FROM HERE ######
@@ -80,7 +81,7 @@ sub has_item {
 
   foreach my $comp (@{$self->{create_stack}}) {
     next unless $name eq $comp->[0];
-    next unless Compare($item, $comp->[1]);
+    next unless Compare($item->spec, $comp->[1]);
     return 1;
   }
   return;
@@ -88,7 +89,7 @@ sub has_item {
 sub add_item {
   my $self = shift;
   my ($name, $item) = @_;
-  push @{$self->{create_stack}}, [ $name, MyCloner::clone($item) ];
+  push @{$self->{create_stack}}, [ $name, MyCloner::clone($item->spec) ];
 }
 sub remove_item {
   my $self = shift;
@@ -104,16 +105,29 @@ sub datetime_parser { shift->schema->storage->datetime_parser }
 sub set_allow_pk_to {
   my ($target, $source) = @_;
   if (ref $source) {
-    ($target->{__META__} //= {})->{allow_pk_set_value}
-      = ($source->{__META__} // {})->{allow_pk_set_value};
+    if (blessed($target)) {
+      ($target->spec->{__META__} //= {})->{allow_pk_set_value}
+        = ($source->spec->{__META__} // {})->{allow_pk_set_value};
+    }
+    else {
+      ($target->{__META__} //= {})->{allow_pk_set_value}
+        = ($source->spec->{__META__} // {})->{allow_pk_set_value};
+    }
   } else {
-    ($target->{__META__} //= {})->{allow_pk_set_value} = $source;
+    if (blessed($target)) {
+      ($target->spec->{__META__} //= {})->{allow_pk_set_value} = $source;
+    }
+    else {
+      ($target->{__META__} //= {})->{allow_pk_set_value} = $source;
+    }
   }
 }
 
 sub create_search {
   my $self = shift;
   my ($rs, $name, $cond) = @_;
+
+  $cond = $cond->spec if blessed($cond);
 
   # Handle the FKs, particularly the FKs of the FKs. Tests for this line:
   # * t/grandchild.t "Find grandparent by DBIC row"
@@ -166,8 +180,8 @@ sub find_child_dependencies {
   foreach my $rel_name ( $source->relationships ) {
     my $rel_info = $source->relationship_info($rel_name);
     unless ( $is_fk->($rel_info) ) {
-      if ($item->{$rel_name}) {
-        $child_deps{$rel_name} = delete $item->{$rel_name};
+      if ($item->spec->{$rel_name}) {
+        $child_deps{$rel_name} = delete $item->spec->{$rel_name};
       }
     }
   }
@@ -206,13 +220,13 @@ sub fix_fk_dependencies {
     my $rs = $self->schema->resultset($fk_name);
 
     if (!$self->{allow_relationship_column_names}) {
-      if ($col ne $rel_name && exists $item->{$col}) {
+      if ($col ne $rel_name && exists $item->spec->{$col}) {
         die "Cannot use column $col - use relationship $rel_name";
       }
     }
 
     my $cond;
-    my $proto = delete($item->{$rel_name}) // delete($item->{$col});
+    my $proto = delete($item->spec->{$rel_name}) // delete($item->spec->{$col});
     if ($proto) {
       # Assume anything blessed is blessed into DBIC.
       if (blessed($proto)) {
@@ -286,18 +300,23 @@ sub fix_fk_dependencies {
       # nullable. We want to defer these because self-referential values need
       # to be set after creation.
       if (!$parent && $col_info->{is_nullable}) {
-        $item->{$col} = undef;
+        $cond = DBIx::Class::Sims::Item->new(
+          spec => $cond,
+        );
+        $item->spec->{$col} = undef;
         set_allow_pk_to($cond, $item);
         $deferred_fks{$rel_name} = $cond;
         next RELATIONSHIP;
       }
     }
     unless ($parent) {
-      my $fk_item = MyCloner::clone($cond);
+      my $fk_item = DBIx::Class::Sims::Item->new(
+        spec => MyCloner::clone($cond),
+      );
       set_allow_pk_to($fk_item, $item);
       $parent = $self->create_item($fk_name, $fk_item);
     }
-    $item->{$col} = $parent->get_column($fkcol);
+    $item->spec->{$col} = $parent->get_column($fkcol);
   }
 
   return \%deferred_fks;
@@ -404,12 +423,12 @@ sub find_by_unique_constraints {
   my $searched = {};
   foreach my $unique (@uniques) {
     # If there are specified values for all the columns in a specific unqiue constraint ...
-    next if grep { ! exists $item->{$_} } @$unique;
+    next if grep { ! exists $item->spec->{$_} } @$unique;
 
     # ... then add that to the list of potential values to search.
     my %criteria;
     foreach my $colname (@{$unique}) {
-      my $value = $item->{$colname};
+      my $value = $item->spec->{$colname};
       if (ref($value) eq 'SCALAR') {
         $value = $self->convert_backreference(
           $name, $colname, $$value,
@@ -472,10 +491,10 @@ sub fix_values {
   my $self = shift;
   my ($name, $item) = @_;
 
-  while (my ($attr, $value) = each %{$item}) {
+  while (my ($attr, $value) = each %{$item->spec}) {
     # Decode a backreference
     if (ref($value) eq 'SCALAR') {
-      $item->{$attr} = $self->convert_backreference(
+      $item->spec->{$attr} = $self->convert_backreference(
         $name, $attr, $$value,
       );
     }
@@ -615,16 +634,16 @@ sub fix_columns {
 
   foreach my $col_name ( $source->columns ) {
     my $sim_spec;
-    if ( exists $item->{$col_name} ) {
+    if ( exists $item->spec->{$col_name} ) {
       if (
            $is{in_pk}->($col_name)
-        && !($item->{__META__}//{})->{allow_pk_set_value}
+        && !($item->spec->{__META__}//{})->{allow_pk_set_value}
         && !$source->column_info($col_name)->{is_nullable}
         && $source->column_info($col_name)->{is_auto_increment}
       ) {
         my $msg = sprintf(
           "Primary-key autoincrement non-null columns should not be hardcoded in tests (%s.%s = %s)",
-          $name, $col_name, $item->{$col_name},
+          $name, $col_name, $item->spec->{$col_name},
         );
         warn $msg;
       }
@@ -633,19 +652,19 @@ sub fix_columns {
       # Reflection has realized it was an unnecessary distinction to a parent
       # specification. Either it's a relationship hashref or a simspec hashref.
       # We can never have both. It will be deprecated.
-      if ((reftype($item->{$col_name}) // '') eq 'REF' &&
-        (reftype(${$item->{$col_name}}) // '') eq 'HASH' ) {
+      if ((reftype($item->spec->{$col_name}) // '') eq 'REF' &&
+        (reftype(${$item->spec->{$col_name}}) // '') eq 'HASH' ) {
         warn "DEPRECATED: Use a regular HASHREF for overriding simspec. HASHREFREF will be removed in a future release.";
-        $sim_spec = ${ delete $item->{$col_name} };
+        $sim_spec = ${ delete $item->spec->{$col_name} };
       }
       elsif (
-        (reftype($item->{$col_name}) // '') eq 'HASH' &&
+        (reftype($item->spec->{$col_name}) // '') eq 'HASH' &&
         # Assume a blessed hash is a DBIC object
-        !blessed($item->{$col_name}) &&
+        !blessed($item->spec->{$col_name}) &&
         # Do not assume we understand something to be inflated/deflated
         !$source->column_info($col_name)->{_inflate_info}
       ) {
-        $sim_spec = delete $item->{$col_name};
+        $sim_spec = delete $item->spec->{$col_name};
       }
       # Pass the value along to DBIC - we don't know how to deal with it.
       else {
@@ -660,7 +679,7 @@ sub fix_columns {
       if ( exists $sim_spec->{null_chance} && $info->{is_nullable} ) {
         # Add check for not a number
         if ( rand() < $sim_spec->{null_chance} ) {
-          $item->{$col_name} = undef;
+          $item->spec->{$col_name} = undef;
           next;
         }
       }
@@ -670,21 +689,21 @@ sub fix_columns {
       }
 
       if ( ref($sim_spec->{func} // '') eq 'CODE' ) {
-        $item->{$col_name} = $sim_spec->{func}->($info);
+        $item->spec->{$col_name} = $sim_spec->{func}->($info);
       }
       elsif ( exists $sim_spec->{value} ) {
         if (ref($sim_spec->{value} // '') eq 'ARRAY') {
           my @v = @{$sim_spec->{value}};
-          $item->{$col_name} = $v[rand @v];
+          $item->spec->{$col_name} = $v[rand @v];
         }
         else {
-          $item->{$col_name} = $sim_spec->{value};
+          $item->spec->{$col_name} = $sim_spec->{value};
         }
       }
       elsif ( $sim_spec->{type} ) {
         my $meth = $self->{parent}->sim_type($sim_spec->{type});
         if ( $meth ) {
-          $item->{$col_name} = $meth->($info, $sim_spec, $self);
+          $item->spec->{$col_name} = $meth->($info, $sim_spec, $self);
         }
         else {
           warn "Type '$sim_spec->{type}' is not loaded";
@@ -694,17 +713,17 @@ sub fix_columns {
         if ( $is{numeric}->($info->{data_type})) {
           my $min = $sim_spec->{min} // 0;
           my $max = $sim_spec->{max} // 100;
-          $item->{$col_name} = int(rand($max-$min))+$min;
+          $item->spec->{$col_name} = int(rand($max-$min))+$min;
         }
         elsif ( $is{decimal}->($info->{data_type})) {
           my $min = $sim_spec->{min} // 0;
           my $max = $sim_spec->{max} // 100;
-          $item->{$col_name} = rand($max-$min)+$min;
+          $item->spec->{$col_name} = rand($max-$min)+$min;
         }
         elsif ( $is{string}->($info->{data_type})) {
           my $min = $sim_spec->{min} // 1;
           my $max = $sim_spec->{max} // $info->{data_length} // $info->{size} // $min;
-          $item->{$col_name} = random_regex(
+          $item->spec->{$col_name} = random_regex(
             '\w' . "{$min,$max}"
           );
         }
@@ -723,17 +742,17 @@ sub fix_columns {
       if ( $is{numeric}->($info->{data_type})) {
         my $min = 0;
         my $max = 100;
-        $item->{$col_name} = int(rand($max-$min))+$min;
+        $item->spec->{$col_name} = int(rand($max-$min))+$min;
       }
       elsif ( $is{decimal}->($info->{data_type})) {
         my $min = 0;
         my $max = 100;
-        $item->{$col_name} = rand($max-$min)+$min;
+        $item->spec->{$col_name} = rand($max-$min)+$min;
       }
       elsif ( $is{string}->($info->{data_type})) {
         my $min = 1;
         my $max = $info->{data_length} // $info->{size} // $min;
-        $item->{$col_name} = random_regex(
+        $item->spec->{$col_name} = random_regex(
           '\w' . "{$min,$max}"
         );
       }
@@ -746,7 +765,7 @@ sub fix_columns {
   # Oracle does not allow the "INSERT INTO x DEFAULT VALUES" syntax that DBIC
   # wants to use. Therefore, find a PK column and set it to NULL. If there
   # isn't one, complain loudly.
-  if ($self->is_oracle && keys(%$item) == 0) {
+  if ($self->is_oracle && keys(%{$item->spec}) == 0) {
     my @pk_columns = grep {
       $is{in_pk}->($_)
     } $source->columns;
@@ -755,7 +774,7 @@ sub fix_columns {
       unless @pk_columns;
 
     # This will work even if there are multiple columns in the PK.
-    $item->{$pk_columns[0]} = undef;
+    $item->spec->{$pk_columns[0]} = undef;
   }
 }
 
@@ -766,13 +785,13 @@ sub create_item {
   # If, in the current stack of in-flight items, we've attempted to make this
   # exact item, die because we've obviously entered an infinite loop.
   if ($self->has_item($name, $item)) {
-    die "ERROR: $name (".np($item).") was seen more than once\n";
+    die "ERROR: $name (".np($item->spec).") was seen more than once\n";
   }
   $self->add_item($name, $item);
 
-  my $before_fix = np($item);
+  my $before_fix = np($item->spec);
   $self->fix_columns($name, $item);
-  my $after_fix = np($item);
+  my $after_fix = np($item->spec);
 
   # Don't keep going if we have already satisfy all UKs
   my $row = $self->find_by_unique_constraints($name, $item);
@@ -783,24 +802,24 @@ sub create_item {
   }
 
   my $source = $self->schema->source($name);
-  $self->{hooks}{preprocess}->($name, $source, $item);
+  $self->{hooks}{preprocess}->($name, $source, $item->spec);
 
   my ($child_deps) = $self->find_child_dependencies($name, $item);
   unless ($row) {
     my ($deferred_fks) = $self->fix_fk_dependencies($name, $item);
     $self->fix_values($name, $item);
 
-    warn "Ensuring $name (".np($item).")\n" if $ENV{SIMS_DEBUG};
+    warn "Ensuring $name (".np($item->spec).")\n" if $ENV{SIMS_DEBUG};
     $row = $self->find_by_unique_constraints($name, $item);
     unless ($row) {
-      warn "Creating $name (".np($item).")\n" if $ENV{SIMS_DEBUG};
+      warn "Creating $name (".np($item->spec).")\n" if $ENV{SIMS_DEBUG};
       $row = eval {
-        my $to_create = MyCloner::clone($item);
+        my $to_create = MyCloner::clone($item->spec);
         delete $to_create->{__META__};
         $self->schema->resultset($name)->create($to_create);
       }; if ($@) {
         my $e = $@;
-        warn "ERROR Creating $name (".np($item).")\n";
+        warn "ERROR Creating $name (".np($item->spec).")\n";
         die $e;
       }
       # This tracks everything that was created, not just what was requested.
@@ -908,9 +927,13 @@ sub run {
         next unless $self->{spec}{$name};
         delete $still_to_use{$name};
 
-        while ( my $item = shift @{$self->{spec}{$name}} ) {
+        while ( my $proto = shift @{$self->{spec}{$name}} ) {
+          my $item = DBIx::Class::Sims::Item->new(
+            spec => $proto,
+          );
+
           if ($self->{allow_pk_set_value}) {
-            set_allow_pk_to($item, 1);
+            set_allow_pk_to($item->spec, 1);
           }
 
           my $row = do {
@@ -924,7 +947,7 @@ sub run {
             $self->create_item($name, $item);
           };
 
-          if ($self->{initial_spec}{$name}{$item}) {
+          if ($self->{initial_spec}{$name}{$item->spec}) {
             push @{$self->{rows}{$name} //= []}, $row;
           }
         }
