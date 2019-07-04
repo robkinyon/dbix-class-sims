@@ -8,6 +8,8 @@ use 5.010_001;
 
 use strictures 2;
 
+use Scalar::Util qw( blessed );
+
 sub new {
   my $class = shift;
   my $self = bless {@_}, $class;
@@ -18,6 +20,8 @@ sub new {
 sub initialize {
   my $self = shift;
 
+  $self->spec->{__META__} //= {};
+
   #$self->{original} = MyCloner::clone($self->{spec});
 
   return;
@@ -26,14 +30,22 @@ sub initialize {
 sub source { $_[0]{source} }
 sub spec   { $_[0]{spec}   }
 
+sub meta   { $_[0]->spec->{__META__} }
 sub runner { $_[0]->source->runner }
 sub schema { $_[0]->source->schema }
 
-#sub allow_pk_set_value {
-#  my $self = shift;
-#
-#  return $self->{allow_pk_set_value} || $self->runner->allow_pk_set_value;
-#}
+sub allow_pk_set_value { $_[0]->meta->{allow_pk_set_value} }
+sub set_allow_pk_to {
+  my $self = shift;
+  my ($proto) = @_;
+
+  if (blessed($proto)) {
+    $self->meta->{allow_pk_set_value} = $proto->meta->{allow_pk_set_value};
+  }
+  else {
+    $self->meta->{allow_pk_set_value} = $proto;
+  }
+}
 
 sub row {
   my $self = shift;

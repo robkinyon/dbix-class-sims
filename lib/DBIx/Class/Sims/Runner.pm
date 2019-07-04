@@ -110,27 +110,6 @@ sub driver { shift->schema->storage->dbh->{Driver}{Name} }
 sub is_oracle { shift->driver eq 'Oracle' }
 sub datetime_parser { shift->schema->storage->datetime_parser }
 
-sub set_allow_pk_to {
-  my ($target, $source) = @_;
-  if (ref $source) {
-    if (blessed($target)) {
-      ($target->spec->{__META__} //= {})->{allow_pk_set_value}
-        = ($source->spec->{__META__} // {})->{allow_pk_set_value};
-    }
-    else {
-      ($target->{__META__} //= {})->{allow_pk_set_value}
-        = ($source->spec->{__META__} // {})->{allow_pk_set_value};
-    }
-  } else {
-    if (blessed($target)) {
-      ($target->spec->{__META__} //= {})->{allow_pk_set_value} = $source;
-    }
-    else {
-      ($target->{__META__} //= {})->{allow_pk_set_value} = $source;
-    }
-  }
-}
-
 sub create_search {
   my $self = shift;
   my ($rs, $name, $cond) = @_;
@@ -307,21 +286,23 @@ sub fix_fk_dependencies {
       # to be set after creation.
       if (!$parent && $col_info->{is_nullable}) {
         $cond = DBIx::Class::Sims::Item->new(
-          spec   => $cond,
           source => $self->{source}{$fk_name},
+          spec   => $cond,
         );
+        $cond->set_allow_pk_to($item);
+
         $item->spec->{$col} = undef;
-        set_allow_pk_to($cond, $item);
         $deferred_fks{$rel_name} = $cond;
         next RELATIONSHIP;
       }
     }
     unless ($parent) {
       my $fk_item = DBIx::Class::Sims::Item->new(
-        spec   => MyCloner::clone($cond),
         source => $self->{source}{$fk_name},
+        spec   => MyCloner::clone($cond),
       );
-      set_allow_pk_to($fk_item, $item);
+      $fk_item->set_allow_pk_to($item);
+
       $parent = $self->create_item($fk_item);
     }
     $item->spec->{$col} = $parent->get_column($fkcol);
@@ -543,7 +524,10 @@ sub fix_child_dependencies {
     # Need to ensure that $child_deps >= $self->{reqs}
 
     foreach my $child (@children) {
-      set_allow_pk_to($child, 1);
+      # FIXME $child is a hashref, not a ::Item. add_child() needs to be able to
+      # handle ::Item's, which requires ::Item's to be Comparable
+      ($child->{__META__} //= {})->{allow_pk_set_value} = 1;
+
       $child->{$fkcol} = $item->row->get_column($col);
       $self->add_child($fk_name, $fkcol, $child, $item->source->name);
     }
@@ -642,7 +626,7 @@ sub fix_columns {
     if ( exists $item->spec->{$col_name} ) {
       if (
            $is{in_pk}->($col_name)
-        && !($item->spec->{__META__}//{})->{allow_pk_set_value}
+        && !$item->allow_pk_set_value
         && !$item->source->column_info($col_name)->{is_nullable}
         && $item->source->column_info($col_name)->{is_auto_increment}
       ) {
@@ -861,7 +845,7 @@ sub run {
           );
 
           if ($self->{allow_pk_set_value}) {
-            set_allow_pk_to($item->spec, 1);
+            $item->set_allow_pk_to(1);
           }
 
           my $row = do {
