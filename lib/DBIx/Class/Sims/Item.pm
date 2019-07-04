@@ -35,5 +35,11 @@ sub schema { $_[0]->source->schema }
 #  return $self->{allow_pk_set_value} || $self->runner->allow_pk_set_value;
 #}
 
+sub row {
+  my $self = shift;
+  $self->{row} = shift if @_;
+  $self->{row};
+}
+
 1;
 __END__

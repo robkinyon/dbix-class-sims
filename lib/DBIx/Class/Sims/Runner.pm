@@ -83,10 +83,10 @@ sub initialize {
 
 sub has_item {
   my $self = shift;
-  my ($source, $item) = @_;
+  my ($item) = @_;
 
   foreach my $comp (@{$self->{create_stack}}) {
-    next unless $source->name eq $comp->[0];
+    next unless $item->source->name eq $comp->[0];
     next unless Compare($item->spec, $comp->[1]);
     return 1;
   }
@@ -94,12 +94,14 @@ sub has_item {
 }
 sub add_item {
   my $self = shift;
-  my ($source, $item) = @_;
-  push @{$self->{create_stack}}, [ $source->name, MyCloner::clone($item->spec) ];
+  my ($item) = @_;
+  push @{$self->{create_stack}}, [
+    $item->source->name, MyCloner::clone($item->spec),
+  ];
 }
 sub remove_item {
   my $self = shift;
-  my ($source, $item) = @_;
+  my ($item) = @_;
   pop @{$self->{create_stack}};
 }
 
@@ -133,8 +135,6 @@ sub create_search {
   my $self = shift;
   my ($rs, $name, $cond) = @_;
 
-  $cond = $cond->spec if blessed($cond);
-
   # Handle the FKs, particularly the FKs of the FKs. Tests for this line:
   # * t/grandchild.t "Find grandparent by DBIC row"
   #
@@ -142,7 +142,9 @@ sub create_search {
   # them if we do? Why can we ignore them if we don't?
   #
   # This is commented out because of explanation below.
-  #$self->fix_fk_dependencies($name, $cond);
+  #$self->fix_fk_dependencies($cond);
+
+  $cond = $cond->spec if blessed($cond);
 
   my $source = $self->schema->source($name);
   my %cols = map { $_ => 1 } $source->columns;
@@ -178,12 +180,12 @@ sub create_search {
 
 sub find_child_dependencies {
   my $self = shift;
-  my ($source, $item) = @_;
+  my ($item) = @_;
 
   my (%child_deps);
   RELATIONSHIP:
-  foreach my $rel_name ( $source->relationships ) {
-    my $rel_info = $source->relationship_info($rel_name);
+  foreach my $rel_name ( $item->source->relationships ) {
+    my $rel_info = $item->source->relationship_info($rel_name);
     unless ( $is_fk->($rel_info) ) {
       if ($item->spec->{$rel_name}) {
         $child_deps{$rel_name} = delete $item->spec->{$rel_name};
@@ -196,7 +198,7 @@ sub find_child_dependencies {
 
 sub fix_fk_dependencies {
   my $self = shift;
-  my ($source, $item) = @_;
+  my ($item) = @_;
 
   # 1. If we have something, then:
   #   a. If it's a scalar, then, COND = { $fk => scalar }
@@ -209,13 +211,13 @@ sub fix_fk_dependencies {
   #   b. If rows don't exist, $create_item->($fksrc, {})
   my (%deferred_fks);
   RELATIONSHIP:
-  foreach my $rel_name ( $source->relationships ) {
-    my $rel_info = $source->relationship_info($rel_name);
+  foreach my $rel_name ( $item->source->relationships ) {
+    my $rel_info = $item->source->relationship_info($rel_name);
     unless ( $is_fk->($rel_info) ) {
       next RELATIONSHIP;
     }
 
-    next RELATIONSHIP unless $self->{reqs}{$source->name}{$rel_name};
+    next RELATIONSHIP unless $self->{reqs}{$item->source->name}{$rel_name};
 
     my $col = $self_fk_col->($rel_info);
     my $fkcol = $foreign_fk_col->($rel_info);
@@ -248,29 +250,29 @@ sub fix_fk_dependencies {
       elsif (ref($proto) eq 'SCALAR') {
         $cond = {
           $fkcol => $self->convert_backreference(
-            $source, $rel_name, $$proto, $fkcol,
+            $item->source, $rel_name, $$proto, $fkcol,
           ),
         };
       }
       else {
-        die "Unsure what to do about @{[$source->name]}->$rel_name():" . np($proto);
+        die "Unsure what to do about @{[$item->source->name]}->$rel_name():" . np($proto);
       }
     }
 
     # If the child's column is within a UK, add a check to the $rs that ensures
     # we cannot pick a parent that's already being used.
-    my @constraints = $self->unique_constraints_containing($source, $col);
+    my @constraints = $self->unique_constraints_containing($item->source, $col);
     if (@constraints) {
       # First, find the inverse relationship. If it doesn't exist or if there
       # is more than one, then die.
       my @inverse = $self->find_inverse_relationships(
-        $source->name, $rel_name, $fk_name, $fkcol,
+        $item->source->name, $rel_name, $fk_name, $fkcol,
       );
       if (@inverse == 0) {
-        die "Cannot find an inverse relationship for @{[$source->name]}->${rel_name}\n";
+        die "Cannot find an inverse relationship for @{[$item->source->name]}->${rel_name}\n";
       }
       elsif (@inverse > 1) {
-        die "Too many inverse relationships for @{[$source->name]}->${rel_name} ($fk_name / $fkcol)\n" . np(@inverse);
+        die "Too many inverse relationships for @{[$item->source->name]}->${rel_name} ($fk_name / $fkcol)\n" . np(@inverse);
       }
 
       # We cannot add this relationship to the $cond because that would result
@@ -281,7 +283,7 @@ sub fix_fk_dependencies {
       );
     }
 
-    my $col_info = $source->column_info($col);
+    my $col_info = $item->source->column_info($col);
     if ( $cond ) {
       $rs = $self->create_search($rs, $fk_name, $cond);
     }
@@ -294,7 +296,7 @@ sub fix_fk_dependencies {
 
     my $meta = delete $cond->{__META__} // {};
 
-    warn "Looking for @{[$source->name]}->$rel_name(".np($cond).")\n" if $ENV{SIMS_DEBUG};
+    warn "Looking for @{[$item->source->name]}->$rel_name(".np($cond).")\n" if $ENV{SIMS_DEBUG};
 
     my $parent;
     unless ($meta->{create}) {
@@ -304,8 +306,13 @@ sub fix_fk_dependencies {
       # nullable. We want to defer these because self-referential values need
       # to be set after creation.
       if (!$parent && $col_info->{is_nullable}) {
+        my $fk_source = DBIx::Class::Sims::Source->new(
+          name   => $fk_name,
+          runner => $self,
+        );
         $cond = DBIx::Class::Sims::Item->new(
           spec => $cond,
+          source => $fk_source,
         );
         $item->spec->{$col} = undef;
         set_allow_pk_to($cond, $item);
@@ -314,15 +321,16 @@ sub fix_fk_dependencies {
       }
     }
     unless ($parent) {
-      my $fk_item = DBIx::Class::Sims::Item->new(
-        spec => MyCloner::clone($cond),
-      );
-      set_allow_pk_to($fk_item, $item);
       my $fk_source = DBIx::Class::Sims::Source->new(
         name   => $fk_name,
         runner => $self,
       );
-      $parent = $self->create_item($fk_source, $fk_item);
+      my $fk_item = DBIx::Class::Sims::Item->new(
+        spec => MyCloner::clone($cond),
+        source => $fk_source,
+      );
+      set_allow_pk_to($fk_item, $item);
+      $parent = $self->create_item($fk_item);
     }
     $item->spec->{$col} = $parent->get_column($fkcol);
   }
@@ -419,13 +427,13 @@ sub unique_constraints_containing {
 
 sub find_by_unique_constraints {
   my $self = shift;
-  my ($source, $item) = @_;
+  my ($item) = @_;
 
   my @uniques = map {
-    [ $source->unique_constraint_columns($_) ]
-  } $source->unique_constraint_names();
+    [ $item->source->unique_constraint_columns($_) ]
+  } $item->source->unique_constraint_names();
 
-  my $rs = $self->schema->resultset($source->name);
+  my $rs = $self->schema->resultset($item->source->name);
   my $searched = {};
   foreach my $unique (@uniques) {
     # If there are specified values for all the columns in a specific unqiue constraint ...
@@ -437,7 +445,7 @@ sub find_by_unique_constraints {
       my $value = $item->spec->{$colname};
       if (ref($value) eq 'SCALAR') {
         $value = $self->convert_backreference(
-          $source, $colname, $$value,
+          $item->source, $colname, $$value,
         );
       }
       my $classname = blessed($value);
@@ -455,11 +463,11 @@ sub find_by_unique_constraints {
   return unless keys %$searched;
   my $row = $rs->search(undef, { rows => 1 })->first;
   if ($row) {
-    push @{$self->{duplicates}{$source->name}}, {
+    push @{$self->{duplicates}{$item->source->name}}, {
       criteria => $searched,
       found    => { $row->get_columns },
     };
-    return $row;
+    $item->row($row);
   }
   return;
 }
@@ -495,13 +503,13 @@ sub convert_backreference {
 
 sub fix_values {
   my $self = shift;
-  my ($source, $item) = @_;
+  my ($item) = @_;
 
   while (my ($attr, $value) = each %{$item->spec}) {
     # Decode a backreference
     if (ref($value) eq 'SCALAR') {
       $item->spec->{$attr} = $self->convert_backreference(
-        $source, $attr, $$value,
+        $item->source, $attr, $$value,
       );
     }
   }
@@ -572,7 +580,7 @@ sub fix_deferred_fks {
         name   => $fk_name,
         runner => $self,
       );
-      $parent = $self->create_item($fk_source, $cond);
+      $parent = $self->create_item($cond);
     }
 
     $row->$col($parent->get_column($fkcol));
@@ -616,22 +624,22 @@ my %types = (
 
 sub fix_columns {
   my $self = shift;
-  my ($source, $item) = @_;
+  my ($item) = @_;
 
   my %is = (
     in_pk => sub {
       my $n = shift;
       grep {
         $_ eq $n
-      } $source->primary_columns;
+      } $item->source->primary_columns;
     },
     in_uk => sub {
       my $n = shift;
       grep {
         $_ eq $n
       } map {
-        $source->unique_constraint_columns($_)
-      } $source->unique_constraint_names;
+        $item->source->unique_constraint_columns($_)
+      } $item->source->unique_constraint_names;
     },
   );
   foreach my $type (keys %types) {
@@ -641,18 +649,18 @@ sub fix_columns {
     };
   }
 
-  foreach my $col_name ( $source->columns ) {
+  foreach my $col_name ( $item->source->columns ) {
     my $sim_spec;
     if ( exists $item->spec->{$col_name} ) {
       if (
            $is{in_pk}->($col_name)
         && !($item->spec->{__META__}//{})->{allow_pk_set_value}
-        && !$source->column_info($col_name)->{is_nullable}
-        && $source->column_info($col_name)->{is_auto_increment}
+        && !$item->source->column_info($col_name)->{is_nullable}
+        && $item->source->column_info($col_name)->{is_auto_increment}
       ) {
         my $msg = sprintf(
           "Primary-key autoincrement non-null columns should not be hardcoded in tests (%s.%s = %s)",
-          $source->name, $col_name, $item->spec->{$col_name},
+          $item->source->name, $col_name, $item->spec->{$col_name},
         );
         warn $msg;
       }
@@ -671,7 +679,7 @@ sub fix_columns {
         # Assume a blessed hash is a DBIC object
         !blessed($item->spec->{$col_name}) &&
         # Do not assume we understand something to be inflated/deflated
-        !$source->column_info($col_name)->{_inflate_info}
+        !$item->source->column_info($col_name)->{_inflate_info}
       ) {
         $sim_spec = delete $item->spec->{$col_name};
       }
@@ -681,7 +689,7 @@ sub fix_columns {
       }
     }
 
-    my $info = $source->column_info($col_name);
+    my $info = $item->source->column_info($col_name);
 
     $sim_spec //= $info->{sim};
     if ( ref($sim_spec // '') eq 'HASH' ) {
@@ -746,7 +754,7 @@ sub fix_columns {
       !exists $info->{default_value} &&
       !$is{in_pk}->($col_name) &&
       !$is{in_uk}->($col_name) &&
-      !$self->{is_fk}{$source->name}{$col_name}
+      !$self->{is_fk}{$item->source->name}{$col_name}
     ) {
       if ( $is{numeric}->($info->{data_type})) {
         my $min = 0;
@@ -766,7 +774,7 @@ sub fix_columns {
         );
       }
       else {
-        die "ERROR: @{[$source->name]}\.$col_name is not nullable, but I don't know how to handle $info->{data_type}\n";
+        die "ERROR: @{[$item->source->name]}\.$col_name is not nullable, but I don't know how to handle $info->{data_type}\n";
       }
     }
   }
@@ -777,7 +785,7 @@ sub fix_columns {
   if ($self->is_oracle && keys(%{$item->spec}) == 0) {
     my @pk_columns = grep {
       $is{in_pk}->($_)
-    } $source->columns;
+    } $item->source->columns;
 
     die "Must specify something about some column or have a PK in Oracle"
       unless @pk_columns;
@@ -789,61 +797,62 @@ sub fix_columns {
 
 sub create_item {
   my $self = shift;
-  my ($source, $item) = @_;
+  my ($item) = @_;
 
   # If, in the current stack of in-flight items, we've attempted to make this
   # exact item, die because we've obviously entered an infinite loop.
-  if ($self->has_item($source, $item)) {
-    die "ERROR: @{[$source->name]} (".np($item->spec).") was seen more than once\n";
+  if ($self->has_item($item)) {
+    die "ERROR: @{[$item->source->name]} (".np($item->spec).") was seen more than once\n";
   }
-  $self->add_item($source, $item);
+  $self->add_item($item);
 
   my $before_fix = np($item->spec);
-  $self->fix_columns($source, $item);
+  $self->fix_columns($item);
   my $after_fix = np($item->spec);
 
   # Don't keep going if we have already satisfy all UKs
-  my $row = $self->find_by_unique_constraints($source, $item);
-  if ($row && $ENV{SIMS_DEBUG}) {
-    warn "Found duplicate in @{[$source->name]}:\n"
+  $self->find_by_unique_constraints($item);
+  if ($item->row && $ENV{SIMS_DEBUG}) {
+    warn "Found duplicate in @{[$item->source->name]}:\n"
       . "\tbefore fix_columns (".np($before_fix).")\n"
       . "\tafter fix_columns (".np($after_fix).")\n";
   }
 
-  $self->{hooks}{preprocess}->($source->name, $source->source, $item->spec);
+  $self->{hooks}{preprocess}->($item->source->name, $item->source, $item->spec);
 
-  my ($child_deps) = $self->find_child_dependencies($source, $item);
-  unless ($row) {
-    my ($deferred_fks) = $self->fix_fk_dependencies($source, $item);
-    $self->fix_values($source, $item);
+  my ($child_deps) = $self->find_child_dependencies($item);
+  unless ($item->row) {
+    my ($deferred_fks) = $self->fix_fk_dependencies($item);
+    $self->fix_values($item);
 
-    warn "Ensuring @{[$source->name]} (".np($item->spec).")\n" if $ENV{SIMS_DEBUG};
-    $row = $self->find_by_unique_constraints($source, $item);
-    unless ($row) {
-      warn "Creating @{[$source->name]} (".np($item->spec).")\n" if $ENV{SIMS_DEBUG};
-      $row = eval {
+    warn "Ensuring @{[$item->source->name]} (".np($item->spec).")\n" if $ENV{SIMS_DEBUG};
+    $self->find_by_unique_constraints($item);
+    unless ($item->row) {
+      warn "Creating @{[$item->source->name]} (".np($item->spec).")\n" if $ENV{SIMS_DEBUG};
+      my $row = eval {
         my $to_create = MyCloner::clone($item->spec);
         delete $to_create->{__META__};
-        $self->schema->resultset($source->name)->create($to_create);
+        $self->schema->resultset($item->source->name)->create($to_create);
       }; if ($@) {
         my $e = $@;
-        warn "ERROR Creating @{[$source->name]} (".np($item->spec).")\n";
+        warn "ERROR Creating @{[$item->source->name]} (".np($item->spec).")\n";
         die $e;
       }
+      $item->row($row);
       # This tracks everything that was created, not just what was requested.
-      $self->{created}{$source->name}++;
+      $self->{created}{$item->source->name}++;
     }
 
-    $self->fix_deferred_fks($source, $row, $deferred_fks);
+    $self->fix_deferred_fks($item->source, $item->row, $deferred_fks);
   }
 
-  $self->fix_child_dependencies($source, $row, $child_deps);
+  $self->fix_child_dependencies($item->source, $item->row, $child_deps);
 
-  $self->{hooks}{postprocess}->($source->name, $source->source, $row);
+  $self->{hooks}{postprocess}->($item->source->name, $item->source, $item->row);
 
-  $self->remove_item($source, $item);
+  $self->remove_item($item);
 
-  return $row;
+  return $item->row;
 }
 
 sub run {
@@ -880,7 +889,7 @@ sub run {
             local *{'DateTime::_data_printer'} = sub { shift->iso8601 }
               unless DateTime->can('_data_printer');
 
-            $self->create_item($source, $item);
+            $self->create_item($item);
           };
 
           if ($self->{initial_spec}{$name}{$item->spec}) {
