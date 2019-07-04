@@ -18,16 +18,16 @@ sub new {
 sub initialize {
   my $self = shift;
 
-  $self->{original} = MyCloner::clone($self->{spec});
+  #$self->{original} = MyCloner::clone($self->{spec});
 
   return;
 }
 
-sub runner { $_[0]{runner} }
 sub source { $_[0]{source} }
-sub schema { $_[0]->source->schema }
+sub spec   { $_[0]{spec}   }
 
-sub spec { $_[0]{spec} }
+sub runner { $_[0]->source->runner }
+sub schema { $_[0]->source->schema }
 
 #sub allow_pk_set_value {
 #  my $self = shift;
