@@ -517,7 +517,7 @@ sub fix_values {
 
 sub fix_child_dependencies {
   my $self = shift;
-  my ($source, $row, $child_deps) = @_;
+  my ($item, $child_deps) = @_;
 
   # 1. If we have something, then:
   #   a. If it's not an array, then make it an array
@@ -526,10 +526,10 @@ sub fix_child_dependencies {
   #   XXX This is more than one item would be supported
   # In all cases, make sure to add { $fkcol => $row->get_column($col) } to the
   # child's $item
-  foreach my $rel_name ( $source->relationships ) {
-    my $rel_info = $source->relationship_info($rel_name);
+  foreach my $rel_name ( $item->source->relationships ) {
+    my $rel_info = $item->source->relationship_info($rel_name);
     next if $is_fk->($rel_info);
-    next unless $child_deps->{$rel_name} // $self->{reqs}{$source->name}{$rel_name};
+    next unless $child_deps->{$rel_name} // $self->{reqs}{$item->source->name}{$rel_name};
 
     my $col = $self_fk_col->($rel_info);
     my $fkcol = $foreign_fk_col->($rel_info);
@@ -540,32 +540,32 @@ sub fix_child_dependencies {
     if ($child_deps->{$rel_name}) {
       my $n = DBIx::Class::Sims::Util->normalize_aoh($child_deps->{$rel_name});
       unless ($n) {
-        die "Don't know what to do with @{[$source->name]}\->{$rel_name}\n\t".np($row);
+        die "Don't know what to do with @{[$item->source->name]}\->{$rel_name}\n\t".np($item->row);
       }
       @children = @{$n};
     }
     else {
-      @children = ( ({}) x $self->{reqs}{$source->name}{$rel_name} );
+      @children = ( ({}) x $self->{reqs}{$item->source->name}{$rel_name} );
     }
 
     # Need to ensure that $child_deps >= $self->{reqs}
 
     foreach my $child (@children) {
       set_allow_pk_to($child, 1);
-      $child->{$fkcol} = $row->get_column($col);
-      $self->add_child($fk_name, $fkcol, $child, $source->name);
+      $child->{$fkcol} = $item->row->get_column($col);
+      $self->add_child($fk_name, $fkcol, $child, $item->source->name);
     }
   }
 }
 
 sub fix_deferred_fks {
   my $self = shift;
-  my ($source, $row, $deferred_fks) = @_;
+  my ($item, $deferred_fks) = @_;
 
   while (my ($rel_name, $cond) = each %$deferred_fks) {
     my $cond = $deferred_fks->{$rel_name};
 
-    my $rel_info = $source->relationship_info($rel_name);
+    my $rel_info = $item->source->relationship_info($rel_name);
 
     my $col = $self_fk_col->($rel_info);
     my $fkcol = $foreign_fk_col->($rel_info);
@@ -576,16 +576,12 @@ sub fix_deferred_fks {
 
     my $parent = $rs->search(undef, { rows => 1 })->first;
     unless ($parent) {
-      my $fk_source = DBIx::Class::Sims::Source->new(
-        name   => $fk_name,
-        runner => $self,
-      );
       $parent = $self->create_item($cond);
     }
 
-    $row->$col($parent->get_column($fkcol));
+    $item->row->$col($parent->get_column($fkcol));
   }
-  $row->update if $row->get_dirty_columns;
+  $item->row->update if $item->row->get_dirty_columns;
 }
 
 my %types = (
@@ -843,10 +839,10 @@ sub create_item {
       $self->{created}{$item->source->name}++;
     }
 
-    $self->fix_deferred_fks($item->source, $item->row, $deferred_fks);
+    $self->fix_deferred_fks($item, $deferred_fks);
   }
 
-  $self->fix_child_dependencies($item->source, $item->row, $child_deps);
+  $self->fix_child_dependencies($item, $child_deps);
 
   $self->{hooks}{postprocess}->($item->source->name, $item->source, $item->row);
 
