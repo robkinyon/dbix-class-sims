@@ -306,13 +306,9 @@ sub fix_fk_dependencies {
       # nullable. We want to defer these because self-referential values need
       # to be set after creation.
       if (!$parent && $col_info->{is_nullable}) {
-        my $fk_source = DBIx::Class::Sims::Source->new(
-          name   => $fk_name,
-          runner => $self,
-        );
         $cond = DBIx::Class::Sims::Item->new(
-          spec => $cond,
-          source => $fk_source,
+          spec   => $cond,
+          source => $self->{source}{$fk_name},
         );
         $item->spec->{$col} = undef;
         set_allow_pk_to($cond, $item);
@@ -321,13 +317,9 @@ sub fix_fk_dependencies {
       }
     }
     unless ($parent) {
-      my $fk_source = DBIx::Class::Sims::Source->new(
-        name   => $fk_name,
-        runner => $self,
-      );
       my $fk_item = DBIx::Class::Sims::Item->new(
-        spec => MyCloner::clone($cond),
-        source => $fk_source,
+        spec   => MyCloner::clone($cond),
+        source => $self->{source}{$fk_name},
       );
       set_allow_pk_to($fk_item, $item);
       $parent = $self->create_item($fk_item);
@@ -862,14 +854,9 @@ sub run {
         next unless $self->{spec}{$name};
         delete $still_to_use{$name};
 
-        my $source = DBIx::Class::Sims::Source->new(
-          name   => $name,
-          runner => $self,
-        );
-
         while ( my $proto = shift @{$self->{spec}{$name}} ) {
           my $item = DBIx::Class::Sims::Item->new(
-            source => $source,
+            source => $self->{source}{$name},
             spec   => $proto,
           );
 
