@@ -32,8 +32,13 @@ sub source { $_[0]{source} }
 sub schema { $_[0]->runner->schema }
 
 # Delegate the following methods:
-# * relationships
-# * relationship_info (Consider melding the two)
+sub relationships { shift->source->relationships(@_) }
+sub relationship_info { shift->source->relationship_info(@_) }
+sub columns { shift->source->columns(@_) }
+sub column_info { shift->source->column_info(@_) }
+sub primary_columns { shift->source->primary_columns(@_) }
+sub unique_constraint_names { shift->source->unique_constraint_names(@_) }
+sub unique_constraint_columns { shift->source->unique_constraint_columns(@_) }
 
 1;
 __END__

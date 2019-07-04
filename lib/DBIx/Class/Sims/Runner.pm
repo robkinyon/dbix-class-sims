@@ -53,9 +53,14 @@ sub new {
 sub initialize {
   my $self = shift;
 
+  $self->{sources} = {};
+
   $self->{is_fk} = {};
   foreach my $name ( $self->schema->sources ) {
-    my $source = $self->schema->source($name);
+    my $source = $self->{source}{$name} = DBIx::Class::Sims::Source->new(
+      name   => $name,
+      runner => $self,
+    );
 
     $self->{reqs}{$name} //= {};
     foreach my $rel_name ( $source->relationships ) {
@@ -177,8 +182,8 @@ sub find_child_dependencies {
 
   my (%child_deps);
   RELATIONSHIP:
-  foreach my $rel_name ( $source->source->relationships ) {
-    my $rel_info = $source->source->relationship_info($rel_name);
+  foreach my $rel_name ( $source->relationships ) {
+    my $rel_info = $source->relationship_info($rel_name);
     unless ( $is_fk->($rel_info) ) {
       if ($item->spec->{$rel_name}) {
         $child_deps{$rel_name} = delete $item->spec->{$rel_name};
@@ -204,8 +209,8 @@ sub fix_fk_dependencies {
   #   b. If rows don't exist, $create_item->($fksrc, {})
   my (%deferred_fks);
   RELATIONSHIP:
-  foreach my $rel_name ( $source->source->relationships ) {
-    my $rel_info = $source->source->relationship_info($rel_name);
+  foreach my $rel_name ( $source->relationships ) {
+    my $rel_info = $source->relationship_info($rel_name);
     unless ( $is_fk->($rel_info) ) {
       next RELATIONSHIP;
     }
@@ -276,7 +281,7 @@ sub fix_fk_dependencies {
       );
     }
 
-    my $col_info = $source->source->column_info($col);
+    my $col_info = $source->column_info($col);
     if ( $cond ) {
       $rs = $self->create_search($rs, $fk_name, $cond);
     }
@@ -397,8 +402,8 @@ sub unique_constraints_containing {
   my ($source, $column) = @_;
 
   my @uniques = map {
-    [ $source->source->unique_constraint_columns($_) ]
-  } $source->source->unique_constraint_names();
+    [ $source->unique_constraint_columns($_) ]
+  } $source->unique_constraint_names();
 
   # Only return true if the unique constraint is solely built from the column.
   # When we handle multi-column relationships, then we will need to handle the
@@ -417,8 +422,8 @@ sub find_by_unique_constraints {
   my ($source, $item) = @_;
 
   my @uniques = map {
-    [ $source->source->unique_constraint_columns($_) ]
-  } $source->source->unique_constraint_names();
+    [ $source->unique_constraint_columns($_) ]
+  } $source->unique_constraint_names();
 
   my $rs = $self->schema->resultset($source->name);
   my $searched = {};
@@ -513,8 +518,8 @@ sub fix_child_dependencies {
   #   XXX This is more than one item would be supported
   # In all cases, make sure to add { $fkcol => $row->get_column($col) } to the
   # child's $item
-  foreach my $rel_name ( $source->source->relationships ) {
-    my $rel_info = $source->source->relationship_info($rel_name);
+  foreach my $rel_name ( $source->relationships ) {
+    my $rel_info = $source->relationship_info($rel_name);
     next if $is_fk->($rel_info);
     next unless $child_deps->{$rel_name} // $self->{reqs}{$source->name}{$rel_name};
 
@@ -552,7 +557,7 @@ sub fix_deferred_fks {
   while (my ($rel_name, $cond) = each %$deferred_fks) {
     my $cond = $deferred_fks->{$rel_name};
 
-    my $rel_info = $source->source->relationship_info($rel_name);
+    my $rel_info = $source->relationship_info($rel_name);
 
     my $col = $self_fk_col->($rel_info);
     my $fkcol = $foreign_fk_col->($rel_info);
@@ -618,15 +623,15 @@ sub fix_columns {
       my $n = shift;
       grep {
         $_ eq $n
-      } $source->source->primary_columns;
+      } $source->primary_columns;
     },
     in_uk => sub {
       my $n = shift;
       grep {
         $_ eq $n
       } map {
-        $source->source->unique_constraint_columns($_)
-      } $source->source->unique_constraint_names;
+        $source->unique_constraint_columns($_)
+      } $source->unique_constraint_names;
     },
   );
   foreach my $type (keys %types) {
@@ -636,14 +641,14 @@ sub fix_columns {
     };
   }
 
-  foreach my $col_name ( $source->source->columns ) {
+  foreach my $col_name ( $source->columns ) {
     my $sim_spec;
     if ( exists $item->spec->{$col_name} ) {
       if (
            $is{in_pk}->($col_name)
         && !($item->spec->{__META__}//{})->{allow_pk_set_value}
-        && !$source->source->column_info($col_name)->{is_nullable}
-        && $source->source->column_info($col_name)->{is_auto_increment}
+        && !$source->column_info($col_name)->{is_nullable}
+        && $source->column_info($col_name)->{is_auto_increment}
       ) {
         my $msg = sprintf(
           "Primary-key autoincrement non-null columns should not be hardcoded in tests (%s.%s = %s)",
@@ -666,7 +671,7 @@ sub fix_columns {
         # Assume a blessed hash is a DBIC object
         !blessed($item->spec->{$col_name}) &&
         # Do not assume we understand something to be inflated/deflated
-        !$source->source->column_info($col_name)->{_inflate_info}
+        !$source->column_info($col_name)->{_inflate_info}
       ) {
         $sim_spec = delete $item->spec->{$col_name};
       }
@@ -676,7 +681,7 @@ sub fix_columns {
       }
     }
 
-    my $info = $source->source->column_info($col_name);
+    my $info = $source->column_info($col_name);
 
     $sim_spec //= $info->{sim};
     if ( ref($sim_spec // '') eq 'HASH' ) {
@@ -772,7 +777,7 @@ sub fix_columns {
   if ($self->is_oracle && keys(%{$item->spec}) == 0) {
     my @pk_columns = grep {
       $is{in_pk}->($_)
-    } $source->source->columns;
+    } $source->columns;
 
     die "Must specify something about some column or have a PK in Oracle"
       unless @pk_columns;
