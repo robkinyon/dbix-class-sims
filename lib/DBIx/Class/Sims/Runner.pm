@@ -37,7 +37,7 @@ sub initialize {
     my $source = $self->{sources}{$name};
 
     $self->{reqs}{$name} //= {};
-    while (my ($rel_name, $r) = each %{$source->my_relationships}) {
+    while (my ($rel_name, $r) = each %{$source->relationships}) {
       if ($r->is_fk) {
         $self->{reqs}{$name}{$r->name} = 1;
       }
@@ -94,9 +94,11 @@ sub create_search {
   # This is commented out because of explanation below.
   #$self->fix_fk_dependencies($cond);
 
+  # FIXME: This needs to handle ::Item properly, but not everything passed here
+  # is an ::Item (yet). (Maybe never?)
   $cond = $cond->spec if blessed($cond);
 
-  my $source = $self->schema->source($name);
+  my $source = $self->{sources}{$name};
   my %cols = map { $_ => 1 } $source->columns;
   my $search = {
     (map {
@@ -111,7 +113,12 @@ sub create_search {
 
   # This for-loop shouldn't exist. Instead, we should be able to use
   # fix_fk_dependencies() above. However, that breaks in mysterious ways.
-  foreach my $rel_name ($source->relationships) {
+  #
+  # FIXME: Using this for-loop times out the tests in t/self_refential.t
+  #foreach my $rel_name (keys %{$source->my_relationships}) {
+  # So, we use this one instead. This breaks encapsulation.
+  foreach my $rel_name ($source->source->relationships) {
+
     next unless exists $cond->{$rel_name};
     next unless (reftype($cond->{$rel_name}) // '') eq 'HASH';
 
@@ -134,7 +141,7 @@ sub find_child_dependencies {
 
   my (%child_deps);
   RELATIONSHIP:
-  while (my ($rel_name, $r) = each %{$item->source->my_relationships}) {
+  while (my ($rel_name, $r) = each %{$item->source->relationships}) {
     unless ( $r->is_fk ) {
       if ($item->spec->{$rel_name}) {
         $child_deps{$rel_name} = delete $item->spec->{$rel_name};
@@ -160,7 +167,7 @@ sub fix_fk_dependencies {
   #   b. If rows don't exist, $create_item->($fksrc, {})
   my (%deferred_fks);
   RELATIONSHIP:
-  while (my ($rel_name, $r) = each %{$item->source->my_relationships}) {
+  while (my ($rel_name, $r) = each %{$item->source->relationships}) {
     unless ( $r->is_fk ) {
       next RELATIONSHIP;
     }
@@ -328,7 +335,7 @@ sub find_inverse_relationships {
   my $fksource = $self->{sources}{$child};
 
   my @inverses;
-  while (my ($rel_name, $r) = each %{$fksource->my_relationships}) {
+  while (my ($rel_name, $r) = each %{$fksource->relationships}) {
 
     # Skip relationships that aren't back towards the table we're coming from.
     next unless $r->short_fk_source eq $parent;
@@ -467,7 +474,7 @@ sub fix_child_dependencies {
   #   XXX This is more than one item would be supported
   # In all cases, make sure to add { $fkcol => $row->get_column($col) } to the
   # child's $item
-  while (my ($rel_name, $r) = each %{$item->source->my_relationships}) {
+  while (my ($rel_name, $r) = each %{$item->source->relationships}) {
     next if $r->is_fk;
     next unless $child_deps->{$rel_name} // $self->{reqs}{$item->source_name}{$rel_name};
 
@@ -757,7 +764,7 @@ sub create_item {
       . "\tafter fix_columns (".np($after_fix).")\n";
   }
 
-  $self->{hooks}{preprocess}->($item->source_name, $item->source, $item->spec);
+  $self->{hooks}{preprocess}->($item->source_name, $item->source->source, $item->spec);
 
   my ($child_deps) = $self->find_child_dependencies($item);
   unless ($item->row) {
@@ -787,7 +794,7 @@ sub create_item {
 
   $self->fix_child_dependencies($item, $child_deps);
 
-  $self->{hooks}{postprocess}->($item->source_name, $item->source, $item->row);
+  $self->{hooks}{postprocess}->($item->source_name, $item->source->source, $item->row);
 
   $self->remove_item($item);
 

@@ -65,19 +65,19 @@ my $artist = DBIx::Class::Sims::Source->new(
 );
 
 isa_ok($artist, 'DBIx::Class::Sims::Source', '::Source(Artist) builds correctly');
-is($artist->schema, Schema, 'The schema() accessor returns correctly');
+is($artist->runner, $runner, 'The runner() accessor returns correctly');
 
-ok(!$artist->column_in_fk('id'), 'artist.id is not in a FK');
-ok(!$artist->column_in_fk('name'), 'artist.name is not in a FK');
+ok(!$artist->column_in_fk('id'), 'artist.id is NOT in a FK');
+ok(!$artist->column_in_fk('name'), 'artist.name is NOT in a FK');
 
 my $album = DBIx::Class::Sims::Source->new(
   name   => 'Album',
   runner => $runner,
 );
 isa_ok($album, 'DBIx::Class::Sims::Source', '::Source(Album) builds correctly');
-is($album->schema, Schema, 'The schema() accessor returns correctly');
-ok(!$album->column_in_fk('id'), 'album.id is not in a FK');
-ok(!$album->column_in_fk('name'), 'album.name is not in a FK');
+is($album->runner, $runner, 'The runner() accessor returns correctly');
+ok(!$album->column_in_fk('id'), 'album.id is NOT in a FK');
+ok(!$album->column_in_fk('name'), 'album.name is NOT in a FK');
 ok($album->column_in_fk('artist_id'), 'album.artist_id IS in a FK');
 
 done_testing;

@@ -26,7 +26,7 @@ sub initialize {
   my $self = shift;
 
   # Do this first so all the other methods work properly.
-  $self->{source} = $self->schema->source($self->name);
+  $self->{source} = $self->runner->schema->source($self->name);
 
   $self->{relationships} = {};
   $self->{in_fk} = {};
@@ -50,11 +50,7 @@ sub name   { $_[0]{name}   }
 sub runner { $_[0]{runner} }
 sub source { $_[0]{source} }
 
-sub schema { $_[0]->runner->schema }
-
 # Delegate the following methods. This will be easier with Moose.
-sub relationships { shift->source->relationships(@_) }
-sub relationship_info { shift->source->relationship_info(@_) }
 sub columns { shift->source->columns(@_) }
 sub column_info { shift->source->column_info(@_) }
 sub primary_columns { shift->source->primary_columns(@_) }
@@ -68,9 +64,18 @@ sub column_in_fk {
   return $self->{in_fk}{$colname};
 }
 
-sub my_relationships {
+sub relationships {
   my $self = shift;
   return $self->{relationships};
+}
+
+sub parent_relationships {
+  my $self = shift;
+
+}
+
+sub child_relationships {
+  my $self = shift;
 }
 
 1;
