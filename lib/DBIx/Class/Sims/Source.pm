@@ -10,6 +10,8 @@ use strictures 2;
 
 use Scalar::Util qw( reftype );
 
+use DBIx::Class::Sims::Relationship;
+
 # Requires the following attributes:
 # * name
 # * runner
@@ -26,28 +28,18 @@ sub initialize {
   # Do this first so all the other methods work properly.
   $self->{source} = $self->schema->source($self->name);
 
-  my $is_fk = sub { return exists $_[0]{attrs}{is_foreign_key_constraint} };
-  my $cond = sub {
-    my $x = $_[0]{cond};
-    if (reftype($x) eq 'CODE') {
-      $x = $x->({
-        foreign_alias => 'foreign',
-        self_alias => 'self',
-      });
-    }
-    if (reftype($x) ne 'HASH') {
-      die "cond is not a HASH\n" . np($_[0]);
-    }
-    return $x;
-  };
-  my $self_fk_cols = sub { map {/^self\.(.*)/; $1} values %{$cond->($_[0])} };
-
+  $self->{relationships} = {};
   $self->{in_fk} = {};
-  foreach my $rel_name ( $self->relationships ) {
-    my $rel_info = $self->relationship_info($rel_name);
+  foreach my $rel_name ( $self->source->relationships ) {
+    my $r = DBIx::Class::Sims::Relationship->new(
+      source => $self,
+      name   => $rel_name,
+      info   => $self->source->relationship_info($rel_name),
+    );
+    $self->{relationships}{$rel_name} = $r;
 
-    if ($is_fk->($rel_info)) {
-      $self->{in_fk}{$_} = 1 for $self_fk_cols->($rel_info);
+    if ($r->is_fk) {
+      $self->{in_fk}{$_} = 1 for $r->self_fk_cols();
     }
   }
 

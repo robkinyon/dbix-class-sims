@@ -20,6 +20,8 @@ sub new {
 sub initialize {
   my $self = shift;
 
+  # Lots of code assumes __META__ exists.
+  # TODO: Should we check for _META__ or __META_ or __MTA__ etc?
   $self->spec->{__META__} //= {};
 
   #$self->{original} = MyCloner::clone($self->{spec});
@@ -31,8 +33,6 @@ sub source { $_[0]{source} }
 sub spec   { $_[0]{spec}   }
 
 sub meta   { shift->spec->{__META__} }
-sub runner { shift->source->runner }
-sub schema { shift->source->schema }
 sub source_name { shift->source->name }
 
 sub allow_pk_set_value { shift->meta->{allow_pk_set_value} }
@@ -40,12 +40,9 @@ sub set_allow_pk_to {
   my $self = shift;
   my ($proto) = @_;
 
-  if (blessed($proto)) {
-    $self->meta->{allow_pk_set_value} = $proto->meta->{allow_pk_set_value};
-  }
-  else {
-    $self->meta->{allow_pk_set_value} = $proto;
-  }
+  $self->meta->{allow_pk_set_value} = blessed($proto)
+    ? $proto->meta->{allow_pk_set_value}
+    : $proto;
 
   return;
 }
@@ -55,10 +52,6 @@ sub row {
   $self->{row} = shift if @_;
   return $self->{row};
 }
-
-# Delegate the following methods. This will be easier with Moose.
-sub relationships { shift->source->relationships(@_) }
-sub relationship_info { shift->source->relationship_info(@_) }
 
 1;
 __END__

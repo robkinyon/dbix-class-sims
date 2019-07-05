@@ -61,7 +61,6 @@ sub initialize {
     );
   }
 
-  $self->{is_in_fk} = {};
   foreach my $name ( $self->schema->sources ) {
     my $source = $self->{sources}{$name};
 
@@ -74,7 +73,6 @@ sub initialize {
 
       if ($is_fk->($rel_info)) {
         $self->{reqs}{$name}{$rel_name} = 1;
-        $self->{is_in_fk}{$name}{$_} = 1 for $self_fk_cols->($rel_info);
       }
     }
   }
@@ -169,8 +167,8 @@ sub find_child_dependencies {
 
   my (%child_deps);
   RELATIONSHIP:
-  foreach my $rel_name ( $item->relationships ) {
-    my $rel_info = $item->relationship_info($rel_name);
+  foreach my $rel_name ( $item->source->relationships ) {
+    my $rel_info = $item->source->relationship_info($rel_name);
     unless ( $is_fk->($rel_info) ) {
       if ($item->spec->{$rel_name}) {
         $child_deps{$rel_name} = delete $item->spec->{$rel_name};
@@ -196,8 +194,8 @@ sub fix_fk_dependencies {
   #   b. If rows don't exist, $create_item->($fksrc, {})
   my (%deferred_fks);
   RELATIONSHIP:
-  foreach my $rel_name ( $item->relationships ) {
-    my $rel_info = $item->relationship_info($rel_name);
+  foreach my $rel_name ( $item->source->relationships ) {
+    my $rel_info = $item->source->relationship_info($rel_name);
     unless ( $is_fk->($rel_info) ) {
       next RELATIONSHIP;
     }
@@ -324,7 +322,7 @@ sub fix_fk_dependencies {
     my $self = shift;
     my ($src, $row, $compare) = @_;
     foreach my $col ($self->schema->source($src)->columns) {
-      next if $self->{is_in_fk}{$src}{$col};
+      next if $self->{sources}{$src}->column_in_fk($col);
 
       next unless exists $row->{$col};
       return unless exists $compare->{$col};
@@ -505,8 +503,8 @@ sub fix_child_dependencies {
   #   XXX This is more than one item would be supported
   # In all cases, make sure to add { $fkcol => $row->get_column($col) } to the
   # child's $item
-  foreach my $rel_name ( $item->relationships ) {
-    my $rel_info = $item->relationship_info($rel_name);
+  foreach my $rel_name ( $item->source->relationships ) {
+    my $rel_info = $item->source->relationship_info($rel_name);
     next if $is_fk->($rel_info);
     next unless $child_deps->{$rel_name} // $self->{reqs}{$item->source_name}{$rel_name};
 
@@ -547,7 +545,7 @@ sub fix_deferred_fks {
   while (my ($rel_name, $cond) = each %$deferred_fks) {
     my $cond = $deferred_fks->{$rel_name};
 
-    my $rel_info = $item->relationship_info($rel_name);
+    my $rel_info = $item->source->relationship_info($rel_name);
 
     my $col = $self_fk_col->($rel_info);
     my $fkcol = $foreign_fk_col->($rel_info);
