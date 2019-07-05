@@ -8,8 +8,11 @@ use 5.010_001;
 
 use strictures 2;
 
-#use Scalar::Util qw( reftype );
+use Scalar::Util qw( reftype );
 
+# Requires the following attributes:
+# * name
+# * runner
 sub new {
   my $class = shift;
   my $self = bless {@_}, $class;
@@ -23,7 +26,6 @@ sub initialize {
   # Do this first so all the other methods work properly.
   $self->{source} = $self->schema->source($self->name);
 
-=pod
   my $is_fk = sub { return exists $_[0]{attrs}{is_foreign_key_constraint} };
   my $cond = sub {
     my $x = $_[0]{cond};
@@ -48,7 +50,6 @@ sub initialize {
       $self->{in_fk}{$_} = 1 for $self_fk_cols->($rel_info);
     }
   }
-=cut
 
   return;
 }
@@ -68,14 +69,12 @@ sub primary_columns { shift->source->primary_columns(@_) }
 sub unique_constraint_names { shift->source->unique_constraint_names(@_) }
 sub unique_constraint_columns { shift->source->unique_constraint_columns(@_) }
 
-=pod
 sub column_in_fk {
   my $self = shift;
   my ($colname) = @_;
 
   return $self->{in_fk}{$colname};
 }
-=cut
 
 1;
 __END__

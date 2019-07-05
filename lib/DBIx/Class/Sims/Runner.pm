@@ -732,8 +732,7 @@ sub fix_columns {
       !exists $info->{default_value} &&
       !$is{in_pk}->($col_name) &&
       !$is{in_uk}->($col_name) &&
-      #$item->source->column_in_fk($col_name)
-      !$self->{is_in_fk}{$item->source_name}{$col_name}
+      !$item->source->column_in_fk($col_name)
     ) {
       if ( $is{numeric}->($info->{data_type})) {
         my $min = 0;
