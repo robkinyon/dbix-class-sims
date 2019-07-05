@@ -68,5 +68,10 @@ sub column_in_fk {
   return $self->{in_fk}{$colname};
 }
 
+sub my_relationships {
+  my $self = shift;
+  return $self->{relationships};
+}
+
 1;
 __END__

@@ -22,6 +22,9 @@ sub initialize {
   return;
 }
 
+sub name   { shift->{name} }
+sub source { shift->{source} }
+
 sub is_fk {
   my $self = shift;
   return exists $self->{info}{attrs}{is_foreign_key_constraint};
@@ -53,7 +56,7 @@ sub self_fk_cols {
 }
 sub self_fk_col  {
   my $self = shift;
-  return ($self->self_fk_cols->(@_))[0];
+  return ($self->self_fk_cols(@_))[0];
 }
 sub foreign_fk_cols {
   my $self = shift;
@@ -61,7 +64,7 @@ sub foreign_fk_cols {
 }
 sub foreign_fk_col  {
   my $self = shift;
-  return ($self->foreign_fk_cols->(@_))[0];
+  return ($self->foreign_fk_cols(@_))[0];
 }
 
 1;

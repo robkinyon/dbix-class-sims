@@ -15,34 +15,6 @@ use DBIx::Class::Sims::Item;
 use DBIx::Class::Sims::Source;
 use DBIx::Class::Sims::Util ();
 
-###### FROM HERE ######
-# These are utility methods to help navigate the rel_info hash.
-my $is_fk = sub { return exists $_[0]{attrs}{is_foreign_key_constraint} };
-my $short_source = sub {
-  (my $x = $_[0]{source}) =~ s/.*:://;
-  return $x;
-};
-
-my $cond = sub {
-  my $x = $_[0]{cond};
-  if (reftype($x) eq 'CODE') {
-    $x = $x->({
-      foreign_alias => 'foreign',
-      self_alias => 'self',
-    });
-  }
-  if (reftype($x) ne 'HASH') {
-    die "cond is not a HASH\n" . np($_[0]);
-  }
-  return $x;
-};
-
-my $self_fk_cols = sub { map {/^self\.(.*)/; $1} values %{$cond->($_[0])} };
-my $self_fk_col  = sub { ($self_fk_cols->(@_))[0] };
-my $foreign_fk_cols = sub { map {/^foreign\.(.*)/; $1} keys %{$cond->($_[0])} };
-my $foreign_fk_col  = sub { ($foreign_fk_cols->(@_))[0] };
-###### TO HERE ######
-
 sub new {
   my $class = shift;
   my $self = bless {@_}, $class;
@@ -65,14 +37,9 @@ sub initialize {
     my $source = $self->{sources}{$name};
 
     $self->{reqs}{$name} //= {};
-    foreach my $rel_name ( $source->relationships ) {
-      my $rel_info = $source->relationship_info($rel_name);
-
-      #my $fk_name = $short_source->($rel_info);
-      #my $fk_source = $self->{sources}{$fk_name};
-
-      if ($is_fk->($rel_info)) {
-        $self->{reqs}{$name}{$rel_name} = 1;
+    while (my ($rel_name, $r) = each %{$source->my_relationships}) {
+      if ($r->is_fk) {
+        $self->{reqs}{$name}{$r->name} = 1;
       }
     }
   }
@@ -167,9 +134,8 @@ sub find_child_dependencies {
 
   my (%child_deps);
   RELATIONSHIP:
-  foreach my $rel_name ( $item->source->relationships ) {
-    my $rel_info = $item->source->relationship_info($rel_name);
-    unless ( $is_fk->($rel_info) ) {
+  while (my ($rel_name, $r) = each %{$item->source->my_relationships}) {
+    unless ( $r->is_fk ) {
       if ($item->spec->{$rel_name}) {
         $child_deps{$rel_name} = delete $item->spec->{$rel_name};
       }
@@ -194,18 +160,17 @@ sub fix_fk_dependencies {
   #   b. If rows don't exist, $create_item->($fksrc, {})
   my (%deferred_fks);
   RELATIONSHIP:
-  foreach my $rel_name ( $item->source->relationships ) {
-    my $rel_info = $item->source->relationship_info($rel_name);
-    unless ( $is_fk->($rel_info) ) {
+  while (my ($rel_name, $r) = each %{$item->source->my_relationships}) {
+    unless ( $r->is_fk ) {
       next RELATIONSHIP;
     }
 
     next RELATIONSHIP unless $self->{reqs}{$item->source_name}{$rel_name};
 
-    my $col = $self_fk_col->($rel_info);
-    my $fkcol = $foreign_fk_col->($rel_info);
+    my $col = $r->self_fk_col;
+    my $fkcol = $r->foreign_fk_col;
 
-    my $fk_name = $short_source->($rel_info);
+    my $fk_name = $r->short_fk_source;
     my $rs = $self->schema->resultset($fk_name);
 
     if (!$self->{allow_relationship_column_names}) {
@@ -360,14 +325,13 @@ sub find_inverse_relationships {
   my $self = shift;
   my ($parent, $rel_to_child, $child, $fkcol) = @_;
 
-  my $fksource = $self->schema->source($child);
+  my $fksource = $self->{sources}{$child};
 
   my @inverses;
-  foreach my $rel_name ( $fksource->relationships ) {
-    my $rel_info = $fksource->relationship_info($rel_name);
+  while (my ($rel_name, $r) = each %{$fksource->my_relationships}) {
 
     # Skip relationships that aren't back towards the table we're coming from.
-    next unless $short_source->($rel_info) eq $parent;
+    next unless $r->short_fk_source eq $parent;
 
     # Assumption: We don't need to verify the $fkcol because there shouldn't be
     # multiple relationships on different columns between the same tables. This
@@ -375,7 +339,7 @@ sub find_inverse_relationships {
 
     push @inverses, {
       rel => $rel_name,
-      col => $foreign_fk_col->($rel_info),
+      col => $r->foreign_fk_col,
     };
   }
 
@@ -503,15 +467,14 @@ sub fix_child_dependencies {
   #   XXX This is more than one item would be supported
   # In all cases, make sure to add { $fkcol => $row->get_column($col) } to the
   # child's $item
-  foreach my $rel_name ( $item->source->relationships ) {
-    my $rel_info = $item->source->relationship_info($rel_name);
-    next if $is_fk->($rel_info);
+  while (my ($rel_name, $r) = each %{$item->source->my_relationships}) {
+    next if $r->is_fk;
     next unless $child_deps->{$rel_name} // $self->{reqs}{$item->source_name}{$rel_name};
 
-    my $col = $self_fk_col->($rel_info);
-    my $fkcol = $foreign_fk_col->($rel_info);
+    my $col = $r->self_fk_col;
+    my $fkcol = $r->foreign_fk_col;
 
-    my $fk_name = $short_source->($rel_info);
+    my $fk_name = $r->short_fk_source;
 
     my @children;
     if ($child_deps->{$rel_name}) {
@@ -545,11 +508,11 @@ sub fix_deferred_fks {
   while (my ($rel_name, $cond) = each %$deferred_fks) {
     my $cond = $deferred_fks->{$rel_name};
 
-    my $rel_info = $item->source->relationship_info($rel_name);
+    my $r = $item->source->{relationships}{$rel_name};
 
-    my $col = $self_fk_col->($rel_info);
-    my $fkcol = $foreign_fk_col->($rel_info);
-    my $fk_name = $short_source->($rel_info);
+    my $col = $r->self_fk_col;
+    my $fkcol = $r->foreign_fk_col;
+    my $fk_name = $r->short_fk_source;
 
     my $rs = $self->schema->resultset($fk_name);
     $rs = $self->create_search($rs, $fk_name, $cond);
