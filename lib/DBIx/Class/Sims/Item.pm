@@ -8,9 +8,11 @@ use 5.010_001;
 
 use strictures 2;
 
+use DDP;
+
 use Scalar::Util qw( blessed );
 
-use DBIx::Class::Sims::Util;
+use DBIx::Class::Sims::Util qw( normalize_aoh );
 
 sub new {
   my $class = shift;
@@ -86,7 +88,7 @@ sub build_children {
 
     my @children;
     if ($self->{children}{$r->name}) {
-      my $n = DBIx::Class::Sims::Util->normalize_aoh($self->{children}{$r->name});
+      my $n = normalize_aoh($self->{children}{$r->name});
       unless ($n) {
         die "Don't know what to do with @{[$r->full_name]}\n\t".np($self->row);
       }

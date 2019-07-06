@@ -5,6 +5,9 @@ use 5.010_001;
 
 use strictures 2;
 
+use base 'Exporter';
+our @EXPORT_OK = qw( normalize_aoh reftype );
+
 use Scalar::Util ();
 
 sub reftype {
@@ -12,7 +15,6 @@ sub reftype {
 }
 
 sub normalize_aoh {
-  shift;
   my ($input) = @_;
 
   return unless defined $input;

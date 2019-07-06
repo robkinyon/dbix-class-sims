@@ -8,7 +8,7 @@ use 5.010_001;
 
 use strictures 2;
 
-use Scalar::Util qw( reftype );
+use DDP;
 
 use DBIx::Class::Sims::Relationship;
 

@@ -40,7 +40,7 @@ use DBIx::Class::TopoSort ();
 use Hash::Merge qw( merge );
 use List::Util qw( first );
 use List::MoreUtils qw( natatime );
-use Scalar::Util qw( blessed reftype );
+use Scalar::Util qw( blessed );
 
 {
   # The aliases in this block are done at BEGIN time so that the ::Types class
@@ -103,7 +103,7 @@ use Scalar::Util qw( blessed reftype );
 use DBIx::Class::Sims::Types;
 
 use DBIx::Class::Sims::Runner;
-use DBIx::Class::Sims::Util;
+use DBIx::Class::Sims::Util qw( normalize_aoh reftype );
 
 sub add_sims {
   my $class = shift;
@@ -147,7 +147,7 @@ sub load_sims {
   # Create a lookup of the items passed in so we can return them back.
   my $initial_spec = {};
   foreach my $name (keys %$spec) {
-    my $normalized = DBIx::Class::Sims::Util->normalize_aoh($spec->{$name});
+    my $normalized = normalize_aoh($spec->{$name});
     unless ($normalized) {
       warn "Skipping $name - I don't know what to do!\n";
       delete $spec->{$name};
@@ -257,7 +257,7 @@ sub massage_input {
       return @_;
     },
     wanted => sub {
-      return unless (reftype($_)//'') eq 'HASH' && !blessed($_);
+      return unless reftype($_) eq 'HASH' && !blessed($_);
       foreach my $k ( keys %$_ ) {
         my $t = $_;
 

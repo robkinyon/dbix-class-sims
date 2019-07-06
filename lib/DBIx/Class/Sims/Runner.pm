@@ -8,12 +8,12 @@ use DDP;
 
 use Data::Compare qw( Compare );
 use Hash::Merge qw( merge );
-use Scalar::Util qw( blessed reftype );
+use Scalar::Util qw( blessed );
 use String::Random qw( random_regex );
 
 use DBIx::Class::Sims::Item;
 use DBIx::Class::Sims::Source;
-use DBIx::Class::Sims::Util ();
+use DBIx::Class::Sims::Util qw( reftype );
 
 sub new {
   my $class = shift;
@@ -111,7 +111,7 @@ sub create_search {
   # So, we use this one instead. This breaks encapsulation.
   foreach my $rel_name ($source->source->relationships) {
     next unless exists $cond->{$rel_name};
-    next unless (reftype($cond->{$rel_name}) // '') eq 'HASH';
+    next unless reftype($cond->{$rel_name}) eq 'HASH';
 
     my %search = map {
       ;"$rel_name.$_" => $cond->{$rel_name}{$_}
@@ -495,13 +495,15 @@ sub fix_columns {
       # Reflection has realized it was an unnecessary distinction to a parent
       # specification. Either it's a relationship hashref or a simspec hashref.
       # We can never have both. It will be deprecated.
-      if ((reftype($item->spec->{$col_name}) // '') eq 'REF' &&
-        (reftype(${$item->spec->{$col_name}}) // '') eq 'HASH' ) {
+      if (
+        reftype($item->spec->{$col_name}) eq 'REF' &&
+        reftype(${$item->spec->{$col_name}}) eq 'HASH'
+      ) {
         warn "DEPRECATED: Use a regular HASHREF for overriding simspec. HASHREFREF will be removed in a future release.";
         $sim_spec = ${ delete $item->spec->{$col_name} };
       }
       elsif (
-        (reftype($item->spec->{$col_name}) // '') eq 'HASH' &&
+        reftype($item->spec->{$col_name}) eq 'HASH' &&
         # Assume a blessed hash is a DBIC object
         !blessed($item->spec->{$col_name}) &&
         # Do not assume we understand something to be inflated/deflated

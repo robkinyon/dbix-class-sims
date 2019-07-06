@@ -7,7 +7,9 @@ use 5.010_001;
 
 use strictures 2;
 
-use Scalar::Util qw( reftype );
+use DDP;
+
+use DBIx::Class::Sims::Util qw( reftype );
 
 sub new {
   my $class = shift;
@@ -15,6 +17,9 @@ sub new {
   $self->initialize;
   return $self;
 }
+
+# Possible TODO:
+# 1. Identify source / target and parent / child
 
 sub initialize {
   my $self = shift;
