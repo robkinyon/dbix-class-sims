@@ -24,11 +24,11 @@ sub new {
 sub initialize {
   my $self = shift;
 
+  $self->{original_spec} = MyCloner::clone($self->spec);
+
   # Lots of code assumes __META__ exists.
   # TODO: Should we check for _META__ or __META_ or __MTA__ etc?
   $self->spec->{__META__} //= {};
-
-  #$self->{original} = MyCloner::clone($self->{spec});
 
   # Should we quarantine_children() immediately?
 
@@ -89,8 +89,9 @@ sub build_children {
     my @children;
     if ($self->{children}{$r->name}) {
       my $n = normalize_aoh($self->{children}{$r->name});
+      # TODO: Test me!
       unless ($n) {
-        die "Don't know what to do with @{[$r->full_name]}\n\t".np($self->row);
+        die "Don't know what to do with @{[$r->full_name]}\n\t".np($self->{original_spec});
       }
       @children = @{$n};
     }

@@ -209,6 +209,16 @@ sims_test "Auto-generate a child with a value" => {
   rv => sub { { Artist => shift->{expect}{Artist} } },
 };
 
+sims_test "Fail to generate a child due to a bad value" => {
+  spec => {
+    Artist => {
+      name => 'foo',
+      albums => \'bad value',
+    },
+  },
+  dies => qr/Don't know what to do with Artist->album/,
+};
+
 sims_test "Auto-generate a parent as necessary" => {
   spec => {
     Album => {},

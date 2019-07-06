@@ -13,11 +13,11 @@ all_versions="5.10 5.14 5.16 5.18 5.20 5.22 5.24 5.26"
 export MSYS_NO_PATHCONV=1
 
 files_dirs_to_map=(
-    lib t
+  lib t
 )
 volumes=()
 for item in ${files_dirs_to_map[@]}; do
-    volumes+=(-v $(pwd)/$item:/app/$item)
+  volumes+=(-v $(pwd)/$item:/app/$item)
 done
 
 if [[ "$1" == "pull" ]]; then
@@ -48,7 +48,7 @@ elif [[ "$1" == "test" ]]; then
   shift
   versions=${@:-"${all_versions}"}
   for version in ${versions}; do
-    echo "Running tests against perl-${version}"
+    echo "Running tests against perl-${version} (should take under 1min)"
     MSYS_NO_PATHCONV=1 \
     docker run \
       -it --rm \
@@ -60,7 +60,7 @@ elif [[ "$1" == "cover" ]]; then
   shift
   versions=${@:-"${all_versions}"}
   for version in ${versions}; do
-    echo "Running test coverage against perl-${version}"
+    echo "Running test coverage against perl-${version} (takes up to 10min)"
 
     rm -rf cover_db cover_db_${version}
     mkdir cover_db
