@@ -59,25 +59,47 @@ my $runner = DBIx::Class::Sims::Runner->new(
   schema => Schema,
 );
 
-my $artist = DBIx::Class::Sims::Source->new(
-  name   => 'Artist',
-  runner => $runner,
-);
+subtest 'parent' => sub {
+  my $artist = DBIx::Class::Sims::Source->new(
+    name   => 'Artist',
+    runner => $runner,
+  );
 
-isa_ok($artist, 'DBIx::Class::Sims::Source', '::Source(Artist) builds correctly');
-is($artist->runner, $runner, 'The runner() accessor returns correctly');
+  isa_ok($artist, 'DBIx::Class::Sims::Source', '::Source(Artist) builds correctly');
+  is($artist->runner, $runner, 'The runner() accessor returns correctly');
 
-ok(!$artist->column_in_fk('id'), 'artist.id is NOT in a FK');
-ok(!$artist->column_in_fk('name'), 'artist.name is NOT in a FK');
+  ok(!$artist->column_in_fk('id'), 'artist.id is NOT in a FK');
+  ok(!$artist->column_in_fk('name'), 'artist.name is NOT in a FK');
 
-my $album = DBIx::Class::Sims::Source->new(
-  name   => 'Album',
-  runner => $runner,
-);
-isa_ok($album, 'DBIx::Class::Sims::Source', '::Source(Album) builds correctly');
-is($album->runner, $runner, 'The runner() accessor returns correctly');
-ok(!$album->column_in_fk('id'), 'album.id is NOT in a FK');
-ok(!$album->column_in_fk('name'), 'album.name is NOT in a FK');
-ok($album->column_in_fk('artist_id'), 'album.artist_id IS in a FK');
+  my @rels = map { $_->name } $artist->relationships;
+  cmp_bag(\@rels, ['albums'], "One relationships overall");
+
+  my @parent_rels = map { $_->name } $artist->parent_relationships;
+  cmp_bag(\@parent_rels, [], "No parent relationships");
+
+  my @child_rels = map { $_->name } $artist->child_relationships;
+  cmp_bag(\@child_rels, ['albums'], "One child relationships");
+};
+
+subtest 'child' => sub {
+  my $album = DBIx::Class::Sims::Source->new(
+    name   => 'Album',
+    runner => $runner,
+  );
+  isa_ok($album, 'DBIx::Class::Sims::Source', '::Source(Album) builds correctly');
+  is($album->runner, $runner, 'The runner() accessor returns correctly');
+  ok(!$album->column_in_fk('id'), 'album.id is NOT in a FK');
+  ok(!$album->column_in_fk('name'), 'album.name is NOT in a FK');
+  ok($album->column_in_fk('artist_id'), 'album.artist_id IS in a FK');
+
+  my @rels = map { $_->name } $album->relationships;
+  cmp_bag(\@rels, ['artist'], "One relationships overall");
+
+  my @parent_rels = map { $_->name } $album->parent_relationships;
+  cmp_bag(\@parent_rels, ['artist'], "One parent relationships");
+
+  my @child_rels = map { $_->name } $album->child_relationships;
+  cmp_bag(\@child_rels, [], "No child relationships");
+};
 
 done_testing;

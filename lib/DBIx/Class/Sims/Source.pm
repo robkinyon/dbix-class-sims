@@ -66,16 +66,19 @@ sub column_in_fk {
 
 sub relationships {
   my $self = shift;
-  return $self->{relationships};
+  return values %{$self->{relationships}};
 }
 
 sub parent_relationships {
   my $self = shift;
 
+  return grep { $_->is_fk } $self->relationships;
 }
 
 sub child_relationships {
   my $self = shift;
+
+  return grep { !$_->is_fk } $self->relationships;
 }
 
 1;

@@ -37,10 +37,8 @@ sub initialize {
     my $source = $self->{sources}{$name};
 
     $self->{reqs}{$name} //= {};
-    while (my ($rel_name, $r) = each %{$source->relationships}) {
-      if ($r->is_fk) {
-        $self->{reqs}{$name}{$r->name} = 1;
-      }
+    foreach my $r ($source->parent_relationships) {
+      $self->{reqs}{$name}{$r->name} = 1;
     }
   }
 
@@ -115,10 +113,9 @@ sub create_search {
   # fix_fk_dependencies() above. However, that breaks in mysterious ways.
   #
   # FIXME: Using this for-loop times out the tests in t/self_refential.t
-  #foreach my $rel_name (keys %{$source->my_relationships}) {
+  #foreach my $rel_name (keys %{$source->relationships}) {
   # So, we use this one instead. This breaks encapsulation.
   foreach my $rel_name ($source->source->relationships) {
-
     next unless exists $cond->{$rel_name};
     next unless (reftype($cond->{$rel_name}) // '') eq 'HASH';
 
@@ -140,12 +137,9 @@ sub find_child_dependencies {
   my ($item) = @_;
 
   my (%child_deps);
-  RELATIONSHIP:
-  while (my ($rel_name, $r) = each %{$item->source->relationships}) {
-    unless ( $r->is_fk ) {
-      if ($item->spec->{$rel_name}) {
-        $child_deps{$rel_name} = delete $item->spec->{$rel_name};
-      }
+  foreach my $r ( $item->source->child_relationships ) {
+    if ($item->spec->{$r->name}) {
+      $child_deps{$r->name} = delete $item->spec->{$r->name};
     }
   }
 
@@ -167,12 +161,8 @@ sub fix_fk_dependencies {
   #   b. If rows don't exist, $create_item->($fksrc, {})
   my (%deferred_fks);
   RELATIONSHIP:
-  while (my ($rel_name, $r) = each %{$item->source->relationships}) {
-    unless ( $r->is_fk ) {
-      next RELATIONSHIP;
-    }
-
-    next RELATIONSHIP unless $self->{reqs}{$item->source_name}{$rel_name};
+  foreach my $r ( $item->source->parent_relationships ) {
+    next RELATIONSHIP unless $self->{reqs}{$item->source_name}{$r->name};
 
     my $col = $r->self_fk_col;
     my $fkcol = $r->foreign_fk_col;
@@ -181,13 +171,13 @@ sub fix_fk_dependencies {
     my $rs = $self->schema->resultset($fk_name);
 
     if (!$self->{allow_relationship_column_names}) {
-      if ($col ne $rel_name && exists $item->spec->{$col}) {
-        die "Cannot use column $col - use relationship $rel_name";
+      if ($col ne $r->name && exists $item->spec->{$col}) {
+        die "Cannot use column $col - use relationship @{[$r->name]}";
       }
     }
 
     my $cond;
-    my $proto = delete($item->spec->{$rel_name}) // delete($item->spec->{$col});
+    my $proto = delete($item->spec->{$r->name}) // delete($item->spec->{$col});
     if ($proto) {
       # Assume anything blessed is blessed into DBIC.
       if (blessed($proto)) {
@@ -205,12 +195,12 @@ sub fix_fk_dependencies {
       elsif (ref($proto) eq 'SCALAR') {
         $cond = {
           $fkcol => $self->convert_backreference(
-            $item->source, $rel_name, $$proto, $fkcol,
+            $item->source, $r->name, $$proto, $fkcol,
           ),
         };
       }
       else {
-        die "Unsure what to do about @{[$item->source_name]}->$rel_name():" . np($proto);
+        die "Unsure what to do about @{[$item->source_name]}\->@{[$r->name]}():" . np($proto);
       }
     }
 
@@ -221,13 +211,13 @@ sub fix_fk_dependencies {
       # First, find the inverse relationship. If it doesn't exist or if there
       # is more than one, then die.
       my @inverse = $self->find_inverse_relationships(
-        $item->source_name, $rel_name, $fk_name, $fkcol,
+        $item->source_name, $r->name, $fk_name, $fkcol,
       );
       if (@inverse == 0) {
-        die "Cannot find an inverse relationship for @{[$item->source_name]}->${rel_name}\n";
+        die "Cannot find an inverse relationship for @{[$item->source_name]}\->@{[$r->name]}\n";
       }
       elsif (@inverse > 1) {
-        die "Too many inverse relationships for @{[$item->source_name]}->${rel_name} ($fk_name / $fkcol)\n" . np(@inverse);
+        die "Too many inverse relationships for @{[$item->source_name]}\->@{[$r->name]} ($fk_name / $fkcol)\n" . np(@inverse);
       }
 
       # We cannot add this relationship to the $cond because that would result
@@ -251,7 +241,7 @@ sub fix_fk_dependencies {
 
     my $meta = delete $cond->{__META__} // {};
 
-    warn "Looking for @{[$item->source_name]}->$rel_name(".np($cond).")\n" if $ENV{SIMS_DEBUG};
+    warn "Looking for @{[$item->source_name]}->@{[$r->name]}(".np($cond).")\n" if $ENV{SIMS_DEBUG};
 
     my $parent;
     unless ($meta->{create}) {
@@ -268,7 +258,7 @@ sub fix_fk_dependencies {
         $cond->set_allow_pk_to($item);
 
         $item->spec->{$col} = undef;
-        $deferred_fks{$rel_name} = $cond;
+        $deferred_fks{$r->name} = $cond;
         next RELATIONSHIP;
       }
     }
@@ -335,7 +325,7 @@ sub find_inverse_relationships {
   my $fksource = $self->{sources}{$child};
 
   my @inverses;
-  while (my ($rel_name, $r) = each %{$fksource->relationships}) {
+  foreach my $r ( $fksource->relationships ) {
 
     # Skip relationships that aren't back towards the table we're coming from.
     next unless $r->short_fk_source eq $parent;
@@ -345,7 +335,7 @@ sub find_inverse_relationships {
     # is likely to be violated, but only by badly-designed schemas.
 
     push @inverses, {
-      rel => $rel_name,
+      rel => $r->name,
       col => $r->foreign_fk_col,
     };
   }
@@ -474,9 +464,8 @@ sub fix_child_dependencies {
   #   XXX This is more than one item would be supported
   # In all cases, make sure to add { $fkcol => $row->get_column($col) } to the
   # child's $item
-  while (my ($rel_name, $r) = each %{$item->source->relationships}) {
-    next if $r->is_fk;
-    next unless $child_deps->{$rel_name} // $self->{reqs}{$item->source_name}{$rel_name};
+  foreach my $r ( $item->source->child_relationships ) {
+    next unless $child_deps->{$r->name} // $self->{reqs}{$item->source_name}{$r->name};
 
     my $col = $r->self_fk_col;
     my $fkcol = $r->foreign_fk_col;
@@ -484,15 +473,15 @@ sub fix_child_dependencies {
     my $fk_name = $r->short_fk_source;
 
     my @children;
-    if ($child_deps->{$rel_name}) {
-      my $n = DBIx::Class::Sims::Util->normalize_aoh($child_deps->{$rel_name});
+    if ($child_deps->{$r->name}) {
+      my $n = DBIx::Class::Sims::Util->normalize_aoh($child_deps->{$r->name});
       unless ($n) {
-        die "Don't know what to do with @{[$item->source_name]}\->{$rel_name}\n\t".np($item->row);
+        die "Don't know what to do with @{[$item->source_name]}\->@{[$r->name]}\n\t".np($item->row);
       }
       @children = @{$n};
     }
     else {
-      @children = ( ({}) x $self->{reqs}{$item->source_name}{$rel_name} );
+      @children = ( ({}) x $self->{reqs}{$item->source_name}{$r->name} );
     }
 
     # Need to ensure that $child_deps >= $self->{reqs}
@@ -515,6 +504,7 @@ sub fix_deferred_fks {
   while (my ($rel_name, $cond) = each %$deferred_fks) {
     my $cond = $deferred_fks->{$rel_name};
 
+    # FIXME: This breaks encapsulation.
     my $r = $item->source->{relationships}{$rel_name};
 
     my $col = $r->self_fk_col;
