@@ -11,6 +11,11 @@ use DDP;
 
 use DBIx::Class::Sims::Util qw( reftype );
 
+# Requires the following attributes:
+# * source
+# * name
+# * info
+# * constraints
 sub new {
   my $class = shift;
   my $self = bless {@_}, $class;

@@ -90,7 +90,7 @@ sub create_search {
   # is an ::Item (yet). (Maybe never?)
   $cond = $cond->spec if blessed($cond);
 
-  my %cols = map { $_ => 1 } $source->columns;
+  my %cols = map { $_->name => 1 } $source->columns;
   my $search = {
     (map {
       'me.' . $_ => $cond->{$_}
@@ -259,8 +259,9 @@ sub fix_fk_dependencies {
 sub are_columns_equal {
   my $self = shift;
   my ($source, $row, $compare) = @_;
-  foreach my $col ($source->columns) {
-    next if $source->column_in_fk($col);
+  foreach my $c ($source->columns) {
+    next if $c->is_in_fk;
+    my $col = $c->name;
 
     next if !exists($row->{$col}) && !exists($compare->{$col});
     return unless exists($row->{$col}) && exists($compare->{$col});
@@ -397,7 +398,7 @@ sub fix_deferred_fks {
   my ($item, $deferred_fks) = @_;
 
   while (my ($rel_name, $cond) = each %$deferred_fks) {
-    my $r = $item->source->relationship_by_name($rel_name);
+    my $r = $item->source->relationship($rel_name);
 
     my $cond = $deferred_fks->{$rel_name};
 
@@ -478,14 +479,16 @@ sub fix_columns {
     };
   }
 
-  foreach my $col_name ( $item->source->columns ) {
+  foreach my $c ( $item->source->columns ) {
+    my $col_name = $c->name;
+
     my $sim_spec;
     if ( exists $item->spec->{$col_name} ) {
       if (
            $is{in_pk}->($col_name)
         && !$item->allow_pk_set_value
-        && !$item->source->column_info($col_name)->{is_nullable}
-        && $item->source->column_info($col_name)->{is_auto_increment}
+        && !$c->is_nullable
+        && $c->is_auto_increment
       ) {
         my $msg = sprintf(
           "Primary-key autoincrement non-null columns should not be hardcoded in tests (%s.%s = %s)",
@@ -585,7 +588,7 @@ sub fix_columns {
       !exists $info->{default_value} &&
       !$is{in_pk}->($col_name) &&
       !$is{in_uk}->($col_name) &&
-      !$item->source->column_in_fk($col_name)
+      !$c->is_in_fk
     ) {
       if ( $is{numeric}->($info->{data_type})) {
         my $min = 0;
@@ -615,7 +618,7 @@ sub fix_columns {
   # isn't one, complain loudly.
   if ($self->is_oracle && keys(%{$item->spec}) == 0) {
     my @pk_columns = grep {
-      $is{in_pk}->($_)
+      $is{in_pk}->($_->name)
     } $item->source->columns;
 
     die "Must specify something about some column or have a PK in Oracle"

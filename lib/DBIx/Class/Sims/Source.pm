@@ -10,6 +10,7 @@ use strictures 2;
 
 use DDP;
 
+use DBIx::Class::Sims::Column;
 use DBIx::Class::Sims::Relationship;
 
 # Requires the following attributes:
@@ -28,6 +29,16 @@ sub initialize {
   # Do this first so all the other methods work properly.
   $self->{source} = $self->runner->schema->source($self->name);
 
+  $self->{columns} = {};
+  foreach my $col_name ( $self->source->columns ) {
+    my $c = DBIx::Class::Sims::Column->new(
+      source => $self,
+      name   => $col_name,
+      info   => $self->source->column_info($col_name),
+    );
+    $self->{columns}{$col_name} = $c;
+  }
+
   $self->{relationships} = {};
   $self->{in_fk} = {};
   my $constraints = delete($self->{constraints}) // {};
@@ -41,6 +52,7 @@ sub initialize {
     $self->{relationships}{$rel_name} = $r;
 
     if ($r->is_fk) {
+      $self->{columns}{$_}->in_fk($r) for $r->self_fk_cols;
       $self->{in_fk}{$_} = 1 for $r->self_fk_cols();
     }
   }
@@ -53,24 +65,26 @@ sub runner { $_[0]{runner} }
 sub source { $_[0]{source} }
 
 # Delegate the following methods. This will be easier with Moose.
-sub columns { shift->source->columns(@_) }
+#sub columns { shift->source->columns(@_) }
 sub column_info { shift->source->column_info(@_) }
 sub primary_columns { shift->source->primary_columns(@_) }
 sub unique_constraint_names { shift->source->unique_constraint_names(@_) }
 sub unique_constraint_columns { shift->source->unique_constraint_columns(@_) }
 
-sub column_in_fk {
+sub columns {
   my $self = shift;
-  my ($colname) = @_;
-
-  return $self->{in_fk}{$colname};
+  return values %{$self->{columns}};
+}
+sub column {
+  my $self = shift;
+  return $self->{columns}{$_[0]};
 }
 
 sub relationships {
   my $self = shift;
   return values %{$self->{relationships}};
 }
-sub relationship_by_name {
+sub relationship {
   my $self = shift;
   return $self->{relationships}{$_[0]};
 }

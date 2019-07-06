@@ -68,8 +68,8 @@ subtest 'parent' => sub {
   isa_ok($artist, 'DBIx::Class::Sims::Source', '::Source(Artist) builds correctly');
   is($artist->runner, $runner, 'The runner() accessor returns correctly');
 
-  ok(!$artist->column_in_fk('id'), 'artist.id is NOT in a FK');
-  ok(!$artist->column_in_fk('name'), 'artist.name is NOT in a FK');
+  ok(!$artist->column('id')->is_in_fk, 'artist.id is NOT in a FK');
+  ok(!$artist->column('name')->is_in_fk, 'artist.name is NOT in a FK');
 
   my @rels = map { $_->name } $artist->relationships;
   cmp_bag(\@rels, ['albums'], "One relationships overall");
@@ -88,9 +88,9 @@ subtest 'child' => sub {
   );
   isa_ok($album, 'DBIx::Class::Sims::Source', '::Source(Album) builds correctly');
   is($album->runner, $runner, 'The runner() accessor returns correctly');
-  ok(!$album->column_in_fk('id'), 'album.id is NOT in a FK');
-  ok(!$album->column_in_fk('name'), 'album.name is NOT in a FK');
-  ok($album->column_in_fk('artist_id'), 'album.artist_id IS in a FK');
+  ok(!$album->column('id')->is_in_fk, 'album.id is NOT in a FK');
+  ok(!$album->column('name')->is_in_fk, 'album.name is NOT in a FK');
+  ok($album->column('artist_id')->is_in_fk, 'album.artist_id IS in a FK');
 
   my @rels = map { $_->name } $album->relationships;
   cmp_bag(\@rels, ['artist'], "One relationships overall");
