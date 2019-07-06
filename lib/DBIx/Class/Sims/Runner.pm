@@ -130,20 +130,6 @@ sub create_search {
   return $rs;
 }
 
-sub find_child_dependencies {
-  my $self = shift;
-  my ($item) = @_;
-
-  my (%child_deps);
-  foreach my $r ( $item->source->child_relationships ) {
-    if ($item->spec->{$r->name}) {
-      $child_deps{$r->name} = delete $item->spec->{$r->name};
-    }
-  }
-
-  return \%child_deps;
-}
-
 sub fix_fk_dependencies {
   my $self = shift;
   my ($item) = @_;
@@ -250,6 +236,7 @@ sub fix_fk_dependencies {
       # to be set after creation.
       if (!$parent && $col_info->{is_nullable}) {
         $cond = DBIx::Class::Sims::Item->new(
+          runner => $self,
           source => $self->{sources}{$fk_name},
           spec   => $cond,
         );
@@ -262,6 +249,7 @@ sub fix_fk_dependencies {
     }
     unless ($parent) {
       my $fk_item = DBIx::Class::Sims::Item->new(
+        runner => $self,
         source => $self->{sources}{$fk_name},
         spec   => MyCloner::clone($cond),
       );
@@ -402,50 +390,6 @@ sub fix_values {
       $item->spec->{$attr} = $self->convert_backreference(
         $item->source, $attr, $$value,
       );
-    }
-  }
-}
-
-sub fix_child_dependencies {
-  my $self = shift;
-  my ($item, $child_deps) = @_;
-
-  # 1. If we have something, then:
-  #   a. If it's not an array, then make it an array
-  # 2. If we don't have something,
-  #   a. Make an array with an empty item
-  #   XXX This is more than one item would be supported
-  # In all cases, make sure to add { $fkcol => $row->get_column($col) } to the
-  # child's $item
-  foreach my $r ( $item->source->child_relationships ) {
-    next unless $child_deps->{$r->name} // $self->{reqs}{$item->source_name}{$r->name};
-
-    my $col = $r->self_fk_col;
-    my $fkcol = $r->foreign_fk_col;
-
-    my $fk_name = $r->short_fk_source;
-
-    my @children;
-    if ($child_deps->{$r->name}) {
-      my $n = DBIx::Class::Sims::Util->normalize_aoh($child_deps->{$r->name});
-      unless ($n) {
-        die "Don't know what to do with @{[$r->full_name]}\n\t".np($item->row);
-      }
-      @children = @{$n};
-    }
-    else {
-      @children = ( ({}) x $self->{reqs}{$item->source_name}{$r->name} );
-    }
-
-    # Need to ensure that $child_deps >= $self->{reqs}
-
-    foreach my $child (@children) {
-      # FIXME $child is a hashref, not a ::Item. add_child() needs to be able to
-      # handle ::Item's, which requires ::Item's to be Comparable
-      ($child->{__META__} //= {})->{allow_pk_set_value} = 1;
-
-      $child->{$fkcol} = $item->row->get_column($col);
-      $self->add_child($fk_name, $fkcol, $child, $item->source_name);
     }
   }
 }
@@ -708,7 +652,7 @@ sub create_item {
 
   $self->{hooks}{preprocess}->($item->source_name, $item->source->source, $item->spec);
 
-  my ($child_deps) = $self->find_child_dependencies($item);
+  $item->quarantine_children;
   unless ($item->row) {
     my ($deferred_fks) = $self->fix_fk_dependencies($item);
     $self->fix_values($item);
@@ -733,8 +677,7 @@ sub create_item {
 
     $self->fix_deferred_fks($item, $deferred_fks);
   }
-
-  $self->fix_child_dependencies($item, $child_deps);
+  $item->build_children;
 
   $self->{hooks}{postprocess}->($item->source_name, $item->source->source, $item->row);
 
@@ -756,6 +699,7 @@ sub run {
 
         while ( my $proto = shift @{$self->{spec}{$name}} ) {
           my $item = DBIx::Class::Sims::Item->new(
+            runner => $self,
             source => $self->{sources}{$name},
             spec   => $proto,
           );
