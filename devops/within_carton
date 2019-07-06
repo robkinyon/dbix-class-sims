@@ -7,17 +7,17 @@ if [[ $1 == "bash" ]]; then
   exit
 fi
 
-TEST_PARALLEL=4
-#TEST_CMD="prove -lrs -j${TEST_PARALLEL}"
-TEST_CMD="yath test -PDBIx::Class::Sims -PDBIx::Class -PMoose -j${TEST_PARALLEL}"
+TEST_PARALLEL="-j4"
+#TEST_CMD="prove -lrs"
+TEST_CMD="yath test -PDBIx::Class::Sims -PDBIx::Class -PMoose"
 
 echo "Starting tests"
 if [[ $1 == "cover" ]]; then
   shift
   carton exec -- cover -delete
   # Ignore the Carton-created library and ignore our test files.
-  HARNESS_PERL_SWITCHES=-MDevel::Cover=+inc,local/lib/perl5,+ignore,'^t/' carton exec -- ${TEST_CMD} "$@"
+  HARNESS_PERL_SWITCHES=-MDevel::Cover=+inc,local/lib/perl5,+ignore,'^t/' carton exec -- "${TEST_CMD} $@"
   carton exec -- cover -coverage default,-pod
 else
-  carton exec -- ${TEST_CMD} "$@"
+  carton exec -- "${TEST_CMD} ${TEST_PARALLEL} $@"
 fi
