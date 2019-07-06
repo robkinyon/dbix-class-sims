@@ -85,6 +85,9 @@ sub child_relationships {
   return grep { !$_->is_fk } $self->relationships;
 }
 
+################################################################################
+# There are not tests for the methods below here to the end of the file.
+
 # This is used to determine if additional constraints need to be added when
 # looking for a parent row that already exists. The use of this method needs to
 # be upgraded to optionally throw an error if the parent found would not meet
@@ -107,6 +110,30 @@ sub unique_constraints_containing {
     my $col_def = $_;
     ! grep { $column ne $_ } @$col_def
   } @uniques;
+}
+
+sub find_inverse_relationships {
+  my $self = shift;
+  my ($fksource, $fkcol) = @_;
+
+  my @inverses;
+  foreach my $r ( $fksource->relationships ) {
+
+    # Skip relationships that aren't back towards the table we're coming from.
+    # TODO: ::Relationship should connect to both ::Source's (source / target)
+    next unless $r->short_fk_source eq $self->name;
+
+    # Assumption: We don't need to verify the $fkcol because there shouldn't be
+    # multiple relationships on different columns between the same tables. This
+    # is likely to be violated, but only by badly-designed schemas.
+
+    push @inverses, {
+      rel => $r->name,
+      col => $r->foreign_fk_col,
+    };
+  }
+
+  return @inverses;
 }
 
 1;

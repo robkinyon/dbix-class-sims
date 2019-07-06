@@ -208,8 +208,8 @@ sub fix_fk_dependencies {
     if (@constraints) {
       # First, find the inverse relationship. If it doesn't exist or if there
       # is more than one, then die.
-      my @inverse = $self->find_inverse_relationships(
-        $item->source_name, $r->name, $fk_name, $fkcol,
+      my @inverse = $item->source->find_inverse_relationships(
+        $self->{sources}{$fk_name}, $fkcol,
       );
       if (@inverse == 0) {
         die "Cannot find an inverse relationship for @{[$item->source_name]}\->@{[$r->name]}\n";
@@ -314,34 +314,6 @@ sub fix_fk_dependencies {
   sub has_pending { keys %pending != 0; }
   sub delete_pending { delete $pending{$_[1]}; }
   sub clear_pending { %pending = (); }
-}
-
-# TODO: Move this into ::Source and/or ::Relationship. It would be really cool
-# if a ::Relationship knew its inverse(s). But, it's likely to be so rare that
-# it should be okay to figure this out on the fly.
-sub find_inverse_relationships {
-  my $self = shift;
-  my ($parent, $rel_to_child, $child, $fkcol) = @_;
-
-  my $fksource = $self->{sources}{$child};
-
-  my @inverses;
-  foreach my $r ( $fksource->relationships ) {
-
-    # Skip relationships that aren't back towards the table we're coming from.
-    next unless $r->short_fk_source eq $parent;
-
-    # Assumption: We don't need to verify the $fkcol because there shouldn't be
-    # multiple relationships on different columns between the same tables. This
-    # is likely to be violated, but only by badly-designed schemas.
-
-    push @inverses, {
-      rel => $r->name,
-      col => $r->foreign_fk_col,
-    };
-  }
-
-  return @inverses;
 }
 
 sub find_by_unique_constraints {
@@ -726,7 +698,7 @@ sub create_item {
   $self->fix_columns($item);
   my $after_fix = np($item->spec);
 
-  # Don't keep going if we have already satisfy all UKs
+  # Don't keep going if we already satisfy all UKs
   $self->find_by_unique_constraints($item);
   if ($item->row && $ENV{SIMS_DEBUG}) {
     warn "Found duplicate in @{[$item->source_name]}:\n"
