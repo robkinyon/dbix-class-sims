@@ -68,6 +68,10 @@ sub relationships {
   my $self = shift;
   return values %{$self->{relationships}};
 }
+sub relationship_by_name {
+  my $self = shift;
+  return $self->{relationships}{$_[0]};
+}
 
 sub parent_relationships {
   my $self = shift;

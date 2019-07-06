@@ -1,5 +1,14 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.500000 Jul XX 2019 XX:XX:00 PDT
+   - THIS RELEASE CONTAINS MULTIPLE POTENTIALLY BREAKING BEHAVIOR CHANGES.
+   - Complete revamp of the internal architecture.
+     - Everything is now an object.
+     - Sims-specific wrappers for:
+       - DBIC::Source
+       - DBIC relationship data structure (hashes and CODE)
+   - XXXX
+
 0.401000 Jun 09 2019 12:30:00 PDT
    - Provide a nice way to print DateTime objects in SIMS_DEBUG mode.
    - Upgrade Toposort to 0.060000 for `add_dependencies` option

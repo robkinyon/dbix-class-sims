@@ -31,13 +31,9 @@ sub initialize {
       name   => $name,
       runner => $self,
     );
-  }
-
-  foreach my $name ( $self->schema->sources ) {
-    my $source = $self->{sources}{$name};
 
     $self->{reqs}{$name} //= {};
-    foreach my $r ($source->parent_relationships) {
+    foreach my $r ($self->{sources}{$name}->parent_relationships) {
       $self->{reqs}{$name}{$r->name} = 1;
     }
   }
@@ -79,6 +75,8 @@ sub driver { shift->schema->storage->dbh->{Driver}{Name} }
 sub is_oracle { shift->driver eq 'Oracle' }
 sub datetime_parser { shift->schema->storage->datetime_parser }
 
+# FIXME: This method is a mess. It needs to be completely rethought and,
+# possibly, broken out into different versions.
 sub create_search {
   my $self = shift;
   my ($rs, $name, $cond) = @_;
@@ -502,14 +500,11 @@ sub fix_deferred_fks {
   my ($item, $deferred_fks) = @_;
 
   while (my ($rel_name, $cond) = each %$deferred_fks) {
-    my $cond = $deferred_fks->{$rel_name};
+    my $r = $item->source->relationship_by_name($rel_name);
 
-    # FIXME: This breaks encapsulation.
-    my $r = $item->source->{relationships}{$rel_name};
-
-    my $col = $r->self_fk_col;
-    my $fkcol = $r->foreign_fk_col;
     my $fk_name = $r->short_fk_source;
+
+    my $cond = $deferred_fks->{$rel_name};
 
     my $rs = $self->schema->resultset($fk_name);
     $rs = $self->create_search($rs, $fk_name, $cond);
@@ -519,6 +514,8 @@ sub fix_deferred_fks {
       $parent = $self->create_item($cond);
     }
 
+    my $col = $r->self_fk_col;
+    my $fkcol = $r->foreign_fk_col;
     $item->row->$col($parent->get_column($fkcol));
   }
   $item->row->update if $item->row->get_dirty_columns;
@@ -813,7 +810,7 @@ sub run {
           }
 
           my $row = do {
-            no strict;
+            no strict 'refs';
 
             # DateTime objects print too big in SIMS_DEBUG mode, so provide a
             # good way for DDP to print them nicely.
