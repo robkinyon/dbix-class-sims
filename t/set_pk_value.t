@@ -38,7 +38,7 @@ sims_test "Trigger the PK autoincrement warning" => {
   spec => {
     Artist => { id => 2 },
   },
-  warning => qr/Primary-key autoincrement non-null columns should not be hardcoded in tests \(Artist.id = 2\)/,
+  warning => qr/Primary-key autoincrement columns should not be hardcoded in tests \(Artist.id = 2\)/,
   expect => {
     Artist => { id => 2, name => 'abcd' },
   },

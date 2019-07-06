@@ -472,11 +472,10 @@ sub fix_columns {
       if (
         $c->is_in_pk &&
         !$item->allow_pk_set_value &&
-        !$c->is_nullable &&
         $c->is_auto_increment
       ) {
         my $msg = sprintf(
-          "Primary-key autoincrement non-null columns should not be hardcoded in tests (%s.%s = %s)",
+          "Primary-key autoincrement columns should not be hardcoded in tests (%s.%s = %s)",
           $item->source_name, $col_name, $item->spec->{$col_name},
         );
         warn $msg;

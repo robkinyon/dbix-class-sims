@@ -190,7 +190,7 @@ sub load_sims {
       hooks => $hooks,
       constraints => normalize_input($opts->{constraints} // {}),
 
-      # Set this to false to throw a warning if a non-null auto-increment column
+      # Set this to false to throw a warning if a PK auto-increment column
       # has a value set. It defaults to false. Set to true to disable.
       allow_pk_set_value => $opts->{allow_pk_set_value} // 0,
       ignore_unknown_tables => $opts->{ignore_unknown_tables} // 0,
