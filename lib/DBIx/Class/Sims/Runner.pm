@@ -257,7 +257,6 @@ sub fix_fk_dependencies {
 }
 
 {
-  my %pending;
   my %added_by;
   sub are_columns_equal {
     my $self = shift;
@@ -289,11 +288,15 @@ sub fix_fk_dependencies {
     push @{$self->{spec}{$source->name}}, $child;
     $added_by{$adder} //= {};
     $added_by{$adder}{$child} = !!1;
-    $pending{$source->name} = 1;
+    $self->add_pending($source->name);
   }
+}
 
+{
+  my %pending;
   # The "pending" structure exists because of t/parent_child_parent.t - q.v. the
   # comments on the toposort->add_dependencies element.
+  sub add_pending { $pending{$_[1]} = undef; }
   sub has_pending { keys %pending != 0; }
   sub delete_pending { delete $pending{$_[1]}; }
   sub clear_pending { %pending = (); }
