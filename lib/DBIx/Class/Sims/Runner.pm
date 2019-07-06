@@ -204,7 +204,7 @@ sub fix_fk_dependencies {
 
     # If the child's column is within a UK, add a check to the $rs that ensures
     # we cannot pick a parent that's already being used.
-    my @constraints = $self->unique_constraints_containing($item->source, $col);
+    my @constraints = $item->source->unique_constraints_containing($col);
     if (@constraints) {
       # First, find the inverse relationship. If it doesn't exist or if there
       # is more than one, then die.
@@ -316,6 +316,9 @@ sub fix_fk_dependencies {
   sub clear_pending { %pending = (); }
 }
 
+# TODO: Move this into ::Source and/or ::Relationship. It would be really cool
+# if a ::Relationship knew its inverse(s). But, it's likely to be so rare that
+# it should be okay to figure this out on the fly.
 sub find_inverse_relationships {
   my $self = shift;
   my ($parent, $rel_to_child, $child, $fkcol) = @_;
@@ -339,26 +342,6 @@ sub find_inverse_relationships {
   }
 
   return @inverses;
-}
-
-sub unique_constraints_containing {
-  my $self = shift;
-  my ($source, $column) = @_;
-
-  my @uniques = map {
-    [ $source->unique_constraint_columns($_) ]
-  } $source->unique_constraint_names();
-
-  # Only return true if the unique constraint is solely built from the column.
-  # When we handle multi-column relationships, then we will need to handle the
-  # situation where the relationship's columns are the UK.
-  #
-  # The situation where the UK has multiple columns, one of which is the the FK,
-  # is potentially undecideable.
-  return grep {
-    my $col_def = $_;
-    ! grep { $column ne $_ } @$col_def
-  } @uniques;
 }
 
 sub find_by_unique_constraints {

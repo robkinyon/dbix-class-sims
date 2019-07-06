@@ -85,5 +85,29 @@ sub child_relationships {
   return grep { !$_->is_fk } $self->relationships;
 }
 
+# This is used to determine if additional constraints need to be added when
+# looking for a parent row that already exists. The use of this method needs to
+# be upgraded to optionally throw an error if the parent found would not meet
+# the other requirements on the parent.
+sub unique_constraints_containing {
+  my $self = shift;
+  my ($column) = @_;
+
+  my @uniques = map {
+    [ $self->source->unique_constraint_columns($_) ]
+  } $self->source->unique_constraint_names();
+
+  # Only return true if the unique constraint is solely built from the column.
+  # When we handle multi-column relationships, then we will need to handle the
+  # situation where the relationship's columns are the UK.
+  #
+  # The situation where the UK has multiple columns, one of which is the the FK,
+  # is potentially undecideable.
+  return grep {
+    my $col_def = $_;
+    ! grep { $column ne $_ } @$col_def
+  } @uniques;
+}
+
 1;
 __END__
