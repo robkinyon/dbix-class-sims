@@ -80,19 +80,31 @@ BEGIN {
 use common qw(sims_test);
 
 sims_test "Specify child->parent->other_child" => {
-  spec => {
-    Album => [
-      {
-        name => 'Wonder Years',
-        artist => {
-          name => 'Superstar',
-          mansions => [
-            { name => 'My Place' },
-          ],
+  spec => [
+    {
+      Album => [
+        {
+          name => 'Wonder Years',
+          artist => {
+            name => 'Superstar',
+            mansions => [
+              { name => 'My Place' },
+            ],
+          },
+        }
+      ],
+    },
+    {
+      # Force Mansion to go first. This exercises the "pending" data structure.
+      # This is required otherwise this test could pass with the "pending" code
+      # commented out, but that's an illusion due to hash-key ordering.
+      toposort => {
+        add_dependencies => {
+          Album => 'Mansion',
         },
-      }
-    ],
-  },
+      },
+    }
+  ],
   expect => {
     Artist => { id => 1, name => 'Superstar' },
     Album => { id => 1, name => 'Wonder Years', artist_id => 1 },

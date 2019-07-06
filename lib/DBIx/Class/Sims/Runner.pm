@@ -292,6 +292,8 @@ sub fix_fk_dependencies {
     $pending{$src} = 1;
   }
 
+  # The "pending" structure exists because of t/parent_child_parent.t - q.v. the
+  # comments on the toposort->add_dependencies element.
   sub has_pending { keys %pending != 0; }
   sub delete_pending { delete $pending{$_[1]}; }
   sub clear_pending { %pending = (); }
