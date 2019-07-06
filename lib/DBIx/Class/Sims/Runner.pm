@@ -256,21 +256,21 @@ sub fix_fk_dependencies {
   return \%deferred_fks;
 }
 
+sub are_columns_equal {
+  my $self = shift;
+  my ($source, $row, $compare) = @_;
+  foreach my $col ($source->columns) {
+    next if $source->column_in_fk($col);
+
+    next if !exists($row->{$col}) && !exists($compare->{$col});
+    return unless exists($row->{$col}) && exists($compare->{$col});
+    return if $compare->{$col} ne $row->{$col};
+  }
+  return 1;
+}
+
 {
   my %added_by;
-  sub are_columns_equal {
-    my $self = shift;
-    my ($source, $row, $compare) = @_;
-    foreach my $col ($source->columns) {
-      next if $source->column_in_fk($col);
-
-      next unless exists $row->{$col};
-      return unless exists $compare->{$col};
-      return if $compare->{$col} ne $row->{$col};
-    }
-    return 1;
-  };
-
   sub add_child {
     my $self = shift;
     my ($source, $fkcol, $child, $adder) = @_;
@@ -293,9 +293,9 @@ sub fix_fk_dependencies {
 }
 
 {
-  my %pending;
   # The "pending" structure exists because of t/parent_child_parent.t - q.v. the
   # comments on the toposort->add_dependencies element.
+  my %pending;
   sub add_pending { $pending{$_[1]} = undef; }
   sub has_pending { keys %pending != 0; }
   sub delete_pending { delete $pending{$_[1]}; }
@@ -310,7 +310,6 @@ sub find_by_unique_constraints {
     [ $item->source->unique_constraint_columns($_) ]
   } $item->source->unique_constraint_names();
 
-  #my $rs = $self->schema->resultset($item->source_name);
   my $rs = $item->source->resultset;
   my $searched = {};
   foreach my $unique (@uniques) {
@@ -664,7 +663,6 @@ sub create_item {
       my $row = eval {
         my $to_create = MyCloner::clone($item->spec);
         delete $to_create->{__META__};
-        #$self->schema->resultset($item->source_name)->create($to_create);
         $item->source->resultset->create($to_create);
       }; if ($@) {
         my $e = $@;

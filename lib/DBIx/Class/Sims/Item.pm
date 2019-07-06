@@ -88,11 +88,9 @@ sub build_children {
 
     my @children;
     if ($self->{children}{$r->name}) {
-      my $n = normalize_aoh($self->{children}{$r->name});
-      # TODO: Test me!
-      unless ($n) {
-        die "Don't know what to do with @{[$r->full_name]}\n\t".np($self->{original_spec});
-      }
+      my $n = normalize_aoh($self->{children}{$r->name})
+        or die "Don't know what to do with @{[$r->full_name]}\n\t".np($self->{original_spec});
+
       @children = @{$n};
     }
     else {
@@ -100,14 +98,16 @@ sub build_children {
       @children = ( ({}) x $r->constraints );
     }
 
-    # Need to ensure that $self->{children} >= $r->constraints
+    # TODO: Add a test for $self->{children} >= $r->constraints. For example,
+    # $r->constraints == 2, but only one child was added by hand.
 
     my $col = $r->self_fk_col;
     my $fkcol = $r->foreign_fk_col;
     my $fk_source = $r->target;
     foreach my $child (@children) {
       # FIXME $child is a hashref, not a ::Item. add_child() needs to be able to
-      # handle ::Item's, which requires ::Item's to be Comparable
+      # handle ::Item's, which requires ::Item's to be Comparable. It also means
+      # the ::Runner's spec has been converted to ::Item before iteration.
       ($child->{__META__} //= {})->{allow_pk_set_value} = 1;
 
       $child->{$fkcol} = $self->row->get_column($col);
