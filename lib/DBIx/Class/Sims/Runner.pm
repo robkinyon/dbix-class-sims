@@ -205,11 +205,11 @@ sub fix_fk_dependencies {
       );
     }
 
-    my $col_info = $item->source->column_info($col);
+    my $c = $item->source->column($col);
     if ( $cond ) {
       $rs = $self->create_search($rs, $fk_source, $cond);
     }
-    elsif ( $col_info->{is_nullable} ) {
+    elsif ( $c->is_nullable ) {
       next RELATIONSHIP;
     }
     else {
@@ -227,7 +227,7 @@ sub fix_fk_dependencies {
       # This occurs when a FK condition was specified, but the column is
       # nullable. We want to defer these because self-referential values need
       # to be set after creation.
-      if (!$parent && $col_info->{is_nullable}) {
+      if (!$parent && $c->is_nullable) {
         $cond = DBIx::Class::Sims::Item->new(
           runner => $self,
           source => $fk_source,
@@ -456,22 +456,7 @@ sub fix_columns {
   my $self = shift;
   my ($item) = @_;
 
-  my %is = (
-    in_pk => sub {
-      my $n = shift;
-      grep {
-        $_ eq $n
-      } $item->source->primary_columns;
-    },
-    in_uk => sub {
-      my $n = shift;
-      grep {
-        $_ eq $n
-      } map {
-        $item->source->unique_constraint_columns($_)
-      } $item->source->unique_constraint_names;
-    },
-  );
+  my %is;
   foreach my $type (keys %types) {
     $is{$type} = sub {
       my $t = shift;
@@ -485,10 +470,10 @@ sub fix_columns {
     my $sim_spec;
     if ( exists $item->spec->{$col_name} ) {
       if (
-           $is{in_pk}->($col_name)
-        && !$item->allow_pk_set_value
-        && !$c->is_nullable
-        && $c->is_auto_increment
+        $c->is_in_pk &&
+        !$item->allow_pk_set_value &&
+        !$c->is_nullable &&
+        $c->is_auto_increment
       ) {
         my $msg = sprintf(
           "Primary-key autoincrement non-null columns should not be hardcoded in tests (%s.%s = %s)",
@@ -513,7 +498,7 @@ sub fix_columns {
         # Assume a blessed hash is a DBIC object
         !blessed($item->spec->{$col_name}) &&
         # Do not assume we understand something to be inflated/deflated
-        !$item->source->column_info($col_name)->{_inflate_info}
+        !$c->is_inflated
       ) {
         $sim_spec = delete $item->spec->{$col_name};
       }
@@ -527,7 +512,7 @@ sub fix_columns {
 
     $sim_spec //= $info->{sim};
     if ( ref($sim_spec // '') eq 'HASH' ) {
-      if ( exists $sim_spec->{null_chance} && $info->{is_nullable} ) {
+      if ( exists $sim_spec->{null_chance} && $c->is_nullable ) {
         # Add check for not a number
         if ( rand() < $sim_spec->{null_chance} ) {
           $item->spec->{$col_name} = undef;
@@ -584,10 +569,10 @@ sub fix_columns {
     # primary key (could be auto-increment) or part of a unique key or part of a
     # foreign key, then generate a value for it.
     elsif (
-      !$info->{is_nullable} &&
-      !exists $info->{default_value} &&
-      !$is{in_pk}->($col_name) &&
-      !$is{in_uk}->($col_name) &&
+      !$c->is_nullable &&
+      !$c->has_default_value &&
+      !$c->is_in_pk &&
+      !$c->is_in_uk &&
       !$c->is_in_fk
     ) {
       if ( $is{numeric}->($info->{data_type})) {
@@ -618,14 +603,14 @@ sub fix_columns {
   # isn't one, complain loudly.
   if ($self->is_oracle && keys(%{$item->spec}) == 0) {
     my @pk_columns = grep {
-      $is{in_pk}->($_->name)
+      $_->is_in_pk
     } $item->source->columns;
 
     die "Must specify something about some column or have a PK in Oracle"
       unless @pk_columns;
 
     # This will work even if there are multiple columns in the PK.
-    $item->spec->{$pk_columns[0]} = undef;
+    $item->spec->{$pk_columns[0]->name} = undef;
   }
 }
 

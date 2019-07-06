@@ -24,6 +24,8 @@ sub new {
 sub initialize {
   my $self = shift;
 
+  $self->{is_in_pk} = 0;
+  $self->{uks} = [];
   $self->{fks} = [];
 
   return;
@@ -41,19 +43,17 @@ sub is_inflated { shift->info->{_inflate_info} }
 #sub is_decimal {}
 #sub is_string {}
 
-#sub has_default_value {}
+sub has_default_value { exists shift->{info}{default_value} }
 #sub default_value {}
 
-#sub is_in_pk {}
-#sub is_in_uk {}
+sub is_in_pk { shift->{is_in_pk} }
+sub in_pk { shift->{is_in_pk} = 1; return }
+
+sub is_in_uk { @{shift->{uks}} != 0 }
+sub in_uk { push @{shift->{uks}}, $_[0]; return }
 
 sub is_in_fk { @{shift->{fks}} != 0 }
-sub in_fk { push @{shift->{fks}}, $_[0] }
-#  my $self = shift;
-#  my ($r) = @_;
-#  push @{$self->{fks}}, $r;
-#  return;
-#}
+sub in_fk { push @{shift->{fks}}, $_[0]; return }
 
 #sub sim_spec {}
 

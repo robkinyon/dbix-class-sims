@@ -39,8 +39,17 @@ sub initialize {
     $self->{columns}{$col_name} = $c;
   }
 
+  foreach my $col ( $self->source->primary_columns ) {
+    $self->{columns}{$col}->in_pk;
+  }
+
+  foreach my $uk ( $self->source->unique_constraint_names ) {
+    foreach my $col ( $self->source->unique_constraint_columns($uk) ) {
+      $self->{columns}{$col}->in_uk($uk);
+    }
+  }
+
   $self->{relationships} = {};
-  $self->{in_fk} = {};
   my $constraints = delete($self->{constraints}) // {};
   foreach my $rel_name ( $self->source->relationships ) {
     my $r = DBIx::Class::Sims::Relationship->new(
@@ -53,7 +62,6 @@ sub initialize {
 
     if ($r->is_fk) {
       $self->{columns}{$_}->in_fk($r) for $r->self_fk_cols;
-      $self->{in_fk}{$_} = 1 for $r->self_fk_cols();
     }
   }
 
@@ -65,7 +73,6 @@ sub runner { $_[0]{runner} }
 sub source { $_[0]{source} }
 
 # Delegate the following methods. This will be easier with Moose.
-#sub columns { shift->source->columns(@_) }
 sub column_info { shift->source->column_info(@_) }
 sub primary_columns { shift->source->primary_columns(@_) }
 sub unique_constraint_names { shift->source->unique_constraint_names(@_) }
