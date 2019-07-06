@@ -1,7 +1,7 @@
 requires 'strictures';
 requires 'Clone::Any';
 requires 'Data::Compare';
-requires 'Data::Printer';
+requires 'Data::Printer' => '0.36';
 requires 'Data::Walk';
 requires 'DateTime';
 requires 'DBIx::Class::TopoSort' => '0.060000';
@@ -22,6 +22,7 @@ on test => sub {
   requires 'Test::Warn'        => '0.01';
   requires 'Test::Trap'        => '0.3.2';
   requires 'DBD::SQLite'       => '1.40';
+  requires 'Test2::Harness'    => '0.001079'; # yath
 
   # All of the following are needed for Devel::Cover and its optional reports.
   requires 'Devel::Cover';

@@ -261,9 +261,9 @@ sub fix_fk_dependencies {
   my %added_by;
   sub are_columns_equal {
     my $self = shift;
-    my ($src, $row, $compare) = @_;
-    foreach my $col ($self->schema->source($src)->columns) {
-      next if $self->{sources}{$src}->column_in_fk($col);
+    my ($source, $row, $compare) = @_;
+    foreach my $col ($source->columns) {
+      next if $source->column_in_fk($col);
 
       next unless exists $row->{$col};
       return unless exists $compare->{$col};
@@ -274,22 +274,22 @@ sub fix_fk_dependencies {
 
   sub add_child {
     my $self = shift;
-    my ($src, $fkcol, $row, $adder) = @_;
-    # If $row has the same keys (other than parent columns) as another row
+    my ($source, $fkcol, $child, $adder) = @_;
+    # If $child has the same keys (other than parent columns) as another row
     # added by a different parent table, then set the foreign key for this
     # parent in the existing row.
-    foreach my $compare (@{$self->{spec}{$src}}) {
+    foreach my $compare (@{$self->{spec}{$source->name}}) {
       next if exists $added_by{$adder} && exists $added_by{$adder}{$compare};
-      if ($self->are_columns_equal($src, $row, $compare)) {
-        $compare->{$fkcol} = $row->{$fkcol};
+      if ($self->are_columns_equal($source, $child, $compare)) {
+        $compare->{$fkcol} = $child->{$fkcol};
         return;
       }
     }
 
-    push @{$self->{spec}{$src}}, $row;
+    push @{$self->{spec}{$source->name}}, $child;
     $added_by{$adder} //= {};
-    $added_by{$adder}{$row} = !!1;
-    $pending{$src} = 1;
+    $added_by{$adder}{$child} = !!1;
+    $pending{$source->name} = 1;
   }
 
   # The "pending" structure exists because of t/parent_child_parent.t - q.v. the

@@ -103,14 +103,14 @@ sub build_children {
 
     my $col = $r->self_fk_col;
     my $fkcol = $r->foreign_fk_col;
-    my $fk_name = $r->short_fk_source;
+    my $fk_source = $r->target;
     foreach my $child (@children) {
       # FIXME $child is a hashref, not a ::Item. add_child() needs to be able to
       # handle ::Item's, which requires ::Item's to be Comparable
       ($child->{__META__} //= {})->{allow_pk_set_value} = 1;
 
       $child->{$fkcol} = $self->row->get_column($col);
-      $self->runner->add_child($fk_name, $fkcol, $child, $self->source_name);
+      $self->runner->add_child($fk_source, $fkcol, $child, $self->source_name);
     }
   }
 }
