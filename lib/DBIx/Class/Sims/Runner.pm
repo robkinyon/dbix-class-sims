@@ -198,7 +198,7 @@ sub fix_fk_dependencies {
         };
       }
       else {
-        die "Unsure what to do about @{[$item->source_name]}\->@{[$r->name]}():" . np($proto);
+        die "Unsure what to do about @{[$r->full_name]}():" . np($proto);
       }
     }
 
@@ -212,10 +212,10 @@ sub fix_fk_dependencies {
         $self->{sources}{$fk_name}, $fkcol,
       );
       if (@inverse == 0) {
-        die "Cannot find an inverse relationship for @{[$item->source_name]}\->@{[$r->name]}\n";
+        die "Cannot find an inverse relationship for @{[$r->full_name]}\n";
       }
       elsif (@inverse > 1) {
-        die "Too many inverse relationships for @{[$item->source_name]}\->@{[$r->name]} ($fk_name / $fkcol)\n" . np(@inverse);
+        die "Too many inverse relationships for @{[$r->full_name]} ($fk_name / $fkcol)\n" . np(@inverse);
       }
 
       # We cannot add this relationship to the $cond because that would result
@@ -239,7 +239,7 @@ sub fix_fk_dependencies {
 
     my $meta = delete $cond->{__META__} // {};
 
-    warn "Looking for @{[$item->source_name]}->@{[$r->name]}(".np($cond).")\n" if $ENV{SIMS_DEBUG};
+    warn "Looking for @{[$r->full_name]}(".np($cond).")\n" if $ENV{SIMS_DEBUG};
 
     my $parent;
     unless ($meta->{create}) {
@@ -429,7 +429,7 @@ sub fix_child_dependencies {
     if ($child_deps->{$r->name}) {
       my $n = DBIx::Class::Sims::Util->normalize_aoh($child_deps->{$r->name});
       unless ($n) {
-        die "Don't know what to do with @{[$item->source_name]}\->@{[$r->name]}\n\t".np($item->row);
+        die "Don't know what to do with @{[$r->full_name]}\n\t".np($item->row);
       }
       @children = @{$n};
     }

@@ -25,6 +25,11 @@ sub initialize {
 sub name   { shift->{name} }
 sub source { shift->{source} }
 
+sub full_name {
+  my $self = shift;
+  return $self->source->name . '->' . $self->name;
+}
+
 sub is_fk {
   my $self = shift;
   return exists $self->{info}{attrs}{is_foreign_key_constraint};
