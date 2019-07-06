@@ -29,8 +29,6 @@ BEGIN {
 
 use common qw(Schema);
 
-use DBIx::Class::Sims::Runner;
-
 my $runner = DBIx::Class::Sims::Runner->new(
   schema => Schema,
 

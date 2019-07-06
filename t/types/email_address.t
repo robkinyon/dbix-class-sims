@@ -8,6 +8,9 @@ use_ok 'DBIx::Class::Sims::Types';
 
 my $sub = DBIx::Class::Sims::Types->can('email_address');
 
+# TODO: Need to be able to set the list of tlds or otherwise select the TLD so
+# that the while($size-length($tld)<4) loop can be exercised.
+
 my @tests = (
   # Default is 7
   [ { data_type => 'varchar' }, qr/^[\w.+]+@[\w.]+$/ ],
