@@ -37,6 +37,14 @@ sub full_name {
   return $self->source->name . '->' . $self->name;
 }
 
+# Yes, this method breaks ::Runner's encapsulation, but this (should) be
+# temporary until someone else sets this for ::Relationship or maybe ::Source
+# builds its relationships after ::Runner has built all ::Source objects first.
+sub target {
+  my $self = shift;
+  return $self->source->runner->{sources}{$self->short_fk_source};
+}
+
 sub is_fk {
   my $self = shift;
   return exists $self->{info}{attrs}{is_foreign_key_constraint};

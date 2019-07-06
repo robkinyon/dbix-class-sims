@@ -75,7 +75,7 @@ sub datetime_parser { shift->schema->storage->datetime_parser }
 # possibly, broken out into different versions.
 sub create_search {
   my $self = shift;
-  my ($rs, $name, $cond) = @_;
+  my ($rs, $source, $cond) = @_;
 
   # Handle the FKs, particularly the FKs of the FKs. Tests for this line:
   # * t/grandchild.t "Find grandparent by DBIC row"
@@ -90,7 +90,6 @@ sub create_search {
   # is an ::Item (yet). (Maybe never?)
   $cond = $cond->spec if blessed($cond);
 
-  my $source = $self->{sources}{$name};
   my %cols = map { $_ => 1 } $source->columns;
   my $search = {
     (map {
@@ -107,7 +106,7 @@ sub create_search {
   # fix_fk_dependencies() above. However, that breaks in mysterious ways.
   #
   # FIXME: Using this for-loop times out the tests in t/self_refential.t
-  #foreach my $rel_name (keys %{$source->relationships}) {
+  #foreach my $rel_name (keys %{$source->relationships})
   # So, we use this one instead. This breaks encapsulation.
   foreach my $rel_name ($source->source->relationships) {
     next unless exists $cond->{$rel_name};
@@ -179,8 +178,8 @@ sub fix_fk_dependencies {
       }
     }
 
-    my $fk_name = $r->short_fk_source;
-    my $rs = $self->schema->resultset($fk_name);
+    my $fk_source = $r->target;
+    my $rs = $fk_source->resultset;
 
     # If the child's column is within a UK, add a check to the $rs that ensures
     # we cannot pick a parent that's already being used.
@@ -189,13 +188,13 @@ sub fix_fk_dependencies {
       # First, find the inverse relationship. If it doesn't exist or if there
       # is more than one, then die.
       my @inverse = $item->source->find_inverse_relationships(
-        $self->{sources}{$fk_name}, $fkcol,
+        $fk_source, $fkcol,
       );
       if (@inverse == 0) {
         die "Cannot find an inverse relationship for @{[$r->full_name]}\n";
       }
       elsif (@inverse > 1) {
-        die "Too many inverse relationships for @{[$r->full_name]} ($fk_name / $fkcol)\n" . np(@inverse);
+        die "Too many inverse relationships for @{[$r->full_name]} (@{[$fk_source->name]} / $fkcol)\n" . np(@inverse);
       }
 
       # We cannot add this relationship to the $cond because that would result
@@ -208,7 +207,7 @@ sub fix_fk_dependencies {
 
     my $col_info = $item->source->column_info($col);
     if ( $cond ) {
-      $rs = $self->create_search($rs, $fk_name, $cond);
+      $rs = $self->create_search($rs, $fk_source, $cond);
     }
     elsif ( $col_info->{is_nullable} ) {
       next RELATIONSHIP;
@@ -231,7 +230,7 @@ sub fix_fk_dependencies {
       if (!$parent && $col_info->{is_nullable}) {
         $cond = DBIx::Class::Sims::Item->new(
           runner => $self,
-          source => $self->{sources}{$fk_name},
+          source => $fk_source,
           spec   => $cond,
         );
         $cond->set_allow_pk_to($item);
@@ -244,7 +243,7 @@ sub fix_fk_dependencies {
     unless ($parent) {
       my $fk_item = DBIx::Class::Sims::Item->new(
         runner => $self,
-        source => $self->{sources}{$fk_name},
+        source => $fk_source,
         spec   => MyCloner::clone($cond),
       );
       $fk_item->set_allow_pk_to($item);
@@ -306,7 +305,8 @@ sub find_by_unique_constraints {
     [ $item->source->unique_constraint_columns($_) ]
   } $item->source->unique_constraint_names();
 
-  my $rs = $self->schema->resultset($item->source_name);
+  #my $rs = $self->schema->resultset($item->source_name);
+  my $rs = $item->source->resultset;
   my $searched = {};
   foreach my $unique (@uniques) {
     # If there are specified values for all the columns in a specific unqiue constraint ...
@@ -395,12 +395,11 @@ sub fix_deferred_fks {
   while (my ($rel_name, $cond) = each %$deferred_fks) {
     my $r = $item->source->relationship_by_name($rel_name);
 
-    my $fk_name = $r->short_fk_source;
-
     my $cond = $deferred_fks->{$rel_name};
 
-    my $rs = $self->schema->resultset($fk_name);
-    $rs = $self->create_search($rs, $fk_name, $cond);
+    my $fk_source = $r->target;
+    my $rs = $fk_source->resultset;
+    $rs = $self->create_search($rs, $fk_source, $cond);
 
     my $parent = $rs->search(undef, { rows => 1 })->first;
     unless ($parent) {
@@ -660,7 +659,8 @@ sub create_item {
       my $row = eval {
         my $to_create = MyCloner::clone($item->spec);
         delete $to_create->{__META__};
-        $self->schema->resultset($item->source_name)->create($to_create);
+        #$self->schema->resultset($item->source_name)->create($to_create);
+        $item->source->resultset->create($to_create);
       }; if ($@) {
         my $e = $@;
         warn "ERROR Creating @{[$item->source_name]} (".np($item->spec).")\n";

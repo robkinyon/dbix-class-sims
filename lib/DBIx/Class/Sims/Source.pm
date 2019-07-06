@@ -87,8 +87,13 @@ sub child_relationships {
   return grep { !$_->is_fk } $self->relationships;
 }
 
+sub resultset {
+  my $self = shift;
+  return $self->runner->schema->resultset($self->name);
+}
+
 ################################################################################
-# There are not tests for the methods below here to the end of the file.
+# There are no tests for the methods below here to the end of the file.
 
 # This is used to determine if additional constraints need to be added when
 # looking for a parent row that already exists. The use of this method needs to
