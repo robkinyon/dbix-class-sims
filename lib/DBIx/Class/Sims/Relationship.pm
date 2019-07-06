@@ -25,6 +25,8 @@ sub initialize {
 sub name   { shift->{name} }
 sub source { shift->{source} }
 
+sub constraints { shift->{constraints} }
+
 sub full_name {
   my $self = shift;
   return $self->source->name . '->' . $self->name;

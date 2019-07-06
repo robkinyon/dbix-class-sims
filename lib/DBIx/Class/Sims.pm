@@ -139,10 +139,6 @@ sub load_sims {
   my $spec = massage_input($schema, normalize_input($spec_proto));
   my $opts = normalize_input($opts_proto);
 
-  # 1. Ensure the belongs_to relationships are in $reqs
-  # 2. Set the rel_info as the leaf in $reqs
-  my $reqs = normalize_input($opts->{constraints} // {});
-
   # 2: Create the rows in toposorted order
   my $hooks = $opts->{hooks} // {};
   $hooks->{preprocess}  //= sub {};
@@ -192,7 +188,8 @@ sub load_sims {
       initial_spec => $initial_spec,
       spec => $spec,
       hooks => $hooks,
-      reqs => $reqs,
+      constraints => normalize_input($opts->{constraints} // {}),
+
       # Set this to false to throw a warning if a non-null auto-increment column
       # has a value set. It defaults to false. Set to true to disable.
       allow_pk_set_value => $opts->{allow_pk_set_value} // 0,

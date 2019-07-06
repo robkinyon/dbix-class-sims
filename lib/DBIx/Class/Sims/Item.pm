@@ -28,6 +28,8 @@ sub initialize {
 
   #$self->{original} = MyCloner::clone($self->{spec});
 
+  # Should we quarantine_children() immediately?
+
   return;
 }
 
@@ -80,7 +82,7 @@ sub build_children {
   # In all cases, make sure to add { $fkcol => $row->get_column($col) } to the
   # child's $item
   foreach my $r ( $self->source->child_relationships ) {
-    next unless $self->{children}{$r->name} // $self->runner->{reqs}{$self->source_name}{$r->name};
+    next unless $self->{children}{$r->name} // $r->constraints;
 
     my @children;
     if ($self->{children}{$r->name}) {
@@ -91,10 +93,11 @@ sub build_children {
       @children = @{$n};
     }
     else {
-      @children = ( ({}) x $self->runner->{reqs}{$self->source_name}{$r->name} );
+      # ASSUMPTION: The constraint provided in the relationship is a number.
+      @children = ( ({}) x $r->constraints );
     }
 
-    # Need to ensure that $self->{children} >= $self->runner->{reqs}
+    # Need to ensure that $self->{children} >= $r->constraints
 
     my $col = $r->self_fk_col;
     my $fkcol = $r->foreign_fk_col;

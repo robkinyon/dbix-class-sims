@@ -3,6 +3,7 @@ Revision history for DBIx::Class::Sims (ordered by revision number).
 0.500000 Jul XX 2019 XX:XX:00 PDT
    - THIS RELEASE CONTAINS MULTIPLE POTENTIALLY BREAKING BEHAVIOR CHANGES.
    - Complete revamp of the internal architecture.
+     - Most of the private attributes have been renamed.
      - Everything is now an object.
      - Sims-specific wrappers for:
        - DBIC::Source

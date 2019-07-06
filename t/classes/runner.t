@@ -40,7 +40,7 @@ my $runner = DBIx::Class::Sims::Runner->new(
   # initial_spec - lists which items are in the original spec
   # spec - requests
   # hooks - hooks
-  # reqs - these are requirements on child relationships
+  # constraints - these are requirements on relationships (usually children)
   # allow_pk_set_value => $opts->{allow_pk_set_value} // 0,
   # ignore_unknown_tables => $opts->{ignore_unknown_tables} // 0,
   # allow_relationship_column_names => $opts->{allow_relationship_column_names} // 1,

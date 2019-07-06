@@ -30,11 +30,13 @@ sub initialize {
 
   $self->{relationships} = {};
   $self->{in_fk} = {};
+  my $constraints = delete($self->{constraints}) // {};
   foreach my $rel_name ( $self->source->relationships ) {
     my $r = DBIx::Class::Sims::Relationship->new(
       source => $self,
       name   => $rel_name,
       info   => $self->source->relationship_info($rel_name),
+      constraints => $constraints->{$rel_name},
     );
     $self->{relationships}{$rel_name} = $r;
 

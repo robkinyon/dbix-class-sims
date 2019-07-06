@@ -30,12 +30,8 @@ sub initialize {
     $self->{sources}{$name} = DBIx::Class::Sims::Source->new(
       name   => $name,
       runner => $self,
+      constraints => $self->{constraints}{$name},
     );
-
-    $self->{reqs}{$name} //= {};
-    foreach my $r ($self->{sources}{$name}->parent_relationships) {
-      $self->{reqs}{$name}{$r->name} = 1;
-    }
   }
 
   $self->{created}    = {};
@@ -146,13 +142,8 @@ sub fix_fk_dependencies {
   my (%deferred_fks);
   RELATIONSHIP:
   foreach my $r ( $item->source->parent_relationships ) {
-    next RELATIONSHIP unless $self->{reqs}{$item->source_name}{$r->name};
-
     my $col = $r->self_fk_col;
     my $fkcol = $r->foreign_fk_col;
-
-    my $fk_name = $r->short_fk_source;
-    my $rs = $self->schema->resultset($fk_name);
 
     if (!$self->{allow_relationship_column_names}) {
       if ($col ne $r->name && exists $item->spec->{$col}) {
@@ -187,6 +178,9 @@ sub fix_fk_dependencies {
         die "Unsure what to do about @{[$r->full_name]}():" . np($proto);
       }
     }
+
+    my $fk_name = $r->short_fk_source;
+    my $rs = $self->schema->resultset($fk_name);
 
     # If the child's column is within a UK, add a check to the $rs that ensures
     # we cannot pick a parent that's already being used.
