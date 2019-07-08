@@ -418,51 +418,9 @@ sub fix_deferred_fks {
   $item->row->update if $item->row->get_dirty_columns;
 }
 
-my %types = (
-  numeric => {( map { $_ => 1 } qw(
-    tinyint smallint mediumint bigint
-    int integer int1 int2 int3 int4 int8 middleint
-    bool boolean
-  ))},
-  decimal => {( map { $_ => 1 } qw(
-    float float4 float8
-    real
-    double
-    decimal dec
-    numeric
-    fixed
-  ))},
-  string => {( map { $_ => 1 } qw(
-    char varchar varchar2
-    binary varbinary
-    text tinytext mediumtext longtext long
-    blob tinyblob mediumblob longblob
-  ))},
-  # These will be unhandled
-  #datetime => [qw(
-  #  date
-  #  datetime
-  #  timestamp
-  #  year
-  #)],
-  #unknown => [qw(
-  #  enum set bit json
-  #  geometry point linestring polygon
-  #  multipoint multilinestring multipolygon geometrycollection
-  #)],
-);
-
 sub fix_columns {
   my $self = shift;
   my ($item) = @_;
-
-  my %is;
-  foreach my $type (keys %types) {
-    $is{$type} = sub {
-      my $t = shift;
-      return exists $types{$type}{$t};
-    };
-  }
 
   foreach my $c ( $item->source->columns ) {
     my $col_name = $c->name;
@@ -545,17 +503,17 @@ sub fix_columns {
         }
       }
       else {
-        if ( $is{numeric}->($info->{data_type})) {
+        if ( $c->is_numeric ) {
           my $min = $sim_spec->{min} // 0;
           my $max = $sim_spec->{max} // 100;
           $item->spec->{$col_name} = int(rand($max-$min))+$min;
         }
-        elsif ( $is{decimal}->($info->{data_type})) {
+        elsif ( $c->is_decimal ) {
           my $min = $sim_spec->{min} // 0;
           my $max = $sim_spec->{max} // 100;
           $item->spec->{$col_name} = rand($max-$min)+$min;
         }
-        elsif ( $is{string}->($info->{data_type})) {
+        elsif ( $c->is_string ) {
           my $min = $sim_spec->{min} // 1;
           my $max = $sim_spec->{max} // $info->{data_length} // $info->{size} // $min;
           $item->spec->{$col_name} = random_regex(
@@ -574,17 +532,17 @@ sub fix_columns {
       !$c->is_in_uk &&
       !$c->is_in_fk
     ) {
-      if ( $is{numeric}->($info->{data_type})) {
+      if ( $c->is_numeric ) {
         my $min = 0;
         my $max = 100;
         $item->spec->{$col_name} = int(rand($max-$min))+$min;
       }
-      elsif ( $is{decimal}->($info->{data_type})) {
+      elsif ( $c->is_decimal ) {
         my $min = 0;
         my $max = 100;
         $item->spec->{$col_name} = rand($max-$min)+$min;
       }
-      elsif ( $is{string}->($info->{data_type})) {
+      elsif ( $c->is_string ) {
         my $min = 1;
         my $max = $info->{data_length} // $info->{size} // $min;
         $item->spec->{$col_name} = random_regex(
