@@ -307,13 +307,9 @@ sub find_by_unique_constraints {
   my $self = shift;
   my ($item) = @_;
 
-  my @uniques = map {
-    [ $item->source->unique_constraint_columns($_) ]
-  } $item->source->unique_constraint_names();
-
   my $rs = $item->source->resultset;
   my $searched = {};
-  foreach my $unique (@uniques) {
+  foreach my $unique ($item->source->unique_columns) {
     # If there are specified values for all the columns in a specific unqiue constraint ...
     next if grep { ! exists $item->spec->{$_} } @$unique;
 
@@ -503,23 +499,7 @@ sub fix_columns {
         }
       }
       else {
-        if ( $c->is_numeric ) {
-          my $min = $sim_spec->{min} // 0;
-          my $max = $sim_spec->{max} // 100;
-          $item->spec->{$col_name} = int(rand($max-$min))+$min;
-        }
-        elsif ( $c->is_decimal ) {
-          my $min = $sim_spec->{min} // 0;
-          my $max = $sim_spec->{max} // 100;
-          $item->spec->{$col_name} = rand($max-$min)+$min;
-        }
-        elsif ( $c->is_string ) {
-          my $min = $sim_spec->{min} // 1;
-          my $max = $sim_spec->{max} // $info->{data_length} // $info->{size} // $min;
-          $item->spec->{$col_name} = random_regex(
-            '\w' . "{$min,$max}"
-          );
-        }
+        $item->spec->{$col_name} = $c->generate_value(die_on_unknown => 0);
       }
     }
     # If it's not nullable, doesn't have a default value and isn't part of a
@@ -532,7 +512,7 @@ sub fix_columns {
       !$c->is_in_uk &&
       !$c->is_in_fk
     ) {
-      $item->spec->{$col_name} = $c->generate_value;
+      $item->spec->{$col_name} = $c->generate_value(die_on_unknown => 1);
     }
   }
 

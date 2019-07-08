@@ -74,9 +74,6 @@ sub source { $_[0]{source} }
 
 # Delegate the following methods. This will be easier with Moose.
 sub column_info { shift->source->column_info(@_) }
-sub primary_columns { shift->source->primary_columns(@_) }
-sub unique_constraint_names { shift->source->unique_constraint_names(@_) }
-sub unique_constraint_columns { shift->source->unique_constraint_columns(@_) }
 
 sub columns {
   my $self = shift;
@@ -113,6 +110,13 @@ sub resultset {
   return $self->runner->schema->resultset($self->name);
 }
 
+sub unique_columns {
+  my $self = shift;
+  return map {
+    [ $self->source->unique_constraint_columns($_) ]
+  } $self->source->unique_constraint_names();
+}
+
 ################################################################################
 # There are no tests for the methods below here to the end of the file.
 
@@ -124,10 +128,6 @@ sub unique_constraints_containing {
   my $self = shift;
   my ($column) = @_;
 
-  my @uniques = map {
-    [ $self->source->unique_constraint_columns($_) ]
-  } $self->source->unique_constraint_names();
-
   # Only return true if the unique constraint is solely built from the column.
   # When we handle multi-column relationships, then we will need to handle the
   # situation where the relationship's columns are the UK.
@@ -137,7 +137,7 @@ sub unique_constraints_containing {
   return grep {
     my $col_def = $_;
     ! grep { $column ne $_ } @$col_def
-  } @uniques;
+  } $self->unique_columns;
 }
 
 sub find_inverse_relationships {

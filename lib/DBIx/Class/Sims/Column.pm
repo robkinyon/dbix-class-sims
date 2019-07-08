@@ -63,6 +63,12 @@ sub initialize {
   $self->{uks} = [];
   $self->{fks} = [];
 
+  # Grab the sim specification from the column so we can modify it as needed.
+  $self->{sim_spec} = MyCloner::clone($self->info->{sim} // {});
+  if (exists $self->sim_spec->{values}) {
+    $self->sim_spec->{value} = delete $self->sim_spec->{values};
+  }
+
   if ( exists $types{numeric}{$self->info->{data_type}} ) {
     $self->{type} = 'numeric';
   }
@@ -79,9 +85,10 @@ sub initialize {
   return;
 }
 
-sub info   { shift->{info} }
-sub name   { shift->{name} }
+sub info { shift->{info} }
+sub name { shift->{name} }
 #sub source { shift->{source} }
+sub sim_spec { shift->{sim_spec} }
 
 sub is_nullable { shift->info->{is_nullable} }
 sub is_auto_increment { shift->info->{is_auto_increment} }
@@ -99,7 +106,6 @@ sub in_uk { push @{shift->{uks}}, $_[0]; return }
 sub is_in_fk { @{shift->{fks}} != 0 }
 sub in_fk { push @{shift->{fks}}, $_[0]; return }
 
-#sub sim_spec {}
 sub is_numeric { shift->{type} eq 'numeric' }
 sub is_decimal { shift->{type} eq 'decimal' }
 sub is_string  { shift->{type} eq 'string' }
@@ -107,25 +113,28 @@ sub is_unknown { shift->{type} eq 'unknown' }
 
 sub generate_value {
   my $self = shift;
+  my %opts = @_;
+  $opts{die_on_unknown} //= 1;
 
+  my $spec = $self->sim_spec;
   if ( $self->is_numeric ) {
-    my $min = 0;
-    my $max = 100;
+    my $min = $spec->{min} // 0;
+    my $max = $spec->{max} // 100;
     return int(rand($max-$min))+$min;
   }
   elsif ( $self->is_decimal ) {
-    my $min = 0;
-    my $max = 100;
+    my $min = $spec->{min} // 0;
+    my $max = $spec->{max} // 100;
     return rand($max-$min)+$min;
   }
   elsif ( $self->is_string ) {
-    my $min = 1;
-    my $max = $self->info->{data_length} // $self->info->{size} // $min;
+    my $min = $spec->{min} // 1;
+    my $max = $spec->{max} // $self->info->{data_length} // $self->info->{size} // $min;
     return random_regex(
       '\w' . "{$min,$max}"
     );
   }
-  else {
+  elsif ( $opts{die_on_unknown} ) {
     die "ERROR: @{[$self->source->name]}\.@{[$self->name]} is not nullable, but I don't know how to handle @{[$self->info->{data_type}]}\n";
   }
 }
