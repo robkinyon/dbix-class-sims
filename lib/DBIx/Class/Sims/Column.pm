@@ -1,6 +1,5 @@
-# This class exists to encapsulate the DBIx::Class::Source object and provide
-# Sims-specific functionality to navigate sources and the attributes of
-# sources.
+# This class exists to encapsulate the a DBIx::Class column hashref and provide
+# Sims-specific functionality to navigate columns and what goes into a column.
 
 package DBIx::Class::Sims::Column;
 
@@ -9,6 +8,8 @@ use 5.010_001;
 use strictures 2;
 
 use DDP;
+
+use String::Random qw( random_regex );
 
 # Requires the following attributes:
 # * source
@@ -103,6 +104,31 @@ sub is_numeric { shift->{type} eq 'numeric' }
 sub is_decimal { shift->{type} eq 'decimal' }
 sub is_string  { shift->{type} eq 'string' }
 sub is_unknown { shift->{type} eq 'unknown' }
+
+sub generate_value {
+  my $self = shift;
+
+  if ( $self->is_numeric ) {
+    my $min = 0;
+    my $max = 100;
+    return int(rand($max-$min))+$min;
+  }
+  elsif ( $self->is_decimal ) {
+    my $min = 0;
+    my $max = 100;
+    return rand($max-$min)+$min;
+  }
+  elsif ( $self->is_string ) {
+    my $min = 1;
+    my $max = $self->info->{data_length} // $self->info->{size} // $min;
+    return random_regex(
+      '\w' . "{$min,$max}"
+    );
+  }
+  else {
+    die "ERROR: @{[$self->source->name]}\.@{[$self->name]} is not nullable, but I don't know how to handle @{[$self->info->{data_type}]}\n";
+  }
+}
 
 1;
 __END__

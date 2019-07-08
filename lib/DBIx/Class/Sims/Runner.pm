@@ -532,26 +532,7 @@ sub fix_columns {
       !$c->is_in_uk &&
       !$c->is_in_fk
     ) {
-      if ( $c->is_numeric ) {
-        my $min = 0;
-        my $max = 100;
-        $item->spec->{$col_name} = int(rand($max-$min))+$min;
-      }
-      elsif ( $c->is_decimal ) {
-        my $min = 0;
-        my $max = 100;
-        $item->spec->{$col_name} = rand($max-$min)+$min;
-      }
-      elsif ( $c->is_string ) {
-        my $min = 1;
-        my $max = $info->{data_length} // $info->{size} // $min;
-        $item->spec->{$col_name} = random_regex(
-          '\w' . "{$min,$max}"
-        );
-      }
-      else {
-        die "ERROR: @{[$item->source_name]}\.$col_name is not nullable, but I don't know how to handle $info->{data_type}\n";
-      }
+      $item->spec->{$col_name} = $c->generate_value;
     }
   }
 
