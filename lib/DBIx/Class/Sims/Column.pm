@@ -21,37 +21,6 @@ sub new {
   return $self;
 }
 
-sub initialize {
-  my $self = shift;
-
-  $self->{is_in_pk} = 0;
-  $self->{uks} = [];
-  $self->{fks} = [];
-
-  return;
-}
-
-sub info   { shift->{info} }
-sub name   { shift->{name} }
-#sub source { shift->{source} }
-
-sub is_nullable { shift->info->{is_nullable} }
-sub is_auto_increment { shift->info->{is_auto_increment} }
-sub is_inflated { shift->info->{_inflate_info} }
-
-sub has_default_value { exists shift->{info}{default_value} }
-#sub default_value {}
-
-sub is_in_pk { shift->{is_in_pk} }
-sub in_pk { shift->{is_in_pk} = 1; return }
-
-sub is_in_uk { @{shift->{uks}} != 0 }
-sub in_uk { push @{shift->{uks}}, $_[0]; return }
-
-sub is_in_fk { @{shift->{fks}} != 0 }
-sub in_fk { push @{shift->{fks}}, $_[0]; return }
-
-#sub sim_spec {}
 my %types = (
   numeric => {( map { $_ => 1 } qw(
     tinyint smallint mediumint bigint
@@ -86,18 +55,54 @@ my %types = (
   #)],
 );
 
-sub is_numeric {
+sub initialize {
   my $self = shift;
-  return exists $types{numeric}{$self->info->{data_type}};
+
+  $self->{is_in_pk} = 0;
+  $self->{uks} = [];
+  $self->{fks} = [];
+
+  if ( exists $types{numeric}{$self->info->{data_type}} ) {
+    $self->{type} = 'numeric';
+  }
+  elsif ( exists $types{decimal}{$self->info->{data_type}} ) {
+    $self->{type} = 'decimal';
+  }
+  elsif ( exists $types{string}{$self->info->{data_type}} ) {
+    $self->{type} = 'string';
+  }
+  else {
+    $self->{type} = 'unknown';
+  }
+
+  return;
 }
-sub is_decimal {
-  my $self = shift;
-  return exists $types{decimal}{$self->info->{data_type}};
-}
-sub is_string {
-  my $self = shift;
-  return exists $types{string}{$self->info->{data_type}};
-}
+
+sub info   { shift->{info} }
+sub name   { shift->{name} }
+#sub source { shift->{source} }
+
+sub is_nullable { shift->info->{is_nullable} }
+sub is_auto_increment { shift->info->{is_auto_increment} }
+sub is_inflated { shift->info->{_inflate_info} }
+
+sub has_default_value { exists shift->{info}{default_value} }
+#sub default_value {}
+
+sub is_in_pk { shift->{is_in_pk} }
+sub in_pk { shift->{is_in_pk} = 1; return }
+
+sub is_in_uk { @{shift->{uks}} != 0 }
+sub in_uk { push @{shift->{uks}}, $_[0]; return }
+
+sub is_in_fk { @{shift->{fks}} != 0 }
+sub in_fk { push @{shift->{fks}}, $_[0]; return }
+
+#sub sim_spec {}
+sub is_numeric { shift->{type} eq 'numeric' }
+sub is_decimal { shift->{type} eq 'decimal' }
+sub is_string  { shift->{type} eq 'string' }
+sub is_unknown { shift->{type} eq 'unknown' }
 
 1;
 __END__
