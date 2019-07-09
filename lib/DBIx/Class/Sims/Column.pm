@@ -63,12 +63,6 @@ sub initialize {
   $self->{uks} = [];
   $self->{fks} = [];
 
-  # Grab the sim specification from the column so we can modify it as needed.
-  $self->{sim_spec} = MyCloner::clone($self->info->{sim} // {});
-  if (exists $self->sim_spec->{values}) {
-    $self->sim_spec->{value} = delete $self->sim_spec->{values};
-  }
-
   if ( exists $types{numeric}{$self->info->{data_type}} ) {
     $self->{type} = 'numeric';
   }
@@ -88,7 +82,23 @@ sub initialize {
 sub info { shift->{info} }
 sub name { shift->{name} }
 #sub source { shift->{source} }
-sub sim_spec { shift->{sim_spec} }
+sub sim_spec {
+  my $self = shift;
+
+  unless (exists $self->{sim_spec}) {
+    if ($self->info->{sim}) {
+      $self->{sim_spec} = MyCloner::clone($self->info->{sim});
+      if (exists $self->{sim_spec}{values}) {
+        $self->{sim_spec}{value} = delete $self->{sim_spec}{values};
+      }
+    }
+    else {
+      $self->{sim_spec} = undef;
+    }
+  }
+
+  return $self->{sim_spec};
+}
 
 sub is_nullable { shift->info->{is_nullable} }
 sub is_auto_increment { shift->info->{is_auto_increment} }

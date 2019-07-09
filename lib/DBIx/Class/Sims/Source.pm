@@ -72,9 +72,6 @@ sub name   { $_[0]{name}   }
 sub runner { $_[0]{runner} }
 sub source { $_[0]{source} }
 
-# Delegate the following methods. This will be easier with Moose.
-sub column_info { shift->source->column_info(@_) }
-
 sub columns {
   my $self = shift;
   return values %{$self->{columns}};

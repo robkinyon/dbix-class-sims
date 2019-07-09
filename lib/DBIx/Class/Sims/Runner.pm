@@ -461,9 +461,7 @@ sub fix_columns {
       }
     }
 
-    my $info = $item->source->column_info($col_name);
-
-    $sim_spec //= $info->{sim};
+    $sim_spec //= $c->sim_spec;
     if ( ref($sim_spec // '') eq 'HASH' ) {
       if ( exists $sim_spec->{null_chance} && $c->is_nullable ) {
         # Add check for not a number
@@ -478,7 +476,7 @@ sub fix_columns {
       }
 
       if ( ref($sim_spec->{func} // '') eq 'CODE' ) {
-        $item->spec->{$col_name} = $sim_spec->{func}->($info);
+        $item->spec->{$col_name} = $sim_spec->{func}->($c->info);
       }
       elsif ( exists $sim_spec->{value} ) {
         if (ref($sim_spec->{value} // '') eq 'ARRAY') {
@@ -492,7 +490,7 @@ sub fix_columns {
       elsif ( $sim_spec->{type} ) {
         my $meth = $self->{parent}->sim_type($sim_spec->{type});
         if ( $meth ) {
-          $item->spec->{$col_name} = $meth->($info, $sim_spec, $self);
+          $item->spec->{$col_name} = $meth->($c->info, $sim_spec, $self);
         }
         else {
           warn "Type '$sim_spec->{type}' is not loaded";
