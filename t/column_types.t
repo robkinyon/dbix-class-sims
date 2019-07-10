@@ -26,7 +26,8 @@ BEGIN {
       text tinytext mediumtext longtext long
       blob tinyblob mediumblob longblob
     )],
-    # These will be unhandled
+    # These will be unhandled because SQLite doesn't have any column types other
+    # than NULL, INTEGER, REAL, TEXT, and BLOB
     datetime => [qw(
       date
       datetime

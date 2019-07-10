@@ -47,6 +47,36 @@ BEGIN {
           },
         },
       },
+      decimal_maxmin => {
+        data_type => 'decimal',
+        sim => {
+          min => 5.2, max => 20.2,
+        },
+      },
+      decimal_nomin => {
+        data_type => 'decimal',
+        sim => {
+          max => 20.2,
+        },
+      },
+      decimal_nomax => {
+        data_type => 'decimal',
+        sim => {
+          min => 5.2,
+        },
+      },
+      decimal_nolimit => {
+        data_type => 'decimal',
+        sim => {},
+      },
+      decimal_with_func => {
+        data_type => 'decimal',
+        sim => {
+          func => sub {
+            return 22.2;
+          },
+        },
+      },
       varchar_maxmin => {
         data_type => 'varchar',
         sim => {
@@ -62,6 +92,13 @@ BEGIN {
       varchar_nomax_length => {
         data_type => 'varchar',
         data_length => '60',
+        sim => {
+          min => 5,
+        },
+      },
+      varchar_nomax_size => {
+        data_type => 'varchar',
+        size => '55',
         sim => {
           min => 5,
         },
@@ -156,9 +193,24 @@ cmp_ok( $row->int_nolimit, '<=', 100, 'sim_int_nolimit <= 100' );
 
 is( $row->int_with_func, 22, 'sim_int_with_func is 22' );
 
+cmp_ok( $row->decimal_maxmin, '>=', 5.2, 'decimal_maxmin >= 5.2' );
+cmp_ok( $row->decimal_maxmin, '<=', 20.2, 'decimal_maxmin <= 20.2' );
+
+cmp_ok( $row->decimal_nomin, '>=', 0, 'sim_decimal_nomin >= 0' );
+cmp_ok( $row->decimal_nomin, '<=', 20.2, 'sim_decimal_nomin <= 20.2' );
+
+cmp_ok( $row->decimal_nomax, '>=', 5.2, 'sim_decimal_nomax >= 5.2' );
+cmp_ok( $row->decimal_nomax, '<=', 100, 'sim_decimal_nomax <= 100' );
+
+cmp_ok( $row->decimal_nolimit, '>=', 0, 'sim_decimal_nolimit >= 0' );
+cmp_ok( $row->decimal_nolimit, '<=', 100, 'sim_decimal_nolimit <= 100' );
+
+is( $row->decimal_with_func, 22.2, 'sim_decimal_with_func is 22.2' );
+
 like( $row->varchar_maxmin, qr/\w{5,20}/, 'varchar_maxmin of right length' );
 like( $row->varchar_nomin, qr/\w{1,20}/, 'varchar_nomin of right length' );
 like( $row->varchar_nomax_length, qr/\w{1,60}/, 'varchar_nomax_length of right length' );
+like( $row->varchar_nomax_size, qr/\w{1,55}/, 'varchar_nomax_size of right length' );
 like( $row->varchar_nomax_nolength, qr/\w{1,255}/, 'varchar_nomax_nolength of right length' );
 like( $row->varchar_nolimit, qr/\w{1,255}/, 'varchar_nolimit of right length' );
 

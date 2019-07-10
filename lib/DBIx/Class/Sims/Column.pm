@@ -119,7 +119,7 @@ sub in_fk { push @{shift->{fks}}, $_[0]; return }
 sub is_numeric { shift->{type} eq 'numeric' }
 sub is_decimal { shift->{type} eq 'decimal' }
 sub is_string  { shift->{type} eq 'string' }
-sub is_unknown { shift->{type} eq 'unknown' }
+#sub is_unknown { shift->{type} eq 'unknown' }
 
 sub generate_value {
   my $self = shift;
