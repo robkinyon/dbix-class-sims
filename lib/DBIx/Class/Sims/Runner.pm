@@ -169,7 +169,7 @@ sub fix_fk_dependencies {
       elsif (ref($proto) eq 'SCALAR') {
         $cond = {
           $fkcol => $self->convert_backreference(
-            $item->source, $r->name, $$proto, $fkcol,
+            $self->backref_name($item, $r->name), $$proto, $fkcol,
           ),
         };
       }
@@ -319,7 +319,7 @@ sub find_by_unique_constraints {
       my $value = $item->spec->{$colname};
       if (ref($value) eq 'SCALAR') {
         $value = $self->convert_backreference(
-          $item->source, $colname, $$value,
+          $self->backref_name($item, $colname), $$value,
         );
       }
       my $classname = blessed($value);
@@ -346,13 +346,19 @@ sub find_by_unique_constraints {
   return;
 }
 
+sub backref_name {
+  my $self = shift;
+  my ($item, $colname) = @_;
+  return $item->source->name . '->' . $colname;
+}
+
 sub convert_backreference {
   my $self = shift;
-  my ($source, $attr, $proto, $default_method) = @_;
+  my ($backref_name, $proto, $default_method) = @_;
 
   my ($table, $idx, $methods) = ($proto =~ /(.+)\[(\d+)\](?:\.(.+))?$/);
   unless ($table && defined $idx) {
-    die "Unsure what to do about @{[$source->name]}->$attr => $proto\n";
+    die "Unsure what to do about $backref_name => $proto\n";
   }
   unless (exists $self->{rows}{$table}) {
     die "No rows in $table to reference\n";
@@ -371,7 +377,7 @@ sub convert_backreference {
     return $self->{rows}{$table}[$idx]->$default_method;
   }
   else {
-    die "No method to call at @{[$source->name]}->$attr => $proto\n";
+    die "No method to call at $backref_name => $proto\n";
   }
 }
 
@@ -383,7 +389,7 @@ sub fix_values {
     # Decode a backreference
     if (ref($value) eq 'SCALAR') {
       $item->spec->{$attr} = $self->convert_backreference(
-        $item->source, $attr, $$value,
+        $self->backref_name($item, $attr), $$value,
       );
     }
   }
