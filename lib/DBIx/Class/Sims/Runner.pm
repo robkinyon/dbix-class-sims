@@ -424,15 +424,13 @@ sub fix_columns {
     my $sim_spec;
     if ( exists $item->spec->{$col_name} ) {
       if (
-        $c->is_in_pk &&
-        !$item->allow_pk_set_value &&
-        $c->is_auto_increment
+        $c->is_in_pk && $c->is_auto_increment &&
+        !$item->allow_pk_set_value
       ) {
-        my $msg = sprintf(
+        warn sprintf(
           "Primary-key autoincrement columns should not be hardcoded in tests (%s.%s = %s)",
           $item->source_name, $col_name, $item->spec->{$col_name},
         );
-        warn $msg;
       }
 
       # This is the original way of specifying an override with a HASHREFREF.
@@ -469,10 +467,6 @@ sub fix_columns {
           $item->spec->{$col_name} = undef;
           next;
         }
-      }
-
-      if (exists $sim_spec->{values}) {
-        $sim_spec->{value} = delete $sim_spec->{values};
       }
 
       if ( ref($sim_spec->{func} // '') eq 'CODE' ) {
