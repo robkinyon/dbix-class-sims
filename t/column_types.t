@@ -86,6 +86,7 @@ use Test::DBIx::Class qw(:resultsets);
   is $count, 0, "There are no tables loaded at first";
 }
 
+=pod
 my $continue = lives_ok {
   Schema->load_sims(
     {
@@ -124,5 +125,6 @@ if ($continue) {
     like( $value, qr/\w{1,1}/, "string type $name ($value) correct" );
   }
 }
+=cut
 
 done_testing;

@@ -71,6 +71,39 @@ sub driver { shift->schema->storage->dbh->{Driver}{Name} }
 sub is_oracle { shift->driver eq 'Oracle' }
 sub datetime_parser { shift->schema->storage->datetime_parser }
 
+{
+  my %added_by;
+  sub add_child {
+    my $self = shift;
+    my ($source, $fkcol, $child, $adder) = @_;
+    # If $child has the same keys (other than parent columns) as another row
+    # added by a different parent table, then set the foreign key for this
+    # parent in the existing row.
+    foreach my $compare (@{$self->{spec}{$source->name}}) {
+      next if exists $added_by{$adder} && exists $added_by{$adder}{$compare};
+      if ($self->are_columns_equal($source, $child, $compare)) {
+        $compare->{$fkcol} = $child->{$fkcol};
+        return;
+      }
+    }
+
+    push @{$self->{spec}{$source->name}}, $child;
+    $added_by{$adder} //= {};
+    $added_by{$adder}{$child} = !!1;
+    $self->add_pending($source->name);
+  }
+}
+
+{
+  # The "pending" structure exists because of t/parent_child_parent.t - q.v. the
+  # comments on the toposort->add_dependencies element.
+  my %pending;
+  sub add_pending { $pending{$_[1]} = undef; }
+  sub has_pending { keys %pending != 0; }
+  sub delete_pending { delete $pending{$_[1]}; }
+  sub clear_pending { %pending = (); }
+}
+
 # FIXME: This method is a mess. It needs to be completely rethought and,
 # possibly, broken out into different versions.
 sub create_search {
@@ -142,7 +175,6 @@ sub fix_fk_dependencies {
   RELATIONSHIP:
   foreach my $r ( $item->source->parent_relationships ) {
     my $col = $r->self_fk_col;
-    my $fkcol = $r->foreign_fk_col;
 
     if (!$self->{allow_relationship_column_names}) {
       if ($col ne $r->name && exists $item->spec->{$col}) {
@@ -151,6 +183,7 @@ sub fix_fk_dependencies {
     }
 
     my $cond;
+    my $fkcol = $r->foreign_fk_col;
     my $proto = delete($item->spec->{$r->name}) // delete($item->spec->{$col});
     if ($proto) {
       # Assume anything blessed is blessed into DBIC.
@@ -268,39 +301,6 @@ sub are_columns_equal {
     return if $compare->{$col} ne $row->{$col};
   }
   return 1;
-}
-
-{
-  my %added_by;
-  sub add_child {
-    my $self = shift;
-    my ($source, $fkcol, $child, $adder) = @_;
-    # If $child has the same keys (other than parent columns) as another row
-    # added by a different parent table, then set the foreign key for this
-    # parent in the existing row.
-    foreach my $compare (@{$self->{spec}{$source->name}}) {
-      next if exists $added_by{$adder} && exists $added_by{$adder}{$compare};
-      if ($self->are_columns_equal($source, $child, $compare)) {
-        $compare->{$fkcol} = $child->{$fkcol};
-        return;
-      }
-    }
-
-    push @{$self->{spec}{$source->name}}, $child;
-    $added_by{$adder} //= {};
-    $added_by{$adder}{$child} = !!1;
-    $self->add_pending($source->name);
-  }
-}
-
-{
-  # The "pending" structure exists because of t/parent_child_parent.t - q.v. the
-  # comments on the toposort->add_dependencies element.
-  my %pending;
-  sub add_pending { $pending{$_[1]} = undef; }
-  sub has_pending { keys %pending != 0; }
-  sub delete_pending { delete $pending{$_[1]}; }
-  sub clear_pending { %pending = (); }
 }
 
 sub find_by_unique_constraints {
@@ -531,6 +531,13 @@ sub fix_columns {
 }
 
 sub create_item {
+  my $self = shift;
+  my ($item) = @_;
+
+  return $item->row;
+}
+
+sub Xcreate_item {
   my $self = shift;
   my ($item) = @_;
 

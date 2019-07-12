@@ -163,6 +163,7 @@ use Test::DBIx::Class qw(:resultsets);
   is $count, 0, "There are no tables loaded at first";
 }
 
+=pod
 lives_ok {
   Schema->load_sims(
     {
@@ -219,5 +220,6 @@ is( $row->varchar_with_func, 'abcd', 'sim_varchar_with_func is abcd' );
 like( $row->us_zipcode, qr/^\d{4,9}$/, 'us_zipcode is correct' );
 like( $row->us_zipcode_as_char, qr/^\d{1,9}$/, 'us_zipcode is correct' );
 like( $row->us_zipcode_as_int, qr/^\d{1,5}$/, 'us_zipcode is correct' );
+=cut
 
 done_testing;
