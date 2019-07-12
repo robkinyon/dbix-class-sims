@@ -25,7 +25,6 @@ BEGIN {
           data_type => 'varchar',
           size => 128,
           is_nullable => 1,
-          sim => { value => 'purple' },
         },
       },
       primary_keys => [ 'id' ],
@@ -36,6 +35,19 @@ BEGIN {
 use common qw(sims_test Schema);
 
 sims_test "A single row succeeds" => {
+  spec => {
+    Artist => [
+      { name => 'foo' },
+    ],
+  },
+  expect => {
+    Artist => { id => 1, name => 'foo', hat_color => undef },
+  },
+};
+
+Schema->source('Artist')->column_info('hat_color')->{sim}{value} = 'purple';
+
+sims_test "A single row with a sim-type succeeds" => {
   skip => 'Regressing until refactoring is done',
   spec => {
     Artist => [

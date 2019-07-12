@@ -534,6 +534,20 @@ sub create_item {
   my $self = shift;
   my ($item) = @_;
 
+  #warn "Creating @{[$item->source_name]} (".np($item->spec).")\n" if $ENV{SIMS_DEBUG};
+  my $row = do { #eval {
+    #my $to_create = MyCloner::clone($item->spec);
+    #delete $to_create->{__META__};
+    #$item->source->resultset->create($to_create);
+    delete $item->spec->{__META__};
+    $item->source->resultset->create($item->spec);
+  };# if ($@) {
+  #    my $e = $@;
+  #    warn "ERROR Creating @{[$item->source_name]} (".np($item->spec).")\n";
+  #    die $e;
+  #  }
+  $item->row($row);
+
   return $item->row;
 }
 

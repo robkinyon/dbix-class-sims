@@ -33,11 +33,13 @@ BEGIN {
 
 use Test::DBIx::Class qw(:resultsets);
 
+=pod
 DBIx::Class::Sims->add_sim(
   Schema, Artist => (
     name => { value => 'abcd' },
   ),
 );
+=cut
 
 use common qw(sims_test);
 
