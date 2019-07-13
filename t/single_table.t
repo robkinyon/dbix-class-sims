@@ -45,6 +45,16 @@ sims_test "A single row succeeds" => {
   },
 };
 
+sims_test "Providing no columns fails" => {
+  spec => {
+    Artist => [
+      {},
+    ],
+  },
+  warning => qr/ERROR Creating Artist/,
+  dies => qr/NOT NULL constraint failed/,
+};
+
 Schema->source('Artist')->column_info('hat_color')->{sim}{value} = 'purple';
 
 sims_test "A single row with a sim-type succeeds" => {

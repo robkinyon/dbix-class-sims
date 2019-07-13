@@ -51,6 +51,9 @@ sub sims_test ($$) {
             : Schema->load_sims(@args);
         };
         is $trap->leaveby, 'die', 'load_sims fails';
+        if ($opts->{warning}) {
+          like $trap->stderr, $opts->{warning}, "Warning as expected";
+        }
         like $trap->die, $opts->{dies}, 'Error message as expected';
       }
       else {
