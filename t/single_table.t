@@ -45,6 +45,7 @@ sims_test "A single row succeeds" => {
   },
 };
 
+# This will not fail in the future when we add more capabilities
 sims_test "Providing no columns fails" => {
   spec => {
     Artist => [

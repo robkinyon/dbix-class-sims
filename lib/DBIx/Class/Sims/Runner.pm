@@ -530,27 +530,6 @@ sub fix_columns {
   }
 }
 
-sub create_item {
-  my $self = shift;
-  my ($item) = @_;
-
-  #warn "Creating @{[$item->source_name]} (".np($item->spec).")\n" if $ENV{SIMS_DEBUG};
-  my $row = eval {
-    #my $to_create = MyCloner::clone($item->spec);
-    #delete $to_create->{__META__};
-    #$item->source->resultset->create($to_create);
-    delete $item->spec->{__META__};
-    $item->source->resultset->create($item->spec);
-  }; if ($@) {
-    my $e = $@;
-    warn "ERROR Creating @{[$item->source_name]} (".np($item->spec).")\n";
-    die $e;
-  }
-  $item->row($row);
-
-  return $item->row;
-}
-
 sub Xcreate_item {
   my $self = shift;
   my ($item) = @_;
@@ -640,7 +619,7 @@ sub run {
             local *{'DateTime::_data_printer'} = sub { shift->iso8601 }
               unless DateTime->can('_data_printer');
 
-            $self->create_item($item);
+            $item->create;
           };
 
           if ($self->{initial_spec}{$name}{$item->spec}) {

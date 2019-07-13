@@ -60,6 +60,32 @@ sub row {
   return $self->{row};
 }
 
+################################################################################
+#
+# These are the expected interface methods
+#
+################################################################################
+
+sub create {
+  my $self = shift;
+
+  #warn "Creating @{[$self->source_name]} (".np($self->spec).")\n" if $ENV{SIMS_DEBUG};
+  my $row = eval {
+    #my $to_create = MyCloner::clone($self->spec);
+    #delete $to_create->{__META__};
+    #$self->source->resultset->create($to_create);
+    delete $self->spec->{__META__};
+    $self->source->resultset->create($self->spec);
+  }; if ($@) {
+    my $e = $@;
+    warn "ERROR Creating @{[$self->source_name]} (".np($self->spec).")\n";
+    die $e;
+  }
+  $self->row($row);
+
+  return $self->row;
+}
+
 sub quarantine_children {
   my $self = shift;
 
