@@ -97,6 +97,16 @@ sub populate_columns {
 
     my $spec;
     if ( exists $self->spec->{$col_name} ) {
+      if (
+        $c->is_in_pk && $c->is_auto_increment &&
+        !$self->allow_pk_set_value
+      ) {
+        warn sprintf(
+          "Primary-key autoincrement columns should not be hardcoded in tests (%s.%s = %s)",
+          $self->source_name, $col_name, $self->spec->{$col_name},
+        );
+      }
+
       # This is the original way of specifying an override with a HASHREFREF.
       # Reflection has realized it was an unnecessary distinction to a parent
       # specification. Either it's a relationship hashref or a simspec hashref.

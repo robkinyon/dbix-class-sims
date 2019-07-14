@@ -25,7 +25,6 @@ BEGIN {
 use common qw(sims_test);
 
 sims_test "Can use a default value for a char PK" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Country => {},
   },
@@ -34,8 +33,7 @@ sims_test "Can use a default value for a char PK" => {
   },
 };
 
-sims_test "Can use a default value for a char PK" => {
-  skip => 'Regressing until refactoring is done',
+sims_test "Can set the value for a char PK" => {
   spec => {
     Country => { code => 'UK' },
   },

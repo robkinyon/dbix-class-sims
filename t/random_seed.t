@@ -37,7 +37,6 @@ use common qw(sims_test);
 subtest "Same random value when reusing a seed" => sub {
   my ($email, $seed);
   sims_test "first run" => {
-    skip => 'Regressing until refactoring is done',
     spec => {
       Artist => { name => 'Joe' },
     },
@@ -51,7 +50,6 @@ subtest "Same random value when reusing a seed" => sub {
   };
 
   sims_test "second run with seed" => {
-    skip => 'Regressing until refactoring is done',
     spec => [
       { Artist => { name => 'Joe' } },
       { seed => $seed },

@@ -32,7 +32,6 @@ BEGIN {
 use common qw(sims_test);
 
 sims_test "Nothing provided to inflater" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => 1,
   },
@@ -43,7 +42,6 @@ sims_test "Nothing provided to inflater" => {
 };
 
 sims_test "Simple hash provided to inflater" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => {
       params => { 'hello' => 'world' },

@@ -50,7 +50,6 @@ use Test::DBIx::Class qw(:resultsets);
   is $count, 0, "There are no tables loaded at first";
 }
 
-=pod
 Schema->load_sims({ SimTypeArray => [{}] });
 
 is( SimTypeArray->count, 1, 'The number of rows is correct' );
@@ -58,6 +57,5 @@ my $row = SimTypeArray->first;
 
 is($row->one, 1, 'The one column is correct');
 is($row->onnnnne, 1, 'The onnnnne column is correct');
-=cut
 
 done_testing;

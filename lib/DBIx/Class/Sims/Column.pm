@@ -127,7 +127,7 @@ sub resolve_sim_spec {
       }
     }
     elsif ( $spec->{type} ) {
-      my $meth = $item->runner->sim_type($spec->{type});
+      my $meth = $item->runner->parent->sim_type($spec->{type});
       if ( $meth ) {
         return $meth->($self->info, $spec, $self);
       }

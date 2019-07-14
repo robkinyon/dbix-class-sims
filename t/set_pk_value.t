@@ -35,7 +35,6 @@ use Test::DBIx::Class qw(:resultsets);
 use common qw(sims_test);
 
 sims_test "Trigger the PK autoincrement warning" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => { id => 2 },
   },
@@ -47,10 +46,19 @@ sims_test "Trigger the PK autoincrement warning" => {
 };
 
 sims_test "allow_pk_set_value silences the warning" => {
-  skip => 'Regressing until refactoring is done',
   spec => [
     { Artist => { id => 2 } },
     { allow_pk_set_value => 1 },
+  ],
+  expect => {
+    Artist => { id => 2, name => 'abcd' },
+  },
+  rv => sub { { Artist => shift->{expect}{Artist} } },
+};
+
+sims_test "allow_pk_set_value in the __META__ silences the warning" => {
+  spec => [
+    { Artist => { id => 2, __META__ => { allow_pk_set_value => 1 } } },
   ],
   expect => {
     Artist => { id => 2, name => 'abcd' },

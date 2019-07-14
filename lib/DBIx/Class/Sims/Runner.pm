@@ -66,6 +66,7 @@ sub remove_item {
   pop @{$self->{create_stack}};
 }
 
+sub parent { shift->{parent} }
 sub schema { shift->{schema} }
 sub driver { shift->schema->storage->dbh->{Driver}{Name} }
 sub is_oracle { shift->driver eq 'Oracle' }

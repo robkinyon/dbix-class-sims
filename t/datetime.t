@@ -38,7 +38,6 @@ my $now = DateTime->now;
 my $parsed_now = Schema->storage->datetime_parser->format_datetime($now);
 
 sims_test "Accept a DateTime object" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => { name => 'foo', created_on => $now },
   },
@@ -48,7 +47,6 @@ sims_test "Accept a DateTime object" => {
 };
 
 sims_test "Accept a stringified DateTime object" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => { name => 'foo', created_on => "$now" },
   },
