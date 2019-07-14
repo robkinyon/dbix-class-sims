@@ -28,7 +28,9 @@ sub initialize {
 
   # Lots of code assumes __META__ exists.
   # TODO: Should we check for _META__ or __META_ or __MTA__ etc?
-  $self->spec->{__META__} //= {};
+  $self->{meta} = $self->spec->{__META__} // {};
+
+  $self->{create} = {};
 
   # Should we quarantine_children() immediately?
 
@@ -38,8 +40,8 @@ sub initialize {
 sub runner { $_[0]{runner} }
 sub source { $_[0]{source} }
 sub spec   { $_[0]{spec}   }
+sub meta   { $_[0]{meta} }
 
-sub meta   { shift->spec->{__META__} }
 sub source_name { shift->source->name }
 
 sub allow_pk_set_value { shift->meta->{allow_pk_set_value} }
@@ -69,13 +71,13 @@ sub row {
 sub create {
   my $self = shift;
 
+  $self->populate_columns;
+
   #warn "Creating @{[$self->source_name]} (".np($self->spec).")\n" if $ENV{SIMS_DEBUG};
   my $row = eval {
     #my $to_create = MyCloner::clone($self->spec);
-    #delete $to_create->{__META__};
     #$self->source->resultset->create($to_create);
-    delete $self->spec->{__META__};
-    $self->source->resultset->create($self->spec);
+    $self->source->resultset->create($self->{create});
   }; if ($@) {
     my $e = $@;
     warn "ERROR Creating @{[$self->source_name]} (".np($self->spec).")\n";
@@ -84,6 +86,20 @@ sub create {
   $self->row($row);
 
   return $self->row;
+}
+
+sub populate_columns {
+  my $self = shift;
+
+  foreach my $c ( $self->source->columns ) {
+    my $col_name = $c->name;
+
+    if ( exists $self->spec->{$col_name} ) {
+      $self->{create}{$col_name} = $self->spec->{$col_name};
+    }
+  }
+
+  warn np($self->{create});
 }
 
 sub quarantine_children {

@@ -46,6 +46,8 @@ sims_test "A single row succeeds" => {
 };
 
 # This will not fail in the future when we add more capabilities
+# We will have to test this with UK failure, not column failure. In fact, column
+# failure is a failure in the Sims because we should never fail in that.
 sims_test "Providing no columns fails" => {
   spec => {
     Artist => [
