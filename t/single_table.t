@@ -96,7 +96,6 @@ sims_test "Pass in a sim_type" => {
 Schema->source('Artist')->column_info('name')->{sim}{value} = 'george';
 
 sims_test "Override a sim_type with a HASHREFREF (deprecated)" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => { name => \{ value => 'bill' } },
   },

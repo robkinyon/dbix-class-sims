@@ -97,7 +97,18 @@ sub populate_columns {
 
     my $spec;
     if ( exists $self->spec->{$col_name} ) {
+      # This is the original way of specifying an override with a HASHREFREF.
+      # Reflection has realized it was an unnecessary distinction to a parent
+      # specification. Either it's a relationship hashref or a simspec hashref.
+      # We can never have both. It will be deprecated.
       if (
+        reftype($self->spec->{$col_name}) eq 'REF' &&
+        reftype(${$self->spec->{$col_name}}) eq 'HASH'
+      ) {
+        warn "DEPRECATED: Use a regular HASHREF for overriding simspec. HASHREFREF will be removed in a future release.";
+        $spec = ${ $self->spec->{$col_name} };
+      }
+      elsif (
         reftype($self->spec->{$col_name}) eq 'HASH' &&
         # Assume a blessed hash is a DBIC object
         !blessed($self->spec->{$col_name}) &&
