@@ -461,7 +461,7 @@ sub fix_columns {
       }
       # Pass the value along to DBIC - we don't know how to deal with it.
       else {
-        next;
+        next; # DONE
       }
     }
 
@@ -504,9 +504,9 @@ sub fix_columns {
     # primary key (could be auto-increment) or part of a unique key or part of a
     # foreign key, then generate a value for it.
     elsif (
-      !$c->is_nullable &&
+      !$c->is_nullable &&       # DONE
       !$c->has_default_value &&
-      !$c->is_in_pk &&
+      !$c->is_in_pk &&          # DONE
       !$c->is_in_uk &&
       !$c->is_in_fk
     ) {

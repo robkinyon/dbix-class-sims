@@ -45,17 +45,15 @@ sims_test "A single row succeeds" => {
   },
 };
 
-# This will not fail in the future when we add more capabilities
-# We will have to test this with UK failure, not column failure. In fact, column
-# failure is a failure in the Sims because we should never fail in that.
-sims_test "Providing no columns fails" => {
+sims_test "Providing no columns succeeds" => {
   spec => {
     Artist => [
       {},
     ],
   },
-  warning => qr/ERROR Creating Artist/,
-  dies => qr/NOT NULL constraint failed/,
+  expect => {
+    Artist => { id => 1, name => re('.+'), hat_color => undef },
+  },
 };
 
 Schema->source('Artist')->column_info('hat_color')->{sim}{value} = 'purple';

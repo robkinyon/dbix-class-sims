@@ -75,8 +75,9 @@ sub create {
 
   #warn "Creating @{[$self->source_name]} (".np($self->spec).")\n" if $ENV{SIMS_DEBUG};
   my $row = eval {
-    #my $to_create = MyCloner::clone($self->spec);
-    #$self->source->resultset->create($to_create);
+    $self->oracle_ensure_populated_pk;
+
+    #warn 'Creating (' . np($self->{create}) . ")\n";
     $self->source->resultset->create($self->{create});
   }; if ($@) {
     my $e = $@;
@@ -97,9 +98,16 @@ sub populate_columns {
     if ( exists $self->spec->{$col_name} ) {
       $self->{create}{$col_name} = $self->spec->{$col_name};
     }
+    elsif (
+      !$c->is_nullable &&
+      !$c->is_in_pk
+    ) {
+      $self->{create}{$col_name} = $c->generate_value(die_on_unknown => 1);
+    }
   }
 
-  warn np($self->{create});
+  #warn np($self->{create});
+  return;
 }
 
 sub quarantine_children {
@@ -155,6 +163,25 @@ sub build_children {
       $child->{$fkcol} = $self->row->get_column($col);
       $self->runner->add_child($fk_source, $fkcol, $child, $self->source_name);
     }
+  }
+}
+
+sub oracle_ensure_populated_pk {
+  my $self = shift;
+
+  # Oracle does not allow the "INSERT INTO x DEFAULT VALUES" syntax that DBIC
+  # wants to use. Therefore, find a PK column and set it to NULL. If there
+  # isn't one, complain loudly.
+  if ($self->runner->is_oracle && keys(%{$self->{create}}) == 0) {
+    my @pk_columns = grep {
+      $_->is_in_pk
+    } $self->source->columns;
+
+    die "Must specify something about some column or have a PK in Oracle"
+      unless @pk_columns;
+
+    # This will work even if there are multiple columns in the PK.
+    $self->spec->{$pk_columns[0]->name} = undef;
   }
 }
 
