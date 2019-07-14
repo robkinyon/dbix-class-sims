@@ -12,7 +12,7 @@ use DDP;
 
 use Scalar::Util qw( blessed );
 
-use DBIx::Class::Sims::Util qw( normalize_aoh );
+use DBIx::Class::Sims::Util qw( normalize_aoh reftype );
 
 sub new {
   my $class = shift;
@@ -97,30 +97,31 @@ sub populate_columns {
 
     my $spec;
     if ( exists $self->spec->{$col_name} ) {
-      #if (
-      #  reftype($spec) eq 'HASH' &&
-      #  # Assume a blessed hash is a DBIC object
-      #  !blessed($spec) &&
-      #  # Do not assume we understand something to be inflated/deflated
-      #  !$c->is_inflated
-      #) {
-      #  $sim_spec = delete $item->spec->{$col_name};
-      #}
-      #else {
+      if (
+        reftype($self->spec->{$col_name}) eq 'HASH' &&
+        # Assume a blessed hash is a DBIC object
+        !blessed($self->spec->{$col_name}) &&
+        # Do not assume we understand something to be inflated/deflated
+        !$c->is_inflated
+      ) {
+        $spec = $self->spec->{$col_name};
+      }
+      else {
         $self->{create}{$col_name} = $self->spec->{$col_name};
-      #}
+      }
     }
 
     $spec //= $c->sim_spec;
-    if ($spec) {
-      $self->{create}{$col_name} = $c->resolve_sim_spec($spec, $self);
-    }
-    elsif (
-      !exists $self->{create}{$col_name} &&
-      !$c->is_nullable &&
-      !$c->is_in_pk
-    ) {
-      $self->{create}{$col_name} = $c->generate_value(die_on_unknown => 1);
+    if ( ! exists $self->{create}{$col_name} ) {
+      if ($spec) {
+        $self->{create}{$col_name} = $c->resolve_sim_spec($spec, $self);
+      }
+      elsif (
+        !$c->is_nullable &&
+        !$c->is_in_pk
+      ) {
+        $self->{create}{$col_name} = $c->generate_value(die_on_unknown => 1);
+      }
     }
   }
 

@@ -70,7 +70,6 @@ sims_test "A single row with a sim-type succeeds" => {
 };
 
 sims_test "Load multiple rows" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => [
       { name => 'foo' },
@@ -86,7 +85,6 @@ sims_test "Load multiple rows" => {
 };
 
 sims_test "Pass in a sim_type" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => { name => { value => 'george' } },
   },
