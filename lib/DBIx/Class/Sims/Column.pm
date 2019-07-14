@@ -88,6 +88,8 @@ sub sim_spec {
   unless (exists $self->{sim_spec}) {
     if ($self->info->{sim}) {
       $self->{sim_spec} = MyCloner::clone($self->info->{sim});
+
+      # Handle the optional plural of "value"
       if (exists $self->{sim_spec}{values}) {
         $self->{sim_spec}{value} = delete $self->{sim_spec}{values};
       }
@@ -98,6 +100,47 @@ sub sim_spec {
   }
 
   return $self->{sim_spec};
+}
+
+sub resolve_sim_spec {
+  my $self = shift;
+  my ($spec, $item) = @_;
+
+  if (ref($spec // '') eq 'HASH') {
+    if ( exists $spec->{null_chance} && $self->is_nullable ) {
+      # Add check for not a number
+      if ( rand() < $spec->{null_chance} ) {
+        return;
+      }
+    }
+
+    if ( ref($spec->{func} // '') eq 'CODE' ) {
+      return $spec->{func}->($self->info);
+    }
+    elsif ( exists $spec->{value} ) {
+      if (ref($spec->{value} // '') eq 'ARRAY') {
+        my @v = @{$spec->{value}};
+        return $v[rand @v];
+      }
+      else {
+        return $spec->{value};
+      }
+    }
+    elsif ( $spec->{type} ) {
+      my $meth = $item->runner->sim_type($spec->{type});
+      if ( $meth ) {
+        return $meth->($self->info, $spec, $self);
+      }
+      else {
+        warn "Type '$spec->{type}' is not loaded";
+      }
+    }
+    else {
+      return $self->generate_value(die_on_unknown => 0);
+    }
+  }
+
+  return;
 }
 
 sub is_nullable { shift->info->{is_nullable} }

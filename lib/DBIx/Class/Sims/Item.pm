@@ -95,10 +95,28 @@ sub populate_columns {
   foreach my $c ( $self->source->columns ) {
     my $col_name = $c->name;
 
+    my $spec;
     if ( exists $self->spec->{$col_name} ) {
-      $self->{create}{$col_name} = $self->spec->{$col_name};
+      #if (
+      #  reftype($spec) eq 'HASH' &&
+      #  # Assume a blessed hash is a DBIC object
+      #  !blessed($spec) &&
+      #  # Do not assume we understand something to be inflated/deflated
+      #  !$c->is_inflated
+      #) {
+      #  $sim_spec = delete $item->spec->{$col_name};
+      #}
+      #else {
+        $self->{create}{$col_name} = $self->spec->{$col_name};
+      #}
+    }
+
+    $spec //= $c->sim_spec;
+    if ($spec) {
+      $self->{create}{$col_name} = $c->resolve_sim_spec($spec, $self);
     }
     elsif (
+      !exists $self->{create}{$col_name} &&
       !$c->is_nullable &&
       !$c->is_in_pk
     ) {

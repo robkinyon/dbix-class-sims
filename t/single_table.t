@@ -59,7 +59,6 @@ sims_test "Providing no columns succeeds" => {
 Schema->source('Artist')->column_info('hat_color')->{sim}{value} = 'purple';
 
 sims_test "A single row with a sim-type succeeds" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => [
       { name => 'foo' },
