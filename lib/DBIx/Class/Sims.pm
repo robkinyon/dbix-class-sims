@@ -177,6 +177,7 @@ sub load_sims {
     my $strict_mode = $opts->{strict_mode} // 0;
     if ($strict_mode) {
       $opts->{ignore_unknown_tables} //= 0;
+      $opts->{ignore_unknown_columns} //= 0;
       $opts->{allow_relationship_column_names} //= 0;
       $opts->{die_on_failure} //= 1;
     }
@@ -194,6 +195,7 @@ sub load_sims {
       # has a value set. It defaults to false. Set to true to disable.
       allow_pk_set_value => $opts->{allow_pk_set_value} // 0,
       ignore_unknown_tables => $opts->{ignore_unknown_tables} // 0,
+      ignore_unknown_columns => $opts->{ignore_unknown_columns} // 0,
       allow_relationship_column_names => $opts->{allow_relationship_column_names} // 1,
     );
 
@@ -762,6 +764,13 @@ This defaults to 1.
 
 If set, this will be the srand() seed used for this invocation.
 
+=head2 ignore_unknown_columns
+
+If set to 1, this will ignore column names that don't exist in the schema.
+Otherwise, it will raise an error.
+
+This defaults to 0.
+
 =head2 ignore_unknown_tables
 
 If set to 1, this will ignore table names that don't exist in the schema.
@@ -784,6 +793,8 @@ This defaults to 1.
 This sets the following options:
 
 =over 4
+
+=item * C<< ignore_unknown_columns => 0 >>
 
 =item * C<< ignore_unknown_tables => 0 >>
 

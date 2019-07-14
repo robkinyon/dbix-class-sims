@@ -92,6 +92,8 @@ sub create {
 sub populate_columns {
   my $self = shift;
 
+  my %still_to_use = map { $_ => 1 } keys %{$self->spec};
+  delete $still_to_use{__META__};
   foreach my $c ( $self->source->columns ) {
     my $col_name = $c->name;
 
@@ -144,6 +146,16 @@ sub populate_columns {
         $self->{create}{$col_name} = $c->generate_value(die_on_unknown => 1);
       }
     }
+
+    delete $still_to_use{$col_name};
+  }
+
+  # Things were passed in, but don't exist in the schema.
+  if (!$self->runner->{ignore_unknown_columns} && %still_to_use) {
+    my $msg = "The following names are in the spec, but not the table @{[$self->source_name]}\n";
+    $msg .= join ',', sort keys %still_to_use;
+    $msg .= "\n";
+    die $msg;
   }
 
   #warn np($self->{create});
