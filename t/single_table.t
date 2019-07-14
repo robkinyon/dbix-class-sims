@@ -106,7 +106,6 @@ sims_test "Override a sim_type with a HASHREFREF (deprecated)" => {
 };
 
 sims_test "Override a sim_type with a HASHREF" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => { name => { value => 'bill' } },
   },
@@ -116,7 +115,6 @@ sims_test "Override a sim_type with a HASHREF" => {
 };
 
 sims_test "Set 1 for number of rows" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => 1,
   },
@@ -126,7 +124,6 @@ sims_test "Set 1 for number of rows" => {
 };
 
 sims_test "Set 2 for number of rows" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => 2,
   },
@@ -139,9 +136,8 @@ sims_test "Set 2 for number of rows" => {
 };
 
 sims_test "Provide a hashref for rows" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
-    Artist => 1,
+    Artist => {},
   },
   expect => {
     Artist => { id => 1, name => 'george', hat_color => 'purple' },
@@ -149,7 +145,6 @@ sims_test "Provide a hashref for rows" => {
 };
 
 sims_test "A scalarref is unknown" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => \"",
   },
@@ -160,7 +155,6 @@ sims_test "A scalarref is unknown" => {
 Schema->source('Artist')->column_info('name')->{sim}{value} = [ 'george', 'bill' ];
 
 sims_test "See that a set of values (singular) works" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => 1,
   },
@@ -173,7 +167,6 @@ delete Schema->source('Artist')->column_info('name')->{sim}{value};
 Schema->source('Artist')->column_info('name')->{sim}{values} = [ 'george', 'bill' ];
 
 sims_test "See that a set of values (plural) works" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => 1,
   },
@@ -186,7 +179,6 @@ delete Schema->source('Artist')->column_info('hat_color')->{sim}{value};
 Schema->source('Artist')->column_info('hat_color')->{sim}{null_chance} = 1;
 
 sims_test "See that null_chance=1 works" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => 1,
   },
