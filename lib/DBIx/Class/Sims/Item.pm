@@ -77,8 +77,8 @@ sub row {
 sub create {
   my $self = shift;
 
-  #$self->populate_columns({ is_in_uk => 1 });
-  $self->populate_columns;#({ is_in_uk => 0 });
+  $self->populate_columns({ is_in_uk => 1 });
+  $self->populate_columns({ is_in_uk => 0 });
 
   # Things were passed in, but don't exist in the table.
   if (!$self->runner->{ignore_unknown_columns} && %{$self->{still_to_use}}) {
