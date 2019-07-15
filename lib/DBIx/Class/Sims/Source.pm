@@ -74,7 +74,19 @@ sub source { $_[0]{source} }
 
 sub columns {
   my $self = shift;
-  return values %{$self->{columns}};
+  my ($spec) = @_;
+  $spec //= {};
+
+  return grep {
+    my $rv = 1;
+    while (my ($method, $result) = each %$spec) {
+      my $x = $_->$method;
+
+      # This is an implementation of xor
+      $rv &&= !(!$x != !$result);
+    }
+    $rv;
+  } values %{$self->{columns}};
 }
 sub column {
   my $self = shift;

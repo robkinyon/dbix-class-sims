@@ -45,6 +45,7 @@ BEGIN {
         },
       },
       primary_keys => [ 'id' ],
+      unique_constraints => [ [ 'name' ] ],
       belongs_to => {
         artist => { Artist => 'artist_id' },
       },
@@ -79,6 +80,13 @@ subtest 'parent' => sub {
 
   my @child_rels = map { $_->name } $artist->child_relationships;
   cmp_bag(\@child_rels, ['albums'], "One child relationships");
+
+  my @c_primary = map { $_->name } $artist->columns({ is_in_pk => 1 });
+  cmp_bag(\@c_primary, ['id'], "Correct PK columns");
+  my @c_in_uk = map { $_->name } $artist->columns({ is_in_uk => 1 });
+  cmp_bag(\@c_in_uk, ['id'], "Correct UK columns");
+  my @c_normal = map { $_->name } $artist->columns({ is_in_uk => 0 });
+  cmp_bag(\@c_normal, ['name'], "Correct normal columns");
 };
 
 subtest 'child' => sub {
@@ -100,6 +108,13 @@ subtest 'child' => sub {
 
   my @child_rels = map { $_->name } $album->child_relationships;
   cmp_bag(\@child_rels, [], "No child relationships");
+
+  my @c_primary = map { $_->name } $album->columns({ is_in_pk => 1 });
+  cmp_bag(\@c_primary, ['id'], "Correct PK columns");
+  my @c_in_uk = map { $_->name } $album->columns({ is_in_uk => 1 });
+  cmp_bag(\@c_in_uk, ['id', 'name'], "Correct UK columns");
+  my @c_normal = map { $_->name } $album->columns({ is_in_uk => 0 });
+  cmp_bag(\@c_normal, ['artist_id'], "Correct normal columns");
 };
 
 done_testing;

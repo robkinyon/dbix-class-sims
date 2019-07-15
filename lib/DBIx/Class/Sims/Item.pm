@@ -32,6 +32,9 @@ sub initialize {
 
   $self->{create} = {};
 
+  $self->{still_to_use} = { map { $_ => 1 } keys %{$self->spec} };
+  delete $self->{still_to_use}{__META__};
+
   # Should we quarantine_children() immediately?
 
   return;
@@ -68,11 +71,24 @@ sub row {
 #
 ################################################################################
 
+#sub find_unique_match {
+#}
+
 sub create {
   my $self = shift;
 
-  $self->populate_columns;
+  #$self->populate_columns({ is_in_uk => 1 });
+  $self->populate_columns;#({ is_in_uk => 0 });
 
+  # Things were passed in, but don't exist in the table.
+  if (!$self->runner->{ignore_unknown_columns} && %{$self->{still_to_use}}) {
+    my $msg = "The following names are in the spec, but not the table @{[$self->source_name]}\n";
+    $msg .= join ',', sort keys %{$self->{still_to_use}};
+    $msg .= "\n";
+    die $msg;
+  }
+
+  #warn np($self->{create});
   #warn "Creating @{[$self->source_name]} (".np($self->spec).")\n" if $ENV{SIMS_DEBUG};
   my $row = eval {
     $self->oracle_ensure_populated_pk;
@@ -91,10 +107,9 @@ sub create {
 
 sub populate_columns {
   my $self = shift;
+  my ($col_spec) = @_;
 
-  my %still_to_use = map { $_ => 1 } keys %{$self->spec};
-  delete $still_to_use{__META__};
-  foreach my $c ( $self->source->columns ) {
+  foreach my $c ( $self->source->columns($col_spec) ) {
     my $col_name = $c->name;
 
     my $spec;
@@ -147,18 +162,9 @@ sub populate_columns {
       }
     }
 
-    delete $still_to_use{$col_name};
+    delete $self->{still_to_use}{$col_name};
   }
 
-  # Things were passed in, but don't exist in the schema.
-  if (!$self->runner->{ignore_unknown_columns} && %still_to_use) {
-    my $msg = "The following names are in the spec, but not the table @{[$self->source_name]}\n";
-    $msg .= join ',', sort keys %still_to_use;
-    $msg .= "\n";
-    die $msg;
-  }
-
-  #warn np($self->{create});
   return;
 }
 

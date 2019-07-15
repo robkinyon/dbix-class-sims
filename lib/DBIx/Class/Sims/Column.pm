@@ -81,7 +81,7 @@ sub initialize {
 
 sub info { shift->{info} }
 sub name { shift->{name} }
-#sub source { shift->{source} }
+sub source { shift->{source} }
 sub sim_spec {
   my $self = shift;
 
@@ -145,7 +145,7 @@ sub resolve_sim_spec {
 
 sub is_nullable { shift->info->{is_nullable} }
 sub is_auto_increment { shift->info->{is_auto_increment} }
-sub is_inflated { shift->info->{_inflate_info} }
+sub is_inflated { defined shift->info->{_inflate_info} }
 
 sub has_default_value { exists shift->{info}{default_value} }
 #sub default_value {}

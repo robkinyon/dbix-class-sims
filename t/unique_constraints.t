@@ -16,12 +16,17 @@ BEGIN {
           is_nullable => 0,
           is_auto_increment => 1,
         },
-        first_name => {
+        name => {
           data_type => 'varchar',
           size => 128,
           is_nullable => 0,
         },
-        last_name => {
+        city => {
+          data_type => 'varchar',
+          size => 128,
+          is_nullable => 0,
+        },
+        state => {
           data_type => 'varchar',
           size => 128,
           is_nullable => 0,
@@ -29,14 +34,97 @@ BEGIN {
       },
       primary_keys => [ 'id' ],
       unique_constraints => [
-        [ 'first_name', 'last_name' ],
-        [ 'last_name' ],
+        [ 'name' ],
+        [ 'city', 'state' ],
       ],
     },
   ]);
 }
 
 use common qw(sims_test Schema);
+
+subtest "Load and retrieve a row by single-column PK" => sub {
+  sims_test "Create the row" => {
+    skip => 'still building',
+    spec => {
+      Artist => {
+        name => 'Bob',
+        city => 'Some',
+        state => 'Place',
+      },
+    },
+    expect => {
+      Artist => { id => 1, name => 'Bob', city => 'Some', state => 'Place' },
+    },
+    addl => {
+      duplicates => {},
+    },
+  };
+
+  sims_test "Find the row" => {
+    skip => 'still building',
+    deploy => 0,
+    loaded => {
+      Artist => 1,
+    },
+    spec => [
+      { Artist => { id => 1 } },
+      { allow_pk_set_value => 1 },
+    ],
+    expect => {
+      Artist => { id => 1, name => 'Bob', city => 'Some', state => 'Place' },
+    },
+    addl => {
+      #duplicates => {
+      #  Artist => [{
+      #    criteria => {
+      #      id => 1,
+      #    },
+      #    found => ignore()
+      #  }],
+      #},
+    },
+  };
+};
+
+subtest "Load and retrieve a row by single-column UK" => sub {
+  my $spec = {
+    Artist => { name => 'Taylor Swift' },
+  };
+
+  sims_test "Create the row" => {
+    skip => 'Regressing until refactoring is done',
+    spec => $spec,
+    expect => {
+      Artist => { id => 1, name => 'Taylor Swift', city => re('.+'), state => re('.+') },
+    },
+    addl => {
+      duplicates => {},
+    },
+  };
+
+  sims_test "Find the row" => {
+    skip => 'Regressing until refactoring is done',
+    deploy => 0,
+    loaded => {
+      Artist => 1,
+    },
+    spec => $spec,
+    expect => {
+      Artist => { id => 1, name => 'Taylor Swift', city => re('.+'), state => re('.+') },
+    },
+    addl => {
+      duplicates => {
+        Artist => [{
+          criteria => {
+            name => 'Taylor Swift',
+          },
+          found => ignore()
+        }],
+      },
+    },
+  };
+};
 
 subtest "Load and retrieve a row by multi-col UK" => sub {
   my $spec = {
