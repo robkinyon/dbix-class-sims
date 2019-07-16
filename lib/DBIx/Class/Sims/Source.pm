@@ -43,8 +43,11 @@ sub initialize {
     $self->{columns}{$col}->in_pk;
   }
 
+  $self->{uniques} = {};
   foreach my $uk ( $self->source->unique_constraint_names ) {
+    $self->{uniques}{$uk} = [];
     foreach my $col ( $self->source->unique_constraint_columns($uk) ) {
+      push @{$self->{uniques}{$uk}}, $self->{columns}{$col};
       $self->{columns}{$col}->in_uk($uk);
     }
   }
@@ -100,6 +103,11 @@ sub relationships {
 sub relationship {
   my $self = shift;
   return $self->{relationships}{$_[0]};
+}
+
+sub uniques {
+  my $self = shift;
+  return values %{$self->{uniques}};
 }
 
 sub parent_relationships {

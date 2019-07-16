@@ -187,4 +187,45 @@ sims_test "See that null_chance=1 works" => {
   },
 };
 
+subtest "Load and retrieve a row by single-column PK" => sub {
+  sims_test "Create the row" => {
+    spec => {
+      Artist => {
+        name => 'Bob',
+        hat_color => 'purple',
+      },
+    },
+    expect => {
+      Artist => { id => 1, name => 'Bob', hat_color => 'purple' },
+    },
+    addl => {
+      duplicates => {},
+    },
+  };
+
+  sims_test "Find the row" => {
+    deploy => 0,
+    loaded => {
+      Artist => 1,
+    },
+    spec => [
+      { Artist => { id => 1 } },
+      { allow_pk_set_value => 1 },
+    ],
+    expect => {
+      Artist => { id => 1, name => 'Bob', hat_color => 'purple' },
+    },
+    addl => {
+      duplicates => {
+        Artist => [{
+          criteria => {
+            id => 1,
+          },
+          found => ignore()
+        }],
+      },
+    },
+  };
+};
+
 done_testing;

@@ -67,22 +67,59 @@ sub row {
 
 ################################################################################
 #
+# These are the helper methods
+#
+################################################################################
+
+sub find_unique_match {
+  my $self = shift;
+
+  my @uniques = $self->source->uniques;
+
+  my $rs = $self->source->resultset;
+
+  my $to_find = {};
+  my $have_all = 1;
+  foreach my $c ( map { @$_ } @uniques ) {
+    unless (exists $self->spec->{$c->name}) {
+      $have_all = 0;
+      last;
+    }
+    $to_find->{$c->name} = $self->spec->{$c->name};
+  }
+
+  if ( keys(%$to_find) && $have_all ) {
+    my $row = $rs->search($to_find, { rows => 1 })->first;
+    if ($row) {
+      push @{$self->runner->{duplicates}{$self->source_name}}, {
+        criteria => $to_find,
+        found    => { $row->get_columns },
+      };
+      $self->row($row);
+      return;
+    }
+  }
+
+  # Search through all the possible iterations of unique keys.
+  #  * Don't populate $self->{create}
+  #  * If found with all keys, great.
+  #  * Otherwise, keep track of what we find for each combination (if at all)
+  #    * If we have multiple finds, die.
+
+  return;
+}
+
+################################################################################
+#
 # These are the expected interface methods
 #
 ################################################################################
 
-#sub find_unique_match {
-#}
-
 sub create {
   my $self = shift;
 
-  # Search through all the possible iterations of unique keys.
-  #  * Don't populate $self->{create} - populate $self->{find}.
-  #  * Iterate through the power set of UKs.
-  #    * If found with all keys, great.
-  #    * Otherwise, keep track of what we find for each combination (if at all)
-  #      * If we have multiple finds, die.
+  $self->find_unique_match;
+
   #  - If we have a row,
   #    * Populate all columns without generation.
   #      * (What to do with a list of values?)
@@ -90,31 +127,33 @@ sub create {
   #      * If value mismatch, die.
   #    * Populate the columns that are left
 
-  #$self->populate_columns({ is_in_uk => 1 });
-  #$self->populate_columns({ is_in_uk => 0 });
-  $self->populate_columns();
+  unless ($self->row) {
+    #$self->populate_columns({ is_in_uk => 1 });
+    #$self->populate_columns({ is_in_uk => 0 });
+    $self->populate_columns();
 
-  # Things were passed in, but don't exist in the table.
-  if (!$self->runner->{ignore_unknown_columns} && %{$self->{still_to_use}}) {
-    my $msg = "The following names are in the spec, but not the table @{[$self->source_name]}\n";
-    $msg .= join ',', sort keys %{$self->{still_to_use}};
-    $msg .= "\n";
-    die $msg;
+    # Things were passed in, but don't exist in the table.
+    if (!$self->runner->{ignore_unknown_columns} && %{$self->{still_to_use}}) {
+      my $msg = "The following names are in the spec, but not the table @{[$self->source_name]}\n";
+      $msg .= join ',', sort keys %{$self->{still_to_use}};
+      $msg .= "\n";
+      die $msg;
+    }
+
+    $self->oracle_ensure_populated_pk;
+
+    #warn np($self->{create});
+    #warn "Creating @{[$self->source_name]} (".np($self->spec).")\n" if $ENV{SIMS_DEBUG};
+    my $row = eval {
+      #warn 'Creating (' . np($self->{create}) . ")\n";
+      $self->source->resultset->create($self->{create});
+    }; if ($@) {
+      my $e = $@;
+      warn "ERROR Creating @{[$self->source_name]} (".np($self->spec).")\n";
+      die $e;
+    }
+    $self->row($row);
   }
-
-  $self->oracle_ensure_populated_pk;
-
-  #warn np($self->{create});
-  #warn "Creating @{[$self->source_name]} (".np($self->spec).")\n" if $ENV{SIMS_DEBUG};
-  my $row = eval {
-    #warn 'Creating (' . np($self->{create}) . ")\n";
-    $self->source->resultset->create($self->{create});
-  }; if ($@) {
-    my $e = $@;
-    warn "ERROR Creating @{[$self->source_name]} (".np($self->spec).")\n";
-    die $e;
-  }
-  $self->row($row);
 
   return $self->row;
 }
