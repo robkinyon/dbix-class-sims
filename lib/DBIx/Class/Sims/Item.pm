@@ -77,8 +77,22 @@ sub row {
 sub create {
   my $self = shift;
 
-  $self->populate_columns({ is_in_uk => 1 });
-  $self->populate_columns({ is_in_uk => 0 });
+  # Search through all the possible iterations of unique keys.
+  #  * Don't populate $self->{create} - populate $self->{find}.
+  #  * Iterate through the power set of UKs.
+  #    * If found with all keys, great.
+  #    * Otherwise, keep track of what we find for each combination (if at all)
+  #      * If we have multiple finds, die.
+  #  - If we have a row,
+  #    * Populate all columns without generation.
+  #      * (What to do with a list of values?)
+  #      * (What to do with a type that has multiple options?)
+  #      * If value mismatch, die.
+  #    * Populate the columns that are left
+
+  #$self->populate_columns({ is_in_uk => 1 });
+  #$self->populate_columns({ is_in_uk => 0 });
+  $self->populate_columns();
 
   # Things were passed in, but don't exist in the table.
   if (!$self->runner->{ignore_unknown_columns} && %{$self->{still_to_use}}) {
@@ -88,11 +102,11 @@ sub create {
     die $msg;
   }
 
+  $self->oracle_ensure_populated_pk;
+
   #warn np($self->{create});
   #warn "Creating @{[$self->source_name]} (".np($self->spec).")\n" if $ENV{SIMS_DEBUG};
   my $row = eval {
-    $self->oracle_ensure_populated_pk;
-
     #warn 'Creating (' . np($self->{create}) . ")\n";
     $self->source->resultset->create($self->{create});
   }; if ($@) {
@@ -194,7 +208,6 @@ sub populate_columns {
         $self->{create}{$col_name} = $c->generate_value(die_on_unknown => 1);
       }
     }
-
   } continue {
     delete $self->{still_to_use}{$c->name};
   }
