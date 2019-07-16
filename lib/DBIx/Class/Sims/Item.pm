@@ -152,7 +152,40 @@ sub populate_columns {
     $spec //= $c->sim_spec;
     if ( ! exists $self->{create}{$col_name} ) {
       if ($spec) {
-        $self->{create}{$col_name} = $c->resolve_sim_spec($spec, $self);
+        if (ref($spec // '') eq 'HASH') {
+          if ( exists $spec->{null_chance} && $c->is_nullable ) {
+            # Add check for not a number
+            if ( rand() < $spec->{null_chance} ) {
+              $self->{create}{$col_name} = undef;
+              next;
+            }
+          }
+
+          if ( ref($spec->{func} // '') eq 'CODE' ) {
+            $self->{create}{$col_name} = $spec->{func}->($c->info);
+          }
+          elsif ( exists $spec->{value} ) {
+            if (ref($spec->{value} // '') eq 'ARRAY') {
+              my @v = @{$spec->{value}};
+              $self->{create}{$col_name} = $v[rand @v];
+            }
+            else {
+              $self->{create}{$col_name} = $spec->{value};
+            }
+          }
+          elsif ( $spec->{type} ) {
+            my $meth = $self->runner->parent->sim_type($spec->{type});
+            if ( $meth ) {
+              $self->{create}{$col_name} = $meth->($c->info, $spec, $c);
+            }
+            else {
+              warn "Type '$spec->{type}' is not loaded";
+            }
+          }
+          else {
+            $self->{create}{$col_name} = $c->generate_value(die_on_unknown => 0);
+          }
+        }
       }
       elsif (
         !$c->is_nullable &&
@@ -162,7 +195,8 @@ sub populate_columns {
       }
     }
 
-    delete $self->{still_to_use}{$col_name};
+  } continue {
+    delete $self->{still_to_use}{$c->name};
   }
 
   return;
