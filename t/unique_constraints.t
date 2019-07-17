@@ -45,7 +45,6 @@ use common qw(sims_test Schema);
 
 subtest "Load and retrieve a row by single-column PK" => sub {
   sims_test "Create the row" => {
-    skip => 'still building',
     spec => {
       Artist => {
         name => 'Bob',
@@ -62,7 +61,6 @@ subtest "Load and retrieve a row by single-column PK" => sub {
   };
 
   sims_test "Find the row" => {
-    skip => 'still building',
     deploy => 0,
     loaded => {
       Artist => 1,
@@ -75,28 +73,23 @@ subtest "Load and retrieve a row by single-column PK" => sub {
       Artist => { id => 1, name => 'Bob', city => 'Some', state => 'Place' },
     },
     addl => {
-      #duplicates => {
-      #  Artist => [{
-      #    criteria => {
-      #      id => 1,
-      #    },
-      #    found => ignore()
-      #  }],
-      #},
+      duplicates => {
+        Artist => [{
+          criteria => {
+            id => 1,
+          },
+          found => ignore()
+        }],
+      },
     },
   };
 };
 
 subtest "Load and retrieve a row by single-column UK" => sub {
-  my $spec = {
-    Artist => { name => 'Taylor Swift' },
-  };
-
   sims_test "Create the row" => {
-    skip => 'Regressing until refactoring is done',
-    spec => $spec,
+    spec => { Artist => { name => 'Bob' } },
     expect => {
-      Artist => { id => 1, name => 'Taylor Swift', city => re('.+'), state => re('.+') },
+      Artist => { id => 1, name => 'Bob', city => re('.+'), state => re('.+') },
     },
     addl => {
       duplicates => {},
@@ -104,20 +97,19 @@ subtest "Load and retrieve a row by single-column UK" => sub {
   };
 
   sims_test "Find the row" => {
-    skip => 'Regressing until refactoring is done',
     deploy => 0,
     loaded => {
       Artist => 1,
     },
-    spec => $spec,
+    spec => { Artist => { name => 'Bob' } },
     expect => {
-      Artist => { id => 1, name => 'Taylor Swift', city => re('.+'), state => re('.+') },
+      Artist => { id => 1, name => 'Bob', city => re('.+'), state => re('.+') },
     },
     addl => {
       duplicates => {
         Artist => [{
           criteria => {
-            name => 'Taylor Swift',
+            name => 'Bob',
           },
           found => ignore()
         }],
@@ -127,15 +119,10 @@ subtest "Load and retrieve a row by single-column UK" => sub {
 };
 
 subtest "Load and retrieve a row by multi-col UK" => sub {
-  my $spec = {
-    Artist => { first_name => 'Taylor', last_name => 'Swift' },
-  };
-
   sims_test "Create the row" => {
-    skip => 'Regressing until refactoring is done',
-    spec => $spec,
+    spec => { Artist => { city => 'AB', state => 'CD' } },
     expect => {
-      Artist => { id => 1, first_name => 'Taylor', last_name => 'Swift' },
+      Artist => { id => 1, name => re('.+'), city => 'AB', state => 'CD' },
     },
     addl => {
       duplicates => {},
@@ -143,21 +130,20 @@ subtest "Load and retrieve a row by multi-col UK" => sub {
   };
 
   sims_test "Find the row" => {
-    skip => 'Regressing until refactoring is done',
     deploy => 0,
     loaded => {
       Artist => 1,
     },
-    spec => $spec,
+    spec => { Artist => { city => 'AB', state => 'CD' } },
     expect => {
-      Artist => { id => 1, first_name => 'Taylor', last_name => 'Swift' },
+      Artist => { id => 1, name => re('.+'), city => 'AB', state => 'CD' },
     },
     addl => {
       duplicates => {
         Artist => [{
           criteria => {
-            first_name => 'Taylor',
-            last_name => 'Swift',
+            city => 'AB',
+            state => 'CD',
           },
           found => ignore()
         }],
@@ -191,27 +177,40 @@ subtest "Don't specify enough to find by multi-col UK" => sub {
 };
 
 subtest "Load and retrieve a row by other UK" => sub {
+  # Force the columns in the other UK to be set predictably
+  Schema->source('Artist')->column_info('city')->{sim}{value} = 'AB';
+  Schema->source('Artist')->column_info('state')->{sim}{value} = 'CD';
+
   sims_test "Create the row" => {
-    skip => 'Regressing until refactoring is done',
     spec => {
-      Artist => { first_name => 'Taylor', last_name => 'Swift' },
+      Artist => { name => 'Bob' },
     },
     expect => {
-      Artist => { id => 1, first_name => 'Taylor', last_name => 'Swift' },
+      Artist => { id => 1, name => 'Bob', city => 'AB', state => 'CD' },
     },
   };
 
   sims_test "Find the row" => {
-    skip => 'Regressing until refactoring is done',
     deploy => 0,
     loaded => {
       Artist => 1,
     },
     spec => {
-      Artist => { last_name => 'Swift' },
+      Artist => { city => 'AB', state => 'CD' },
     },
     expect => {
-      Artist => { id => 1, first_name => 'Taylor', last_name => 'Swift' },
+      Artist => { id => 1, name => 'Bob', city => 'AB', state => 'CD' },
+    },
+    addl => {
+      duplicates => {
+        Artist => [{
+          criteria => {
+            city => 'AB',
+            state => 'CD',
+          },
+          found => ignore()
+        }],
+      },
     },
   };
 };

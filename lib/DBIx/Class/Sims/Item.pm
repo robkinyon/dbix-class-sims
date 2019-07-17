@@ -10,6 +10,7 @@ use strictures 2;
 
 use DDP;
 
+use List::PowerSet qw(powerset);
 use Scalar::Util qw( blessed );
 
 use DBIx::Class::Sims::Util qw( normalize_aoh reftype );
@@ -113,6 +114,30 @@ sub find_unique_match {
   #  * If found with all keys, great.
   #  * Otherwise, keep track of what we find for each combination (if at all)
   #    * If we have multiple finds, die.
+  # TODO: Use List::Powerset->powerset_lazy() instead of our own copy.
+  my @rows_found;
+  foreach my $bundle (@{powerset(@uniques)}) {
+    # Skip the all (already handled) and the empty (unneeded).
+    next if @$bundle == 0 || @$bundle == @uniques;
+
+    my $finder = $self->build_searcher_for_constraints(@$bundle)
+      or next;
+
+    my $row = $rs->search($finder, { rows => 1 })->first;
+    if ($row) {
+      push @rows_found, [ $finder, $row ];
+    }
+  }
+
+  if (@rows_found == 1) {
+    my ($bundle, $row) = @{$rows_found[0]};
+    push @{$self->runner->{duplicates}{$self->source_name}}, {
+      criteria => $bundle,
+      found    => { $row->get_columns },
+    };
+    $self->row($row);
+    return;
+  }
 
   return;
 }

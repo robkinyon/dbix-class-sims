@@ -6,8 +6,9 @@ requires 'Data::Walk';
 requires 'DateTime';
 requires 'DBIx::Class::TopoSort' => '0.060000';
 requires 'Hash::Merge';
-requires 'List::Util';
 requires 'List::MoreUtils';
+requires 'List::PowerSet';
+requires 'List::Util';
 requires 'Scalar::Util';
 requires 'String::Random';
 requires 'YAML::Any'; # Removes a warning.

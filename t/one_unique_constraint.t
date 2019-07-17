@@ -39,7 +39,6 @@ use common qw(sims_test Schema);
 
 subtest "Load and retrieve a row by single-column PK" => sub {
   sims_test "Create the row" => {
-    skip => 'still building',
     spec => {
       Artist => {
         name => 'Bob',
@@ -55,7 +54,6 @@ subtest "Load and retrieve a row by single-column PK" => sub {
   };
 
   sims_test "Find the row" => {
-    skip => 'still building',
     deploy => 0,
     loaded => {
       Artist => 1,
@@ -82,7 +80,6 @@ subtest "Load and retrieve a row by single-column PK" => sub {
 
 subtest "Load and retrieve a row by single-column UK" => sub {
   sims_test "Create the row" => {
-    skip => 'still building',
     spec => {
       Artist => {
         name => 'Bob',
@@ -98,7 +95,6 @@ subtest "Load and retrieve a row by single-column UK" => sub {
   };
 
   sims_test "Find the row" => {
-    skip => 'still building',
     deploy => 0,
     loaded => {
       Artist => 1,
