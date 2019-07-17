@@ -71,6 +71,24 @@ sub row {
 #
 ################################################################################
 
+sub build_searcher_for_constraints {
+  my $self = shift;
+  my (@constraints) = @_;
+
+  my $to_find = {};
+  my $matched_all_columns = 1;
+  foreach my $c ( map { @$_ } @constraints ) {
+    unless (exists $self->spec->{$c->name}) {
+      $matched_all_columns = 0;
+      last;
+    }
+    $to_find->{$c->name} = $self->spec->{$c->name};
+  }
+
+  return $to_find if keys(%$to_find) && $matched_all_columns;
+  return;
+}
+
 sub find_unique_match {
   my $self = shift;
 
@@ -78,17 +96,7 @@ sub find_unique_match {
 
   my $rs = $self->source->resultset;
 
-  my $to_find = {};
-  my $have_all = 1;
-  foreach my $c ( map { @$_ } @uniques ) {
-    unless (exists $self->spec->{$c->name}) {
-      $have_all = 0;
-      last;
-    }
-    $to_find->{$c->name} = $self->spec->{$c->name};
-  }
-
-  if ( keys(%$to_find) && $have_all ) {
+  if ( my $to_find = $self->build_searcher_for_constraints(@uniques) ) {
     my $row = $rs->search($to_find, { rows => 1 })->first;
     if ($row) {
       push @{$self->runner->{duplicates}{$self->source_name}}, {

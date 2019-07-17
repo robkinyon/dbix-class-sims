@@ -122,5 +122,9 @@ subtest "Load and retrieve a row by single-column UK" => sub {
   };
 };
 
+subtest "Fail because a spec matches different rows in each UK" => sub {
+  ok 1;
+};
+
 done_testing
 
