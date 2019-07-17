@@ -119,7 +119,41 @@ subtest "Load and retrieve a row by single-column UK" => sub {
 };
 
 subtest "Fail because a spec matches different rows in each UK" => sub {
-  ok 1;
+  sims_test "Create the row" => {
+    spec => {
+      Artist => [
+        {
+          name => 'Bob',
+          hat_color => 'purple',
+        },
+        {
+          name => 'Not Bob',
+          hat_color => 'red',
+        },
+      ],
+    },
+    expect => {
+      Artist => [
+        { id => 1, name => 'Bob', hat_color => 'purple' },
+        { id => 2, name => 'Not Bob', hat_color => 'red' },
+      ],
+    },
+    addl => {
+      duplicates => {},
+    },
+  };
+
+  sims_test "Fail to find the row" => {
+    deploy => 0,
+    loaded => {
+      Artist => 2,
+    },
+    spec => [
+      { Artist => { id => 1, name => 'Not Bob' } },
+      { allow_pk_set_value => 1 },
+    ],
+    dies => qr/Rows found by multiple unique constraints/,
+  };
 };
 
 done_testing

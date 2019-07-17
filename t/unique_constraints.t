@@ -176,11 +176,11 @@ subtest "Don't specify enough to find by multi-col UK" => sub {
   };
 };
 
-subtest "Load and retrieve a row by other UK" => sub {
-  # Force the columns in the other UK to be set predictably
-  Schema->source('Artist')->column_info('city')->{sim}{value} = 'AB';
-  Schema->source('Artist')->column_info('state')->{sim}{value} = 'CD';
+# Force the columns in the other UK to be set predictably
+Schema->source('Artist')->column_info('city')->{sim}{value} = 'AB';
+Schema->source('Artist')->column_info('state')->{sim}{value} = 'CD';
 
+subtest "Load and retrieve a row by other UK" => sub {
   sims_test "Create the row" => {
     spec => {
       Artist => { name => 'Bob' },

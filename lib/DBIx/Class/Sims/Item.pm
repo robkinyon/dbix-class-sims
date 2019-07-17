@@ -129,6 +129,10 @@ sub find_unique_match {
     }
   }
 
+  if (@rows_found > 1) {
+    die "Rows found by multiple unique constraints";
+  }
+
   if (@rows_found == 1) {
     my ($bundle, $row) = @{$rows_found[0]};
     push @{$self->runner->{duplicates}{$self->source_name}}, {
