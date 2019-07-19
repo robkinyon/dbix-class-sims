@@ -228,4 +228,8 @@ subtest "Load and retrieve a row by single-column PK" => sub {
   };
 };
 
+subtest "Load, then retrieve by PK, but column mismatch" => sub {
+  ok 1;
+};
+
 done_testing;

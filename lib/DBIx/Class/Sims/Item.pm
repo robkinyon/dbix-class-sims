@@ -114,7 +114,7 @@ sub find_unique_match {
   #  * If found with all keys, great.
   #  * Otherwise, keep track of what we find for each combination (if at all)
   #    * If we have multiple finds, die.
-  # TODO: Use List::Powerset->powerset_lazy() instead of our own copy.
+  # TODO: Use List::Powerset->powerset_lazy() instead of powerset()
   my @rows_found;
   foreach my $bundle (@{powerset(@uniques)}) {
     # Skip the all (already handled) and the empty (unneeded).

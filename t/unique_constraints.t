@@ -152,35 +152,11 @@ subtest "Load and retrieve a row by multi-col UK" => sub {
   };
 };
 
-subtest "Don't specify enough to find by multi-col UK" => sub {
-  sims_test "Create the row" => {
-    skip => 'Regressing until refactoring is done',
-    spec => {
-      Artist => { first_name => 'Taylor', last_name => 'Swift' },
-    },
-    expect => {
-      Artist => { id => 1, first_name => 'Taylor', last_name => 'Swift' },
-    },
-  };
-
-  sims_test "Throw an error finding the row" => {
-    skip => 'Regressing until refactoring is done',
-    deploy => 0,
-    loaded => {
-      Artist => 1,
-    },
-    spec => {
-      Artist => { first_name => 'Taylor2', last_name => 'Swift' },
-    },
-    dies => qr/UNIQUE constraint failed/,
-  };
-};
-
 # Force the columns in the other UK to be set predictably
 Schema->source('Artist')->column_info('city')->{sim}{value} = 'AB';
 Schema->source('Artist')->column_info('state')->{sim}{value} = 'CD';
 
-subtest "Load and retrieve a row by other UK" => sub {
+subtest "Load, then retrieve a row by other UK" => sub {
   sims_test "Create the row" => {
     spec => {
       Artist => { name => 'Bob' },
