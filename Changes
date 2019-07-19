@@ -8,7 +8,8 @@ Revision history for DBIx::Class::Sims (ordered by revision number).
      - Sims-specific wrappers for:
        - DBIC::Source
        - DBIC relationship data structure (hashes and CODE)
-   - XXXX
+   - Retrieving unique rows will raise an error if the row doesn't match the
+     provided spec.
 
 0.401000 Jun 09 2019 12:30:00 PDT
    - Provide a nice way to print DateTime objects in SIMS_DEBUG mode.

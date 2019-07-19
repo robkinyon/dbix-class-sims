@@ -229,7 +229,32 @@ subtest "Load and retrieve a row by single-column PK" => sub {
 };
 
 subtest "Load, then retrieve by PK, but column mismatch" => sub {
-  ok 1;
+  sims_test "Create the row" => {
+    spec => {
+      Artist => {
+        name => 'Bob',
+        hat_color => 'purple',
+      },
+    },
+    expect => {
+      Artist => { id => 1, name => 'Bob', hat_color => 'purple' },
+    },
+    addl => {
+      duplicates => {},
+    },
+  };
+
+  sims_test "Find the row" => {
+    deploy => 0,
+    loaded => {
+      Artist => 1,
+    },
+    spec => [
+      { Artist => { id => 1, name => 'Not Bob' } },
+      { allow_pk_set_value => 1 },
+    ],
+    dies => qr/ERROR Retrieving unique Artist/,
+  };
 };
 
 done_testing;

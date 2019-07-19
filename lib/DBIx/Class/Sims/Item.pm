@@ -13,7 +13,7 @@ use DDP;
 use List::PowerSet qw(powerset);
 use Scalar::Util qw( blessed );
 
-use DBIx::Class::Sims::Util qw( normalize_aoh reftype );
+use DBIx::Class::Sims::Util qw( normalize_aoh reftype compare_values );
 
 sub new {
   my $class = shift;
@@ -157,17 +157,33 @@ sub create {
 
   $self->find_unique_match;
 
+
   #  - If we have a row,
   #    * Populate all columns without generation.
   #      * (What to do with a list of values?)
   #      * (What to do with a type that has multiple options?)
   #      * If value mismatch, die.
   #    * Populate the columns that are left
+  if ($self->row) {
+    my @failed;
+    foreach my $c ( $self->source->columns ) {
+      my $col_name = $c->name;
+
+      next unless exists $self->{spec}{$col_name};
+
+      my $row_value = $self->row->get_column($col_name);
+      my $spec_value = $self->{spec}{$col_name};
+      unless (compare_values($row_value, $spec_value)) {
+        push @failed, "\t$col_name: row(@{[$row_value//'[undef]']}) spec(@{[$spec_value//'[undef]']})\n";
+      }
+    }
+    if (@failed) {
+      die "ERROR Retrieving unique @{[$self->source_name]} (".np($self->spec).")\n" . join('', sort @failed);
+    }
+  }
 
   unless ($self->row) {
-    #$self->populate_columns({ is_in_uk => 1 });
-    #$self->populate_columns({ is_in_uk => 0 });
-    $self->populate_columns();
+    $self->populate_columns;
 
     # Things were passed in, but don't exist in the table.
     if (!$self->runner->{ignore_unknown_columns} && %{$self->{still_to_use}}) {
