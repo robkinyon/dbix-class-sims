@@ -55,7 +55,6 @@ BEGIN {
 use common qw(sims_test);
 
 sims_test "Add relationship that creates loop" => {
-  skip => 'Regressing until refactoring is done',
   spec => [
     { Artist => 1 },
     {

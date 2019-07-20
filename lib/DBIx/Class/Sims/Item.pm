@@ -174,6 +174,10 @@ sub create {
     }
   }
 
+  $self->runner->{hooks}{preprocess}->(
+    $self->source_name, $self->source->source, $self->spec,
+  );
+
   $self->quarantine_children;
   unless ($self->row) {
     $self->populate_parents;
@@ -205,6 +209,10 @@ sub create {
     $self->runner->{created}{$self->source_name}++;
   }
   $self->build_children;
+
+  $self->runner->{hooks}{postprocess}->(
+    $self->source_name, $self->source->source, $self->row,
+  );
 
   return $self->row;
 }

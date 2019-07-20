@@ -58,7 +58,6 @@ BEGIN {
 use common qw(sims_test Schema);
 
 sims_test "Create a child via rel by subroutine" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => { name => 'foo', albums => { name => 'bar' } },
   },
