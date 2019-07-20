@@ -83,7 +83,6 @@ sims_test "Connect parent/child by lookup" => {
 };
 
 sims_test "Connect parent/child by object in relationship" => {
-  skip => 'Regressing until refactoring is done',
   load_sims => sub {
     my ($schema) = @_;
     my $rv = $schema->load_sims({

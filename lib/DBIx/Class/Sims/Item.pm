@@ -335,14 +335,14 @@ sub populate_parents {
 
     if ($proto) {
       # Assume anything blessed is blessed into DBIC.
-=pod
+      # TODO: Write tests to force us to ensure things about blessed things.
       if (blessed($proto)) {
-        $cond = { $fkcol => $proto->$fkcol };
+        #$cond = { $fkcol => $proto->$fkcol };
+        $self->spec->{$col} = $proto->get_column($fkcol);
+        next RELATIONSHIP
       }
-=cut
       # Assume any hashref is a Sims specification
-      #elsif (ref($proto) eq 'HASH') {}
-      if (ref($proto) eq 'HASH') {
+      elsif (ref($proto) eq 'HASH') {
         $cond = $proto
       }
 =pod
@@ -350,6 +350,8 @@ sub populate_parents {
       elsif (!ref($proto)) {
         $cond = { $fkcol => $proto };
       }
+=cut
+=pod
       # Use a referenced row
       elsif (ref($proto) eq 'SCALAR') {
         $cond = {
