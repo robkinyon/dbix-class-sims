@@ -299,6 +299,20 @@ sub populate_columns {
   return;
 }
 
+sub create_search {
+  my $self = shift;
+  my ($source, $rs, $cond) = @_;
+
+  # ASSUMPTIONS:
+  #   * All k/v pairs in $cond are scalars
+  #   * All keys in $cond exist as columns in $source
+  # TODO: Write tests to force validation of these assumptions
+
+  $rs = $rs->search($cond);
+
+  return $rs;
+}
+
 sub populate_parents {
   my $self = shift;
 
@@ -315,6 +329,10 @@ sub populate_parents {
     my $cond;
     my $fkcol = $r->foreign_fk_col;
     my $proto = delete($self->spec->{$r->name}) // delete($self->spec->{$col});
+    # TODO: Write a test if both the rel and the FK col are specified
+    delete $self->{still_to_use}{$r->name};
+    delete $self->{still_to_use}{$col};
+
     if ($proto) {
       # Assume anything blessed is blessed into DBIC.
 =pod
@@ -323,7 +341,7 @@ sub populate_parents {
       }
 =cut
       # Assume any hashref is a Sims specification
-      #elsif (ref($proto) eq 'HASH') {
+      #elsif (ref($proto) eq 'HASH') {}
       if (ref($proto) eq 'HASH') {
         $cond = $proto
       }
@@ -350,8 +368,7 @@ sub populate_parents {
     my $rs = $fk_source->resultset;
 
     if ( $cond ) {
-      warn np($cond);
-      $rs = $self->create_search($rs, $fk_source, $cond);
+      $rs = $self->create_search($fk_source, $rs, $cond);
     }
     else {
       $cond = {};
@@ -362,6 +379,7 @@ sub populate_parents {
 
     $self->spec->{$col} = $parent->get_column($fkcol);
   }
+
 }
 
 #sub populate_deferred_parents {

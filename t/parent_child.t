@@ -66,7 +66,6 @@ sims_test "Connect to a random parent" => {
 };
 
 sims_test "Connect parent/child by lookup" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => [ map { { name => "foo$_" } } 1..4 ],
     Album => [
