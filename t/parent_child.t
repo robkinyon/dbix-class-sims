@@ -122,8 +122,30 @@ sims_test "Connect parent/child by object in column" => {
   rv => sub { { Album => shift->{expect}{Album} } },
 };
 
+sims_test "Autogenerate a parent" => {
+  spec => {
+    Album => [
+      { name => 'bar1' },
+    ],
+  },
+  expect => {
+    Artist => [
+      { id => 1, name => re('.+') },
+    ],
+    Album  => [
+      { id => 1, name => 'bar1', artist_id => 1 },
+    ],
+  },
+  rv => sub { { Album => shift->{expect}{Album} } },
+  addl => {
+    created =>  {
+      Artist => 1,
+      Album => 1,
+    },
+  },
+};
+
 sims_test "Autogenerate a parent with a name" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Album => [
       { name => 'bar1', 'artist.name' => 'foo3' },

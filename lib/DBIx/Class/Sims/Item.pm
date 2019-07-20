@@ -198,6 +198,9 @@ sub create {
       die $e;
     }
     $self->row($row);
+
+    # This tracks everything that was created, not just what was requested.
+    $self->runner->{created}{$self->source_name}++;
   }
 
   return $self->row;
@@ -378,6 +381,17 @@ sub populate_parents {
 
     my $parent;
       $parent = $rs->search(undef, { rows => 1 })->single;
+    unless ($parent) {
+      my $fk_item = DBIx::Class::Sims::Item->new(
+        runner => $self->runner,
+        source => $fk_source,
+        spec   => MyCloner::clone($cond),
+      );
+      $fk_item->set_allow_pk_to($self);
+
+      $fk_item->create;
+      $parent = $fk_item->row;
+    }
 
     $self->spec->{$col} = $parent->get_column($fkcol);
   }
