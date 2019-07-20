@@ -173,7 +173,9 @@ sub create {
       die "ERROR Retrieving unique @{[$self->source_name]} (".np($self->spec).")\n" . join('', sort @failed);
     }
   }
-  else {
+
+  $self->quarantine_children;
+  unless ($self->row) {
     $self->populate_parents;
     $self->populate_columns;
 
@@ -202,6 +204,7 @@ sub create {
     # This tracks everything that was created, not just what was requested.
     $self->runner->{created}{$self->source_name}++;
   }
+  $self->build_children;
 
   return $self->row;
 }
@@ -410,7 +413,8 @@ sub quarantine_children {
   $self->{children} = {};
   foreach my $r ( $self->source->child_relationships ) {
     if ($self->spec->{$r->name}) {
-      $self->{children}{$r->name} = delete $self->spec->{$r->name};
+      $self->{children}{$r->name} = $self->spec->{$r->name};
+      delete $self->{still_to_use}{$r->name};
     }
   }
 

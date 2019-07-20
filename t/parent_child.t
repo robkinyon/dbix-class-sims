@@ -250,7 +250,6 @@ sims_test "Force the creation of a parent" => {
 };
 
 sims_test "Auto-generate a child with a value" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => {
       name => 'foo',
@@ -265,7 +264,6 @@ sims_test "Auto-generate a child with a value" => {
 };
 
 sims_test "Fail to generate a child due to a bad value" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => {
       name => 'foo',
@@ -276,7 +274,6 @@ sims_test "Fail to generate a child due to a bad value" => {
 };
 
 sims_test "Use a constraint to force a child row" => {
-  skip => 'Regressing until refactoring is done',
   spec => [
     {
       Artist => {},
@@ -295,7 +292,6 @@ sims_test "Use a constraint to force a child row" => {
 };
 
 sims_test "Use a constraint to force a child row (multiple parents)" => {
-  skip => 'Regressing until refactoring is done',
   spec => [
     {
       Artist => 2,
@@ -320,7 +316,6 @@ sims_test "Use a constraint to force a child row (multiple parents)" => {
 };
 
 sims_test "Use a constraint to force a child row (parent specific ID)" => {
-  skip => 'Regressing until refactoring is done',
   spec => [
     {
       Artist => { id => 20 },
@@ -340,7 +335,6 @@ sims_test "Use a constraint to force a child row (parent specific ID)" => {
 };
 
 sims_test "Specify a child row and bypass the constraint" => {
-  skip => 'Regressing until refactoring is done',
   spec => [
     {
       Artist => { albums => [ { name => 'ijkl' } ] },
@@ -359,7 +353,6 @@ sims_test "Specify a child row and bypass the constraint" => {
 };
 
 sims_test "Autogenerate multiple children via constraint" => {
-  skip => 'Regressing until refactoring is done',
   spec => [
     {
       Artist => {},
@@ -381,7 +374,6 @@ sims_test "Autogenerate multiple children via constraint" => {
 };
 
 sims_test "Specify various parent IDs and connect properly" => {
-  skip => 'Regressing until refactoring is done',
   spec => [
     {
       Artist => [
@@ -413,7 +405,6 @@ sims_test "Specify various parent IDs and connect properly" => {
 };
 
 sims_test "Only create one child even if specified two ways" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => { albums => [ { name => 'Bob' } ] },
     Album => { name => 'Bob' },
@@ -425,7 +416,6 @@ sims_test "Only create one child even if specified two ways" => {
 };
 
 sims_test "Accept a number of children (1)" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => {
       name => 'foo', albums => 1,
@@ -439,7 +429,6 @@ sims_test "Accept a number of children (1)" => {
 };
 
 sims_test "Accept a number of children (2)" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => {
       name => 'foo', albums => 2,
@@ -456,7 +445,6 @@ sims_test "Accept a number of children (2)" => {
 };
 
 sims_test "Accept a hashref for children" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => {
       name => 'foo', albums => { name => 'foobar' },
