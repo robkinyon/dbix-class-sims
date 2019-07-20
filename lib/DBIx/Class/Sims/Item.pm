@@ -377,8 +377,12 @@ sub populate_parents {
       $cond = {};
     }
 
+    my $meta = delete $cond->{__META__} // {};
+
     my $parent;
+    unless ($meta->{create}) {
       $parent = $rs->search(undef, { rows => 1 })->single;
+    }
     unless ($parent) {
       my $fk_item = DBIx::Class::Sims::Item->new(
         runner => $self->runner,

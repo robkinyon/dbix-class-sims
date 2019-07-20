@@ -221,7 +221,6 @@ sims_test "Multiple rows connect to the same available parent" => {
 };
 
 sims_test "Force the creation of a parent" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => [
       { name => 'foo' },
@@ -517,7 +516,7 @@ sims_test "Connect to the right parent by reference" => {
   },
 };
 
-sims_test "Connect to the parent by reference" => {
+sims_test "Use a parent's column by reference" => {
   skip => 'Regressing until refactoring is done',
   spec => {
     Artist => { name => 'foo' },
