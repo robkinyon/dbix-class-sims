@@ -348,12 +348,10 @@ sub populate_parents {
       elsif (ref($proto) eq 'HASH') {
         $cond = $proto
       }
-=pod
       # Assume any unblessed scalar is a column value.
       elsif (!ref($proto)) {
         $cond = { $fkcol => $proto };
       }
-=cut
 =pod
       # Use a referenced row
       elsif (ref($proto) eq 'SCALAR') {

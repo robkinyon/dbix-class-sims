@@ -171,6 +171,7 @@ sims_test "Autogenerate a parent with a name" => {
   },
 };
 
+# QUESTION: Do we want this test?
 sims_test "Specify a parent and override a sims-spec" => {
   skip => 'Regressing until refactoring is done',
   spec => {
@@ -185,7 +186,6 @@ sims_test "Specify a parent and override a sims-spec" => {
 };
 
 sims_test "Pick a random parent out of multiple choices" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => [
       { name => 'foo' },
@@ -202,7 +202,6 @@ sims_test "Pick a random parent out of multiple choices" => {
 };
 
 sims_test "Multiple rows connect to the same available parent" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => [
       { name => 'foo' },
@@ -219,44 +218,6 @@ sims_test "Multiple rows connect to the same available parent" => {
       { id => 2, name => 'baz', artist_id => 1 },
     ],
   },
-};
-
-sims_test "Auto-generate a child with a value" => {
-  skip => 'Regressing until refactoring is done',
-  spec => {
-    Artist => {
-      name => 'foo',
-      albums => [ { name => 'bar' } ],
-    },
-  },
-  expect => {
-    Artist => [ { id => 1, name => 'foo' } ],
-    Album => [ { id => 1, name => 'bar', artist_id => 1 } ],
-  },
-  rv => sub { { Artist => shift->{expect}{Artist} } },
-};
-
-sims_test "Fail to generate a child due to a bad value" => {
-  skip => 'Regressing until refactoring is done',
-  spec => {
-    Artist => {
-      name => 'foo',
-      albums => \'bad value',
-    },
-  },
-  dies => qr/Don't know what to do with Artist->album/,
-};
-
-sims_test "Auto-generate a parent as necessary" => {
-  skip => 'Regressing until refactoring is done',
-  spec => {
-    Album => {},
-  },
-  expect => {
-    Artist => { id => 1, name => re('.+') },
-    Album => { id => 1, name => re('.+'), artist_id => 1 },
-  },
-  rv => sub { { Album => shift->{expect}{Album} } },
 };
 
 sims_test "Force the creation of a parent" => {
@@ -287,6 +248,32 @@ sims_test "Force the creation of a parent" => {
       { id => 1, name => 'bar', artist_id => 3 },
     ],
   },
+};
+
+sims_test "Auto-generate a child with a value" => {
+  skip => 'Regressing until refactoring is done',
+  spec => {
+    Artist => {
+      name => 'foo',
+      albums => [ { name => 'bar' } ],
+    },
+  },
+  expect => {
+    Artist => [ { id => 1, name => 'foo' } ],
+    Album => [ { id => 1, name => 'bar', artist_id => 1 } ],
+  },
+  rv => sub { { Artist => shift->{expect}{Artist} } },
+};
+
+sims_test "Fail to generate a child due to a bad value" => {
+  skip => 'Regressing until refactoring is done',
+  spec => {
+    Artist => {
+      name => 'foo',
+      albums => \'bad value',
+    },
+  },
+  dies => qr/Don't know what to do with Artist->album/,
 };
 
 sims_test "Use a constraint to force a child row" => {
@@ -546,7 +533,6 @@ sims_test "Connect to the parent by reference" => {
 
 # These tests verify the allow_relationship_column_name parameter
 sims_test "Can use column name" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => { name => 'bar' },
     Album => {
