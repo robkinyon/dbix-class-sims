@@ -156,14 +156,6 @@ sub create {
   my $self = shift;
 
   $self->find_unique_match;
-
-
-  #  - If we have a row,
-  #    * Populate all columns without generation.
-  #      * (What to do with a list of values?)
-  #      * (What to do with a type that has multiple options?)
-  #      * If value mismatch, die.
-  #    * Populate the columns that are left
   if ($self->row) {
     my @failed;
     foreach my $c ( $self->source->columns ) {
@@ -181,8 +173,8 @@ sub create {
       die "ERROR Retrieving unique @{[$self->source_name]} (".np($self->spec).")\n" . join('', sort @failed);
     }
   }
-
-  unless ($self->row) {
+  else {
+    $self->populate_parents;
     $self->populate_columns;
 
     # Things were passed in, but don't exist in the table.
@@ -306,6 +298,75 @@ sub populate_columns {
 
   return;
 }
+
+sub populate_parents {
+  my $self = shift;
+
+  RELATIONSHIP:
+  foreach my $r ( $self->source->parent_relationships ) {
+    my $col = $r->self_fk_col;
+
+    if (!$self->runner->{allow_relationship_column_names}) {
+      if ($col ne $r->name && exists $self->spec->{$col}) {
+        die "Cannot use column $col - use relationship @{[$r->name]}";
+      }
+    }
+
+    my $cond;
+    my $fkcol = $r->foreign_fk_col;
+    my $proto = delete($self->spec->{$r->name}) // delete($self->spec->{$col});
+    if ($proto) {
+      # Assume anything blessed is blessed into DBIC.
+=pod
+      if (blessed($proto)) {
+        $cond = { $fkcol => $proto->$fkcol };
+      }
+=cut
+      # Assume any hashref is a Sims specification
+      #elsif (ref($proto) eq 'HASH') {
+      if (ref($proto) eq 'HASH') {
+        $cond = $proto
+      }
+=pod
+      # Assume any unblessed scalar is a column value.
+      elsif (!ref($proto)) {
+        $cond = { $fkcol => $proto };
+      }
+      # Use a referenced row
+      elsif (ref($proto) eq 'SCALAR') {
+        $cond = {
+          $fkcol => $self->runner->convert_backreference(
+            $self->runner->backref_name($self->runner, $r->name), $$proto, $fkcol,
+          ),
+        };
+      }
+=cut
+      else {
+        die "Unsure what to do about @{[$r->full_name]}():" . np($proto);
+      }
+    }
+
+    my $fk_source = $r->target;
+    my $rs = $fk_source->resultset;
+
+    if ( $cond ) {
+      warn np($cond);
+      $rs = $self->create_search($rs, $fk_source, $cond);
+    }
+    else {
+      $cond = {};
+    }
+
+    my $parent;
+      $parent = $rs->search(undef, { rows => 1 })->single;
+
+    $self->spec->{$col} = $parent->get_column($fkcol);
+  }
+}
+
+#sub populate_deferred_parents {
+#  my $self = shift;
+#}
 
 sub quarantine_children {
   my $self = shift;

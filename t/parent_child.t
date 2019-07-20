@@ -54,6 +54,17 @@ BEGIN {
 
 use common qw(sims_test);
 
+sims_test "Connect to a random parent" => {
+  spec => {
+    Artist => { name => 'foo' },
+    Album => { name => 'bar' },
+  },
+  expect => {
+    Artist => [ { id => 1, name => 'foo' } ],
+    Album => [ { id => 1, name => 'bar', artist_id => 1 } ],
+  },
+};
+
 sims_test "Connect parent/child by lookup" => {
   skip => 'Regressing until refactoring is done',
   spec => {
@@ -138,18 +149,6 @@ sims_test "Autogenerate a parent with a name" => {
       Artist => 2,
       Album => 2,
     },
-  },
-};
-
-sims_test "Connect to a random parent" => {
-  skip => 'Regressing until refactoring is done',
-  spec => {
-    Artist => { name => 'foo' },
-    Album => { name => 'bar' },
-  },
-  expect => {
-    Artist => [ { id => 1, name => 'foo' } ],
-    Album => [ { id => 1, name => 'bar', artist_id => 1 } ],
   },
 };
 
@@ -543,7 +542,6 @@ sims_test "Can use column name" => {
 };
 
 sims_test "Cannot use column name" => {
-  skip => 'Regressing until refactoring is done',
   spec => [
     {
       Artist => { name => 'bar' },
