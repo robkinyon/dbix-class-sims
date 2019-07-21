@@ -40,6 +40,7 @@ test_requires 'Test::Warn'        => '0.01';
 test_requires 'Test::Trap'        => '0.3.2';
 test_requires 'DBD::SQLite'       => '1.40';
 test_requires 'Test2::Harness'    => '0.001079'; # yath
+test_requires 'Test2::Suite'      => '0.000122'; # improved test tools
 
 # All of the following are needed for Devel::Cover and its optional reports.
 test_requires 'Devel::Cover';

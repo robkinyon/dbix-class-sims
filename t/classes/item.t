@@ -56,6 +56,18 @@ subtest create_search => sub {
     is $trap->leaveby, 'die', 'died as expected';
     like $trap->die, qr/Foo has no column or relationship 'a'/, 'Error message as expected';
   };
+
+=pod
+  subtest 'simple relationship' => sub {
+    my $source = Source->new(
+      name => 'Foo',
+      columns => [ column('a') ],
+    );
+    my ($cond, $extra) = $item->create_search($source, { a => 1 });
+    cmp_deeply( $cond, { a => 1 }, 'Cond is expected' );
+    cmp_deeply( $extra, {}, 'Extra is expected' );
+  };
+=cut
 };
 
 done_testing;

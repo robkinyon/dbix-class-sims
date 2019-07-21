@@ -318,6 +318,8 @@ sub create_search {
   my ($source, $proto) = @_;
   $proto = MyCloner::clone($proto);
 
+  delete $proto->{__META__};
+
   # ASSUMPTIONS:
   #   * All k/v pairs in $cond are scalars
   #   * All keys in $cond exist as columns in $source
