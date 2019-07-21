@@ -315,16 +315,30 @@ sub populate_columns {
 
 sub create_search {
   my $self = shift;
-  my ($source, $rs, $cond) = @_;
+  my ($source, $proto) = @_;
+  $proto = MyCloner::clone($proto);
 
   # ASSUMPTIONS:
   #   * All k/v pairs in $cond are scalars
   #   * All keys in $cond exist as columns in $source
   # TODO: Write tests to force validation of these assumptions
 
-  $rs = $rs->search($cond);
+  my $cond = {};
+  foreach my $colname ( map { $_->name } $source->columns ) {
+    next unless exists $proto->{$colname};
+    $cond->{$colname} = delete $proto->{$colname};
+  }
 
-  return $rs;
+  # Handle the case of relationships
+
+  if ( keys %$proto ) {
+    my @cols = join "', '", sort keys %$proto;
+    die $source->name . " has no column or relationship '@cols'";
+  }
+
+  #warn $source->name . ':' . np($cond), $/;
+
+  return $cond, {};
 }
 
 sub populate_parents {
@@ -350,6 +364,7 @@ sub populate_parents {
     if ($proto) {
       # Assume anything blessed is blessed into DBIC.
       # TODO: Write tests to force us to ensure things about blessed things.
+      # This should do "blessed($x) && $x->can($fkcol)" and assume this is okay
       if (blessed($proto)) {
         #$cond = { $fkcol => $proto->$fkcol };
         $self->spec->{$col} = $proto->get_column($fkcol);
@@ -382,7 +397,7 @@ sub populate_parents {
     my $rs = $fk_source->resultset;
 
     if ( $cond ) {
-      $rs = $self->create_search($fk_source, $rs, $cond);
+      $rs = $rs->search( $self->create_search($fk_source, $cond) );
     }
     else {
       $cond = {};

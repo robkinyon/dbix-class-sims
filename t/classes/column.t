@@ -4,6 +4,8 @@ use strictures 2;
 use Test::More;
 use Test::Deep; # Needed for re() below
 
+# It's not clear this will ever be needed, but it's clear we don't need it now.
+=pod
 use lib 't/lib';
 
 BEGIN {
@@ -53,6 +55,7 @@ BEGIN {
 }
 
 use common qw(Schema);
+=cut
 
 subtest 'normal' => sub {
   my $col = DBIx::Class::Sims::Column->new(

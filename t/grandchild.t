@@ -82,7 +82,6 @@ BEGIN {
 use common qw(sims_test);
 
 sims_test "Autogenerate grandparent" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Track => 1,
   },
@@ -113,8 +112,26 @@ sims_test "Create ancestors via unmet grandparent specification" => {
   rv => sub { { Track => shift->{expect}{Track} } },
 };
 
-sims_test "Find grandparent by DBIC row" => {
+sims_test "Create ancestors via unmet grandparent specification" => {
   skip => 'Regressing until refactoring is done',
+  load_sims => sub {
+    my ($schema) = @_;
+    my $rv = $schema->load_sims({
+      Artist => [ map { { name => "foo$_" } } 1..4 ],
+      Album  => [ map { { name => "foo$_" } } 1..4 ],
+    });
+
+    return $schema->load_sims({
+      Track => { 'album.artist.name' => 'bar1' },
+    });
+  },
+  expect => {
+    Track => { id => 1, name => 'ijkl', album_id => 5 },
+  },
+  rv => sub { { Track => shift->{expect}{Track} } },
+};
+
+sims_test "Find grandparent by DBIC row" => {
   skip => "Currently broken because of missing test below.",
   spec => {
     Track => {
