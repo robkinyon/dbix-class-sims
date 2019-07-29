@@ -1,8 +1,7 @@
 # vi:sw=2
 use strictures 2;
 
-use Test::More;
-use Test::Deep;
+use Test2::V0 qw( done_testing subtest E match );
 
 use lib 't/lib';
 
@@ -52,7 +51,7 @@ sims_test "Providing no columns succeeds" => {
     ],
   },
   expect => {
-    Artist => { id => 1, name => re('.+'), hat_color => undef },
+    Artist => { id => 1, name => E(), hat_color => undef },
   },
 };
 
@@ -159,7 +158,7 @@ sims_test "See that a set of values (singular) works" => {
     Artist => 1,
   },
   expect => {
-    Artist => { id => 1, name => any(qw/george bill/), hat_color => 'purple' },
+    Artist => { id => 1, name => match(qr/george|bill/), hat_color => 'purple' },
   },
 };
 
@@ -171,7 +170,7 @@ sims_test "See that a set of values (plural) works" => {
     Artist => 1,
   },
   expect => {
-    Artist => { id => 1, name => any(qw/george bill/), hat_color => 'purple' },
+    Artist => { id => 1, name => match(qr/george|bill/), hat_color => 'purple' },
   },
 };
 
@@ -183,7 +182,7 @@ sims_test "See that null_chance=1 works" => {
     Artist => 1,
   },
   expect => {
-    Artist => { id => 1, name => any(qw/george bill/), hat_color => undef },
+    Artist => { id => 1, name => match(qr/george|bill/), hat_color => undef },
   },
 };
 
@@ -221,7 +220,7 @@ subtest "Load and retrieve a row by single-column PK" => sub {
           criteria => {
             id => 1,
           },
-          found => ignore()
+          found => E(),
         }],
       },
     },

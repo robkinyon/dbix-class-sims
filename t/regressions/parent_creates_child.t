@@ -1,8 +1,7 @@
 # vi:sw=2
 use strictures 2;
 
-use Test::More;
-use Test::Deep; # Needed for re() below
+use Test2::V0 qw( done_testing E );
 
 use lib 't/lib';
 
@@ -68,7 +67,7 @@ sims_test "parent builds a child, but we're creating a child" => {
     },
   ],
   expect => {
-    Artist => { id => 1, name => re('.+') },
+    Artist => { id => 1, name => E() },
     Album  => { artist_id => 1, name => 'bar' },
   },
   rv => {
@@ -85,8 +84,8 @@ sims_test "child refers to parent by backref" => {
     },
   ],
   expect => {
-    Artist => { id => 1, name => re('.+') },
-    Album  => { artist_id => 1, name => re('.+') },
+    Artist => { id => 1, name => E() },
+    Album  => { artist_id => 1, name => E() },
   },
 };
 

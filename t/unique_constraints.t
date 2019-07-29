@@ -1,8 +1,7 @@
 # vi:sw=2
 use strictures 2;
 
-use Test::More;
-use Test::Deep;
+use Test2::V0 qw( subtest done_testing E );
 
 use lib 't/lib';
 
@@ -78,7 +77,7 @@ subtest "Load and retrieve a row by single-column PK" => sub {
           criteria => {
             id => 1,
           },
-          found => ignore()
+          found => E(),
         }],
       },
     },
@@ -89,7 +88,7 @@ subtest "Load and retrieve a row by single-column UK" => sub {
   sims_test "Create the row" => {
     spec => { Artist => { name => 'Bob' } },
     expect => {
-      Artist => { id => 1, name => 'Bob', city => re('.+'), state => re('.+') },
+      Artist => { id => 1, name => 'Bob', city => E(), state => E() },
     },
     addl => {
       duplicates => {},
@@ -103,7 +102,7 @@ subtest "Load and retrieve a row by single-column UK" => sub {
     },
     spec => { Artist => { name => 'Bob' } },
     expect => {
-      Artist => { id => 1, name => 'Bob', city => re('.+'), state => re('.+') },
+      Artist => { id => 1, name => 'Bob', city => E(), state => E() },
     },
     addl => {
       duplicates => {
@@ -111,7 +110,7 @@ subtest "Load and retrieve a row by single-column UK" => sub {
           criteria => {
             name => 'Bob',
           },
-          found => ignore()
+          found => E(),
         }],
       },
     },
@@ -122,7 +121,7 @@ subtest "Load and retrieve a row by multi-col UK" => sub {
   sims_test "Create the row" => {
     spec => { Artist => { city => 'AB', state => 'CD' } },
     expect => {
-      Artist => { id => 1, name => re('.+'), city => 'AB', state => 'CD' },
+      Artist => { id => 1, name => E(), city => 'AB', state => 'CD' },
     },
     addl => {
       duplicates => {},
@@ -136,7 +135,7 @@ subtest "Load and retrieve a row by multi-col UK" => sub {
     },
     spec => { Artist => { city => 'AB', state => 'CD' } },
     expect => {
-      Artist => { id => 1, name => re('.+'), city => 'AB', state => 'CD' },
+      Artist => { id => 1, name => E(), city => 'AB', state => 'CD' },
     },
     addl => {
       duplicates => {
@@ -145,7 +144,7 @@ subtest "Load and retrieve a row by multi-col UK" => sub {
             city => 'AB',
             state => 'CD',
           },
-          found => ignore()
+          found => E(),
         }],
       },
     },
@@ -184,7 +183,7 @@ subtest "Load, then retrieve a row by other UK" => sub {
             city => 'AB',
             state => 'CD',
           },
-          found => ignore()
+          found => E(),
         }],
       },
     },

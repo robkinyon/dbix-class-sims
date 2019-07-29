@@ -1,8 +1,8 @@
 # vi:sw=2
 use strictures 2;
 
-use Test::More;
-use Test::Exception;
+use Test2::V0 qw( done_testing is like cmp_ok );
+use Test::Trap; # Needed for trap()
 
 # This currently cannot be converted to build_schema() because the functions
 # are not coming across properly. Figure something out later.
@@ -163,7 +163,7 @@ use Test::DBIx::Class qw(:resultsets);
   is $count, 0, "There are no tables loaded at first";
 }
 
-lives_ok {
+trap {
   Schema->load_sims(
     {
       ColumnTests => [
@@ -171,7 +171,8 @@ lives_ok {
       ],
     },
   );
-} "load_sims runs to completion";
+};
+is $trap->leaveby, 'return', "load_sims runs to completion";
 
 is( ColumnTests->count, 1, 'The number of rows is correct' );
 
@@ -205,7 +206,7 @@ cmp_ok( $row->decimal_nomax, '<=', 100, 'sim_decimal_nomax <= 100' );
 cmp_ok( $row->decimal_nolimit, '>=', 0, 'sim_decimal_nolimit >= 0' );
 cmp_ok( $row->decimal_nolimit, '<=', 100, 'sim_decimal_nolimit <= 100' );
 
-is( $row->decimal_with_func, 22.2, 'sim_decimal_with_func is 22.2' );
+like( $row->decimal_with_func, 22.2, 'sim_decimal_with_func is 22.2' );
 
 like( $row->varchar_maxmin, qr/\w{5,20}/, 'varchar_maxmin of right length' );
 like( $row->varchar_nomin, qr/\w{1,20}/, 'varchar_nomin of right length' );

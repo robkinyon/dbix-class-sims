@@ -10,9 +10,10 @@ our @EXPORT_OK = qw(
 );
 
 use DDP;
-use Test::More;
-use Test::Deep;
-use Test::Exception;
+use Test2::V0 qw(
+  E item object array bag hash subtest skip_all number is match call field
+  end
+);
 use Test::Warn;
 use Test::Trap;
 
@@ -22,7 +23,7 @@ sub sims_test ($$) {
   my ($name, $opts) = @_;
 
   subtest $name => sub {
-    plan(skip_all => $opts->{skip}) if $opts->{skip};
+    skip_all($opts->{skip}) if $opts->{skip};
 
     Schema->storage->dbh_do(sub {
       my ($st, $dbh) = @_; $dbh->do('PRAGMA foreign_keys = OFF');
@@ -35,7 +36,8 @@ sub sims_test ($$) {
     foreach my $name (Schema->sources) {
       my $c = ResultSet($name)->count;
       my $l = $opts->{loaded}{$name} // 0;
-      cmp_ok $c, '==', $l, "$name has $l rows loaded at first";
+      #cmp_ok $c, '==', $l, "$name has $l rows loaded at first";
+      is($c, number($l), "$name has $l rows loaded at first");
     }
 
     my ($rv, $addl);
@@ -50,17 +52,18 @@ sub sims_test ($$) {
             ? DBIx::Class::Sims->load_sims(Schema, @args)
             : Schema->load_sims(@args);
         };
-        is $trap->leaveby, 'die', 'load_sims fails';
+        is($trap->leaveby, 'die', 'load_sims fails');
         if ($opts->{warning}) {
-          like $trap->stderr, $opts->{warning}, "Warning as expected";
+          is($trap->stderr, match($opts->{warning}), "Warning as expected");
         }
-        like $trap->die, $opts->{dies}, 'Error message as expected';
+        is($trap->die . "", match($opts->{dies}), 'Error message as expected');
       }
       else {
         if ($opts->{load_sims}) {
-          lives_ok {
+          trap {
             ($rv, $addl) = $opts->{load_sims}->(Schema)
-          } "load_sims runs to completion";
+          };
+          is $trap->leaveby, 'return', "load_sims runs to completion";
         }
         else {
           my @args = ref($opts->{spec}//'') eq 'ARRAY'
@@ -73,11 +76,12 @@ sub sims_test ($$) {
             } $opts->{warning}, "Warning as expected";
           }
           else {
-            lives_ok {
+            trap {
               ($rv, $addl) = $opts->{as_class_method}
                 ? DBIx::Class::Sims->load_sims(Schema, @args)
                 : Schema->load_sims(@args);
-            } "load_sims runs to completion"
+            };
+            is $trap->leaveby, 'return', "load_sims runs to completion"
               or return; # Don't continue the test if we die unexpectedly.
           }
         }
@@ -88,11 +92,18 @@ sub sims_test ($$) {
 
         while (my ($name, $expect) = each %{$opts->{expect} // {}}) {
           $expect = [ $expect ] unless ref($expect) eq 'ARRAY';
-          #my $x = { x => [ResultSet($name)->all] };
-          #warn np($x);
-          cmp_bag(
-            [ ResultSet($name)->all ],
-            [ map { methods(%$_) } @$expect ],
+          my $check = bag {
+            foreach my $exp ( @$expect ) {
+              item object {
+                while ( my ($kx,$vx) = each(%$exp) ) {
+                  call $kx => $vx;
+                }
+              };
+            }
+          };
+          my @x = ResultSet($name)->all;
+          is(
+            \@x, $check,
             "Rows in database for $name are expected",
           );
         }
@@ -101,19 +112,31 @@ sub sims_test ($$) {
           $opts->{rv} = $opts->{rv}->($opts);
         }
 
-        my $expected_rv = {};
-        while (my ($n,$e) = each %{$opts->{rv} // $opts->{expect} // {}}) {
-          $e = [ $e ] unless ref($e) eq 'ARRAY';
-          $expected_rv->{$n} = [ map { methods(%$_) } @$e ];
-        }
-        cmp_deeply($rv, $expected_rv, "Return value is as expected");
+        my $check = hash {
+          while (my ($n,$e) = each %{$opts->{rv} // $opts->{expect} // {}}) {
+            $e = [ $e ] unless ref($e) eq 'ARRAY';
+            field $n => bag {
+              foreach my $exp ( @$e ) {
+                item object {
+                  while ( my ($kx,$vx) = each %$exp ) {
+                    call $kx => $vx;
+                  }
+                };
+              }
+            };
+
+            end();
+          }
+        };
+        is( $rv, $check, "Return value is as expected" );
 
         if ($opts->{addl}) {
           # Don't force me to set these things, unless I want to.
           $opts->{addl}{duplicates} //= {};
-          $opts->{addl}{seed} //= re(qr/^[\d.]+$/);
-          $opts->{addl}{created} //= ignore();
-          cmp_deeply($addl, $opts->{addl}, "Additional value is as expected");
+          $opts->{addl}{seed} //= match(qr/^[\d.]+$/);
+          $opts->{addl}{created} //= E();
+          #cmp_deeply($addl, $opts->{addl}, "Additional value is as expected");
+          is($addl, $opts->{addl}, "Additional value is as expected");
         }
       }
       alarm 0;

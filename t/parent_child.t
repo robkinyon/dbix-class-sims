@@ -1,8 +1,7 @@
 # vi:sw=2
 use strictures 2;
 
-use Test::More;
-use Test::Deep; # Needed for re() below
+use Test2::V0 qw( done_testing subtest E match );
 
 use lib 't/lib';
 
@@ -130,7 +129,7 @@ sims_test "Autogenerate a parent" => {
   },
   expect => {
     Artist => [
-      { id => 1, name => re('.+') },
+      { id => 1, name => E() },
     ],
     Album  => [
       { id => 1, name => 'bar1', artist_id => 1 },
@@ -181,7 +180,7 @@ sims_test "Specify a parent and override a sims-spec" => {
     },
   },
   expect => {
-    Album => [ { id => 1, name => re('.+'), artist_id => 1 } ],
+    Album => [ { id => 1, name => E(), artist_id => 1 } ],
   },
 };
 
@@ -197,7 +196,7 @@ sims_test "Pick a random parent out of multiple choices" => {
   },
   expect => {
     Artist => [ { id => 1, name => 'foo' }, { id => 2, name => 'foo2' } ],
-    Album  => [ { id => 1, name => 'bar', artist_id => re('1|2') } ],
+    Album  => [ { id => 1, name => 'bar', artist_id => match(qr/1|2/) } ],
   },
 };
 
@@ -234,7 +233,7 @@ sims_test "Force the creation of a parent" => {
     Artist => [
       { id => 1, name => 'foo' },
       { id => 2, name => 'foo2' },
-      { id => 3, name => re('.+') },
+      { id => 3, name => E() },
     ],
     Album => { id => 1, name => 'bar', artist_id => 3 },
   },
@@ -285,8 +284,8 @@ sims_test "Use a constraint to force a child row" => {
     },
   ],
   expect => {
-    Artist => { id => 1, name => re('.+') },
-    Album => { id => 1, name => re('.+'), artist_id => 1 },
+    Artist => { id => 1, name => E() },
+    Album => { id => 1, name => E(), artist_id => 1 },
   },
   rv => sub { { Artist => shift->{expect}{Artist} } },
 };
@@ -304,12 +303,12 @@ sims_test "Use a constraint to force a child row (multiple parents)" => {
   ],
   expect => {
     Artist => [
-      { id => 1, name => re('.+') },
-      { id => 2, name => re('.+') },
+      { id => 1, name => E() },
+      { id => 2, name => E() },
     ],
     Album => [
-      { id => 1, name => re('.+'), artist_id => 1 },
-      { id => 2, name => re('.+'), artist_id => 2 },
+      { id => 1, name => E(), artist_id => 1 },
+      { id => 2, name => E(), artist_id => 2 },
     ],
   },
   rv => sub { { Artist => shift->{expect}{Artist} } },
@@ -328,8 +327,8 @@ sims_test "Use a constraint to force a child row (parent specific ID)" => {
     }
   ],
   expect => {
-    Artist => { id => 20, name => re('.+') },
-    Album => { id => 1, name => re('.+'), artist_id => 20 },
+    Artist => { id => 20, name => E() },
+    Album => { id => 1, name => E(), artist_id => 20 },
   },
   rv => sub { { Artist => shift->{expect}{Artist} } },
 };
@@ -346,7 +345,7 @@ sims_test "Specify a child row and bypass the constraint" => {
     }
   ],
   expect => {
-    Artist => { id => 1, name => re('.+') },
+    Artist => { id => 1, name => E() },
     Album => { id => 1, name => 'ijkl', artist_id => 1 },
   },
   rv => sub { { Artist => shift->{expect}{Artist} } },
@@ -364,10 +363,10 @@ sims_test "Autogenerate multiple children via constraint" => {
     },
   ],
   expect => {
-    Artist => { id => 1, name => re('.+') },
+    Artist => { id => 1, name => E() },
     Album => [
-      { id => 1, name => re('.+'), artist_id => 1 },
-      { id => 2, name => re('.+'), artist_id => 1 },
+      { id => 1, name => E(), artist_id => 1 },
+      { id => 2, name => E(), artist_id => 1 },
     ],
   },
   rv => sub { { Artist => shift->{expect}{Artist} } },
@@ -391,8 +390,8 @@ sims_test "Specify various parent IDs and connect properly" => {
   ],
   expect => {
     Artist => [
-      { id => 20, name => re('.+') },
-      { id => 10, name => re('.+') },
+      { id => 20, name => E() },
+      { id => 10, name => E() },
     ],
     Album => [
       { id => 1, name => 'i20', artist_id => 20 },
@@ -410,7 +409,7 @@ sims_test "Only create one child even if specified two ways" => {
     Album => { name => 'Bob' },
   },
   expect => {
-    Artist => { id => 1, name => re('.+') },
+    Artist => { id => 1, name => E() },
     Album => { id => 1, name => 'Bob', artist_id => 1 },
   },
 };
@@ -423,7 +422,7 @@ sims_test "Accept a number of children (1)" => {
   },
   expect => {
     Artist => { id => 1, name => 'foo' },
-    Album => { id => 1, name => re('.+'), artist_id => 1 },
+    Album => { id => 1, name => E(), artist_id => 1 },
   },
   rv => sub { { Artist => shift->{expect}{Artist} } },
 };
@@ -437,8 +436,8 @@ sims_test "Accept a number of children (2)" => {
   expect => {
     Artist => { id => 1, name => 'foo' },
     Album => [
-      { id => 1, name => re('.+'), artist_id => 1 },
-      { id => 2, name => re('.+'), artist_id => 1 },
+      { id => 1, name => E(), artist_id => 1 },
+      { id => 2, name => E(), artist_id => 1 },
     ],
   },
   rv => sub { { Artist => shift->{expect}{Artist} } },
@@ -468,9 +467,9 @@ sims_test "Connect to the parent by reference" => {
   },
   expect => {
     Artist => [
-      { id => 1, name => re('.+') },
-      { id => 2, name => re('.+') },
-      { id => 3, name => re('.+') },
+      { id => 1, name => E() },
+      { id => 2, name => E() },
+      { id => 3, name => E() },
     ],
     Album => { id => 1, name => 'foo', artist_id => 2 },
   },
@@ -497,9 +496,9 @@ sims_test "Connect to the right parent by reference" => {
       { id => 3, name => 'third' },
     ],
     Album => [
-      { id => 1, name => re('.+'), artist_id => 2 },
-      { id => 2, name => re('.+'), artist_id => 3 },
-      { id => 3, name => re('.+'), artist_id => 1 },
+      { id => 1, name => E(), artist_id => 2 },
+      { id => 2, name => E(), artist_id => 3 },
+      { id => 3, name => E(), artist_id => 1 },
     ],
   },
 };

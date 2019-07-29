@@ -1,8 +1,7 @@
 # vi:sw=2
 use strictures 2;
 
-use Test::More;
-use Test::Deep;
+use Test2::V0 qw( done_testing is );
 
 use lib 't/lib';
 
@@ -13,7 +12,7 @@ BEGIN {
 
 use common qw(Schema);
 
-use_ok 'DBIx::Class::Sims';
+use DBIx::Class::Sims;
 my $sub = \&DBIx::Class::Sims::massage_input;
 
 my @tests = (
@@ -40,7 +39,7 @@ my @tests = (
 );
 
 foreach my $test ( @tests ) {
-  cmp_deeply( $sub->( Schema, $test->{start} ), $test->{expected} );
+  is( $sub->( Schema, $test->{start} ), $test->{expected} );
 }
 
 done_testing;

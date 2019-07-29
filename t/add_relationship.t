@@ -1,8 +1,7 @@
 # vi:sw=2
 use strictures 2;
 
-use Test::More;
-use Test::Deep; # Needed for re() below
+use Test2::V0 qw( done_testing );
 
 use lib 't/lib';
 

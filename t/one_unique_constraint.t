@@ -1,8 +1,7 @@
 # vi:sw=2
 use strictures 2;
 
-use Test::More;
-use Test::Deep;
+use Test2::V0 qw( done_testing subtest E );
 
 use lib 't/lib';
 
@@ -71,7 +70,7 @@ subtest "Load and retrieve a row by single-column PK" => sub {
           criteria => {
             id => 1,
           },
-          found => ignore()
+          found => E(),
         }],
       },
     },
@@ -111,7 +110,7 @@ subtest "Load and retrieve a row by single-column UK" => sub {
           criteria => {
             name => 'Bob',
           },
-          found => ignore()
+          found => E(),
         }],
       },
     },

@@ -1,8 +1,7 @@
 # vi:sw=2
 use strictures 2;
 
-use Test::More;
-use Test::Deep; # Needed for re() below
+use Test2::V0 qw( done_testing subtest match is );
 use Test::Trap; # Needed for trap()
 
 my $item = DBIx::Class::Sims::Item->new(
@@ -31,8 +30,8 @@ subtest create_search => sub {
       columns => [],
     );
     my ($cond, $extra) = $item->create_search($source, {});
-    cmp_deeply( $cond, {}, 'Cond is expected' );
-    cmp_deeply( $extra, {}, 'Extra is expected' );
+    is( $cond, {}, 'Cond is expected' );
+    is( $extra, {}, 'Extra is expected' );
   };
 
   subtest 'simple case' => sub {
@@ -41,8 +40,8 @@ subtest create_search => sub {
       columns => [ column('a') ],
     );
     my ($cond, $extra) = $item->create_search($source, { a => 1 });
-    cmp_deeply( $cond, { a => 1 }, 'Cond is expected' );
-    cmp_deeply( $extra, {}, 'Extra is expected' );
+    is( $cond, { a => 1 }, 'Cond is expected' );
+    is( $extra, {}, 'Extra is expected' );
   };
 
   subtest 'column missing' => sub {
@@ -54,7 +53,7 @@ subtest create_search => sub {
       $item->create_search($source, { a => 1 });
     };
     is $trap->leaveby, 'die', 'died as expected';
-    like $trap->die, qr/Foo has no column or relationship 'a'/, 'Error message as expected';
+    is $trap->die . '', match(qr/Foo has no column or relationship 'a'/), 'Error message as expected';
   };
 
 =pod
@@ -64,8 +63,8 @@ subtest create_search => sub {
       columns => [ column('a') ],
     );
     my ($cond, $extra) = $item->create_search($source, { a => 1 });
-    cmp_deeply( $cond, { a => 1 }, 'Cond is expected' );
-    cmp_deeply( $extra, {}, 'Extra is expected' );
+    is( $cond, { a => 1 }, 'Cond is expected' );
+    is( $extra, {}, 'Extra is expected' );
   };
 =cut
 };

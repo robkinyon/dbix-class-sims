@@ -1,10 +1,7 @@
 # vi:sw=2
-use strict;
-use warnings FATAL => 'all';
+use strictures 2;
 
-use Test::More;
-
-use_ok 'DBIx::Class::Sims::Types';
+use Test2::V0 qw( done_testing cmp_ok like );
 
 my $sub = DBIx::Class::Sims::Types->can('ip_address');
 
