@@ -81,8 +81,11 @@ sub sims_test ($$) {
                 ? DBIx::Class::Sims->load_sims(Schema, @args)
                 : Schema->load_sims(@args);
             };
-            is $trap->leaveby, 'return', "load_sims runs to completion"
-              or return; # Don't continue the test if we die unexpectedly.
+            my $continue = is $trap->leaveby, 'return', "load_sims runs to completion";
+            unless ($continue) {
+              warn $trap->die;
+              return; # Don't continue the test if we die unexpectedly.
+            }
           }
         }
 

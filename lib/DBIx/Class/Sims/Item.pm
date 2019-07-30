@@ -398,6 +398,30 @@ sub populate_parents {
     my $fk_source = $r->target;
     my $rs = $fk_source->resultset;
 
+    # If the child's column is within a UK, add a check to the $rs that ensures
+    # we cannot pick a parent that's already being used.
+    my @constraints = $self->source->unique_constraints_containing($col);
+    if (@constraints) {
+      # First, find the inverse relationship. If it doesn't exist or if there
+      # is more than one, then die.
+      my @inverse = $self->source->find_inverse_relationships(
+        $fk_source, $fkcol,
+      );
+      if (@inverse == 0) {
+        die "Cannot find an inverse relationship for @{[$r->full_name]}\n";
+      }
+      elsif (@inverse > 1) {
+        die "Too many inverse relationships for @{[$r->full_name]} (@{[$fk_source->name]} / $fkcol)\n" . np(@inverse);
+      }
+
+      # We cannot add this relationship to the $cond because that would result
+      # in an infinite loop. So, restrict the $rs here.
+      $rs = $rs->search(
+        { join('.', $inverse[0]{rel}, $inverse[0]{col}) => undef },
+        { join => $inverse[0]{rel} },
+      );
+    }
+
     if ( $cond ) {
       $rs = $rs->search( $self->create_search($fk_source, $cond) );
     }
