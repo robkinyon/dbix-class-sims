@@ -56,7 +56,7 @@ sub sims_test ($$) {
         if ($opts->{warning}) {
           is($trap->stderr, match($opts->{warning}), "Warning as expected");
         }
-        is($trap->die . "", match($opts->{dies}), 'Error message as expected');
+        is(($trap->die // '') . "", match($opts->{dies}), 'Error message as expected');
       }
       else {
         if ($opts->{load_sims}) {

@@ -594,6 +594,12 @@ sub run {
   my $self = shift;
 
   return $self->schema->txn_do(sub {
+    # DateTime objects print too big in SIMS_DEBUG mode, so provide a
+    # good way for DDP to print them nicely.
+    no strict 'refs';
+    local *{'DateTime::_data_printer'} = sub { shift->iso8601 }
+      unless DateTime->can('_data_printer');
+
     $self->{rows} = {};
     my %still_to_use = map { $_ => 1 } keys %{$self->{spec}};
     while (1) {
@@ -602,6 +608,9 @@ sub run {
         delete $still_to_use{$name};
 
         while ( my $proto = shift @{$self->{spec}{$name}} ) {
+          $proto->{__META__} //= {};
+          $proto->{__META__}{create} = 1;
+
           my $item = DBIx::Class::Sims::Item->new(
             runner => $self,
             source => $self->{sources}{$name},
@@ -612,16 +621,7 @@ sub run {
             $item->set_allow_pk_to(1);
           }
 
-          my $row = do {
-            no strict 'refs';
-
-            # DateTime objects print too big in SIMS_DEBUG mode, so provide a
-            # good way for DDP to print them nicely.
-            local *{'DateTime::_data_printer'} = sub { shift->iso8601 }
-              unless DateTime->can('_data_printer');
-
-            $item->create;
-          };
+          my $row = $item->create;
 
           if ($self->{initial_spec}{$name}{$item->spec}) {
             push @{$self->{rows}{$name} //= []}, $row;

@@ -146,6 +146,23 @@ sub find_unique_match {
   return;
 }
 
+sub find_any_match {
+  my $self = shift;
+
+  my $rs = $self->source->resultset;
+
+  my $cond = {};
+  foreach my $colname ( map { $_->name } $self->source->columns ) {
+    next unless exists $self->spec->{$colname};
+    $cond->{'me.' . $colname} = $self->spec->{$colname};
+  }
+
+  my $row = $rs->search($cond, { rows => 1 })->single;
+  $self->row($row) if $row;
+
+  return $self->row;
+}
+
 ################################################################################
 #
 # These are the expected interface methods
@@ -181,6 +198,13 @@ sub create {
   $self->quarantine_children;
   unless ($self->row) {
     $self->populate_parents;
+  }
+
+  if ( ! $self->row && ! $self->meta->{create} ) {
+    $self->find_any_match;
+  }
+
+  unless ($self->row) {
     $self->populate_columns;
 
     # Things were passed in, but don't exist in the table.
@@ -328,10 +352,19 @@ sub create_search {
   my $cond = {};
   foreach my $colname ( map { $_->name } $source->columns ) {
     next unless exists $proto->{$colname};
-    $cond->{$colname} = delete $proto->{$colname};
+    $cond->{'me.' . $colname} = delete $proto->{$colname};
   }
 
   # Handle the case of relationships
+  # This needs to walk the possible relationships
+  my $extra = {};
+  foreach my $rel ( $source->relationships ) {
+    next unless exists $proto->{$rel->name};
+
+    $cond->{$rel->name . '.' . $rel->foreign_fk_col} = delete $proto->{$rel->name};
+    $extra->{join} //= [];
+    push @{$extra->{join}}, $rel->name;
+  }
 
   if ( keys %$proto ) {
     my @cols = join "', '", sort keys %$proto;
@@ -340,7 +373,7 @@ sub create_search {
 
   #warn $source->name . ':' . np($cond), $/;
 
-  return $cond, {};
+  return $cond, $extra;
 }
 
 sub populate_parents {
@@ -380,16 +413,14 @@ sub populate_parents {
       elsif (!ref($proto)) {
         $cond = { $fkcol => $proto };
       }
-=pod
       # Use a referenced row
-      elsif (ref($proto) eq 'SCALAR') {
-        $cond = {
-          $fkcol => $self->runner->convert_backreference(
-            $self->runner->backref_name($self->runner, $r->name), $$proto, $fkcol,
-          ),
-        };
-      }
-=cut
+      #elsif (ref($proto) eq 'SCALAR') {
+      #  $cond = {
+      #    $fkcol => $self->runner->convert_backreference(
+      #      $self->runner->backref_name($self->runner, $r->name), $$proto, $fkcol,
+      #    ),
+      #  };
+      #}
       else {
         die "Unsure what to do about @{[$r->full_name]}():" . np($proto);
       }
@@ -441,6 +472,7 @@ sub populate_parents {
         source => $fk_source,
         spec   => MyCloner::clone($cond),
       );
+      $fk_item->meta->{create} = 1; # Force the creation
       $fk_item->set_allow_pk_to($self);
 
       $fk_item->create;
@@ -449,7 +481,6 @@ sub populate_parents {
 
     $self->spec->{$col} = $parent->get_column($fkcol);
   }
-
 }
 
 #sub populate_deferred_parents {
