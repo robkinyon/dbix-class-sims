@@ -337,45 +337,6 @@ sub populate_columns {
   return;
 }
 
-sub create_search {
-  my $self = shift;
-  my ($source, $proto) = @_;
-  $proto = MyCloner::clone($proto);
-
-  delete $proto->{__META__};
-
-  # ASSUMPTIONS:
-  #   * All k/v pairs in $cond are scalars
-  #   * All keys in $cond exist as columns in $source
-  # TODO: Write tests to force validation of these assumptions
-
-  my $cond = {};
-  foreach my $colname ( map { $_->name } $source->columns ) {
-    next unless exists $proto->{$colname};
-    $cond->{'me.' . $colname} = delete $proto->{$colname};
-  }
-
-  # Handle the case of relationships
-  # This needs to walk the possible relationships
-  my $extra = {};
-  foreach my $rel ( $source->relationships ) {
-    next unless exists $proto->{$rel->name};
-
-    $cond->{$rel->name . '.' . $rel->foreign_fk_col} = delete $proto->{$rel->name};
-    $extra->{join} //= [];
-    push @{$extra->{join}}, $rel->name;
-  }
-
-  if ( keys %$proto ) {
-    my @cols = join "', '", sort keys %$proto;
-    die $source->name . " has no column or relationship '@cols'";
-  }
-
-  #warn $source->name . ':' . np($cond), $/;
-
-  return $cond, $extra;
-}
-
 sub populate_parents {
   my $self = shift;
 
@@ -401,13 +362,13 @@ sub populate_parents {
       # TODO: Write tests to force us to ensure things about blessed things.
       # This should do "blessed($x) && $x->can($fkcol)" and assume this is okay
       if (blessed($proto)) {
-        #$cond = { $fkcol => $proto->$fkcol };
         $self->spec->{$col} = $proto->get_column($fkcol);
-        next RELATIONSHIP
+        next RELATIONSHIP;
       }
+
       # Assume any hashref is a Sims specification
-      elsif (ref($proto) eq 'HASH') {
-        $cond = $proto
+      if (ref($proto) eq 'HASH') {
+        $cond = $proto;
       }
       # Assume any unblessed scalar is a column value.
       elsif (!ref($proto)) {
@@ -427,8 +388,7 @@ sub populate_parents {
     }
 
     my $fk_source = $r->target;
-    my $rs = $fk_source->resultset;
-
+=pod
     # If the child's column is within a UK, add a check to the $rs that ensures
     # we cannot pick a parent that's already being used.
     my @constraints = $self->source->unique_constraints_containing($col);
@@ -452,32 +412,15 @@ sub populate_parents {
         { join => $inverse[0]{rel} },
       );
     }
-
-    if ( $cond ) {
-      $rs = $rs->search( $self->create_search($fk_source, $cond) );
-    }
-    else {
-      $cond = {};
-    }
-
-    my $meta = delete $cond->{__META__} // {};
-
-    my $parent;
-    unless ($meta->{create}) {
-      $parent = $rs->search(undef, { rows => 1 })->single;
-    }
-    unless ($parent) {
-      my $fk_item = DBIx::Class::Sims::Item->new(
-        runner => $self->runner,
-        source => $fk_source,
-        spec   => MyCloner::clone($cond),
-      );
-      $fk_item->meta->{create} = 1; # Force the creation
-      $fk_item->set_allow_pk_to($self);
-
-      $fk_item->create;
-      $parent = $fk_item->row;
-    }
+=cut
+    my $fk_item = DBIx::Class::Sims::Item->new(
+      runner => $self->runner,
+      source => $fk_source,
+      spec   => MyCloner::clone($cond // {}),
+    );
+    $fk_item->set_allow_pk_to($self);
+    $fk_item->create;
+    my $parent = $fk_item->row;
 
     $self->spec->{$col} = $parent->get_column($fkcol);
   }
@@ -523,13 +466,14 @@ sub build_children {
     }
     else {
       # ASSUMPTION: The constraint provided in the relationship is a number.
-      @children = ( ({}) x $r->constraints );
+      # Don't do "( ({}) x $r->constraints );" because that doesn't create
+      # independent hashrefs.
+      push @children, {} for 1 .. $r->constraints;
     }
 
     # TODO: Add a test for $self->{children} >= $r->constraints. For example,
     # $r->constraints == 2, but only one child was added by hand.
 
-    my $col = $r->self_fk_col;
     my $fkcol = $r->foreign_fk_col;
     my $fk_source = $r->target;
     foreach my $child (@children) {
@@ -538,7 +482,10 @@ sub build_children {
       # the ::Runner's spec has been converted to ::Item before iteration.
       ($child->{__META__} //= {})->{allow_pk_set_value} = 1;
 
-      $child->{$fkcol} = $self->row->get_column($col);
+      # Do not do $self->row->get_column($col). This causes an infinite loop
+      # because the child then needs a parent ::Item that tries to create a
+      # child, and so forth.
+      $child->{$fkcol} = $self->row;
       $self->runner->add_child($fk_source, $fkcol, $child, $self->source_name);
     }
   }

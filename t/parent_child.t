@@ -430,11 +430,11 @@ sims_test "Accept a number of children (1)" => {
 sims_test "Accept a number of children (2)" => {
   spec => {
     Artist => {
-      name => 'foo', albums => 2,
+      albums => 2,
     },
   },
   expect => {
-    Artist => { id => 1, name => 'foo' },
+    Artist => { id => 1, name => E() },
     Album => [
       { id => 1, name => E(), artist_id => 1 },
       { id => 2, name => E(), artist_id => 1 },

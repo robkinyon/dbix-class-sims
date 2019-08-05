@@ -83,6 +83,7 @@ sub sims_test ($$) {
             };
             my $continue = is $trap->leaveby, 'return', "load_sims runs to completion";
             unless ($continue) {
+              warn $trap->stderr;
               warn $trap->die;
               return; # Don't continue the test if we die unexpectedly.
             }
