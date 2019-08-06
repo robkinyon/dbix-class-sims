@@ -94,7 +94,6 @@ sims_test "Autogenerate grandparent" => {
 };
 
 sims_test "Create ancestors via unmet grandparent specification" => {
-  skip => 'Regressing until refactoring is done',
   load_sims => sub {
     my ($schema) = @_;
     my $rv = $schema->load_sims({
@@ -113,7 +112,6 @@ sims_test "Create ancestors via unmet grandparent specification" => {
 };
 
 sims_test "Create ancestors via unmet grandparent specification" => {
-  skip => 'Regressing until refactoring is done',
   load_sims => sub {
     my ($schema) = @_;
     my $rv = $schema->load_sims({

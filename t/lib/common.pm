@@ -104,6 +104,7 @@ sub sims_test ($$) {
                 }
               };
             }
+            end();
           };
           my @x = ResultSet($name)->all;
           is(

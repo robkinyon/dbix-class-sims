@@ -71,7 +71,6 @@ BEGIN {
 use common qw(sims_test);
 
 sims_test "create child in postprocess" => {
-  skip => 'Regressing until refactoring is done',
   spec => [
     {
       Artist => { name => 'foo' },

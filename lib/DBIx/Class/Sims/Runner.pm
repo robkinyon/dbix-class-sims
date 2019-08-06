@@ -72,6 +72,19 @@ sub driver { shift->schema->storage->dbh->{Driver}{Name} }
 sub is_oracle { shift->driver eq 'Oracle' }
 sub datetime_parser { shift->schema->storage->datetime_parser }
 
+sub are_columns_equal {
+  my $self = shift;
+  my ($source, $row, $compare) = @_;
+  foreach my $c ($source->columns) {
+    next if $c->is_in_fk;
+    my $col = $c->name;
+
+    next if !exists($row->{$col}) && !exists($compare->{$col});
+    return unless exists($row->{$col}) && exists($compare->{$col});
+    return if $compare->{$col} ne $row->{$col};
+  }
+  return 1;
+}
 {
   my %added_by;
   sub add_child {
@@ -103,248 +116,6 @@ sub datetime_parser { shift->schema->storage->datetime_parser }
   sub has_pending { keys %pending != 0; }
   sub delete_pending { delete $pending{$_[1]}; }
   sub clear_pending { %pending = (); }
-}
-
-# FIXME: This method is a mess. It needs to be completely rethought and,
-# possibly, broken out into different versions.
-sub create_search {
-  my $self = shift;
-  my ($rs, $source, $cond) = @_;
-
-  # Handle the FKs, particularly the FKs of the FKs. Tests for this line:
-  # * t/grandchild.t "Find grandparent by DBIC row"
-  #
-  # XXX: Do we need to receive the deferred_fks() here? What should we do with
-  # them if we do? Why can we ignore them if we don't?
-  #
-  # This is commented out because of explanation below.
-  #$self->fix_fk_dependencies($cond);
-
-  # FIXME: This needs to handle ::Item properly, but not everything passed here
-  # is an ::Item (yet). (Maybe never?)
-  $cond = $cond->spec if blessed($cond);
-
-  my %cols = map { $_->name => 1 } $source->columns;
-  my $search = {
-    (map {
-      'me.' . $_ => $cond->{$_}
-    } grep {
-      # Make sure this column exists and is an actual value. Assumption is that
-      # a non-reference is a value and a reference is a sims-spec.
-      exists $cols{$_} && !reftype($cond->{$_})
-    } keys %$cond)
-  };
-  $rs = $rs->search($search);
-
-  # This for-loop shouldn't exist. Instead, we should be able to use
-  # fix_fk_dependencies() above. However, that breaks in mysterious ways.
-  #
-  # FIXME: Using this for-loop times out the tests in t/self_refential.t
-  #foreach my $rel_name (keys %{$source->relationships})
-  # So, we use this one instead. This breaks encapsulation.
-  foreach my $rel_name ($source->source->relationships) {
-    next unless exists $cond->{$rel_name};
-    next unless reftype($cond->{$rel_name}) eq 'HASH';
-
-    my %search = map {
-      ;"$rel_name.$_" => $cond->{$rel_name}{$_}
-    } grep {
-      # Nested relationships are "automagically handled."
-      !ref $cond->{$rel_name}{$_}
-    } keys %{$cond->{$rel_name}};
-
-    $rs = $rs->search(\%search, { join => $rel_name });
-  }
-
-  return $rs;
-}
-
-sub fix_fk_dependencies {
-  my $self = shift;
-  my ($item) = @_;
-
-  # 1. If we have something, then:
-  #   a. If it's a scalar, then, COND = { $fk => scalar }
-  #   b. Look up the row by COND
-  #   c. If the row is not there and the FK is nullable, defer til later.
-  #      This let's us deal with self-referential FKs
-  #   d. If the row is not there and it is NOT nullable, then $create_item
-  # 2. If we don't have something and the column is non-nullable, then:
-  #   a. If rows exists, pick a random one.
-  #   b. If rows don't exist, $create_item->($fksrc, {})
-  my (%deferred_fks);
-  RELATIONSHIP:
-  foreach my $r ( $item->source->parent_relationships ) {
-    my $col = $r->self_fk_col;
-
-    if (!$self->{allow_relationship_column_names}) {
-      if ($col ne $r->name && exists $item->spec->{$col}) {
-        die "Cannot use column $col - use relationship @{[$r->name]}";
-      }
-    }
-
-    my $cond;
-    my $fkcol = $r->foreign_fk_col;
-    my $proto = delete($item->spec->{$r->name}) // delete($item->spec->{$col});
-    if ($proto) {
-      # Assume anything blessed is blessed into DBIC.
-      if (blessed($proto)) {
-        $cond = { $fkcol => $proto->$fkcol };
-      }
-      # Assume any hashref is a Sims specification
-      elsif (ref($proto) eq 'HASH') {
-        $cond = $proto
-      }
-      # Assume any unblessed scalar is a column value.
-      elsif (!ref($proto)) {
-        $cond = { $fkcol => $proto };
-      }
-      # Use a referenced row
-      elsif (ref($proto) eq 'SCALAR') {
-        $cond = {
-          $fkcol => $self->convert_backreference(
-            $self->backref_name($item, $r->name), $$proto, $fkcol,
-          ),
-        };
-      }
-      else {
-        die "Unsure what to do about @{[$r->full_name]}():" . np($proto);
-      }
-    }
-
-    my $fk_source = $r->target;
-    my $rs = $fk_source->resultset;
-
-    # If the child's column is within a UK, add a check to the $rs that ensures
-    # we cannot pick a parent that's already being used.
-    my @constraints = $item->source->unique_constraints_containing($col);
-    if (@constraints) {
-      # First, find the inverse relationship. If it doesn't exist or if there
-      # is more than one, then die.
-      my @inverse = $item->source->find_inverse_relationships(
-        $fk_source, $fkcol,
-      );
-      if (@inverse == 0) {
-        die "Cannot find an inverse relationship for @{[$r->full_name]}\n";
-      }
-      elsif (@inverse > 1) {
-        die "Too many inverse relationships for @{[$r->full_name]} (@{[$fk_source->name]} / $fkcol)\n" . np(@inverse);
-      }
-
-      # We cannot add this relationship to the $cond because that would result
-      # in an infinite loop. So, restrict the $rs here.
-      $rs = $rs->search(
-        { join('.', $inverse[0]{rel}, $inverse[0]{col}) => undef },
-        { join => $inverse[0]{rel} },
-      );
-    }
-
-    my $c = $item->source->column($col);
-    if ( $cond ) {
-      $rs = $self->create_search($rs, $fk_source, $cond);
-    }
-    elsif ( $c->is_nullable ) {
-      next RELATIONSHIP;
-    }
-    else {
-      $cond = {};
-    }
-
-    my $meta = delete $cond->{__META__} // {};
-
-    warn "Looking for @{[$r->full_name]}(".np($cond).")\n" if $ENV{SIMS_DEBUG};
-
-    my $parent;
-    unless ($meta->{create}) {
-      $parent = $rs->search(undef, { rows => 1 })->single;
-
-      # This occurs when a FK condition was specified, but the column is
-      # nullable. We want to defer these because self-referential values need
-      # to be set after creation.
-      if (!$parent && $c->is_nullable) {
-        $cond = DBIx::Class::Sims::Item->new(
-          runner => $self,
-          source => $fk_source,
-          spec   => $cond,
-        );
-        $cond->set_allow_pk_to($item);
-
-        $item->spec->{$col} = undef;
-        $deferred_fks{$r->name} = $cond;
-        next RELATIONSHIP;
-      }
-    }
-    unless ($parent) {
-      my $fk_item = DBIx::Class::Sims::Item->new(
-        runner => $self,
-        source => $fk_source,
-        spec   => MyCloner::clone($cond),
-      );
-      $fk_item->set_allow_pk_to($item);
-
-      $parent = $self->create_item($fk_item);
-    }
-    $item->spec->{$col} = $parent->get_column($fkcol);
-  }
-
-  return \%deferred_fks;
-}
-
-sub are_columns_equal {
-  my $self = shift;
-  my ($source, $row, $compare) = @_;
-  foreach my $c ($source->columns) {
-    next if $c->is_in_fk;
-    my $col = $c->name;
-
-    next if !exists($row->{$col}) && !exists($compare->{$col});
-    return unless exists($row->{$col}) && exists($compare->{$col});
-    return if $compare->{$col} ne $row->{$col};
-  }
-  return 1;
-}
-
-sub find_by_unique_constraints {
-  my $self = shift;
-  my ($item) = @_;
-
-  my $rs = $item->source->resultset;
-  my $searched = {};
-  foreach my $unique ($item->source->unique_columns) {
-    # If there are specified values for all the columns in a specific unqiue constraint ...
-    next if grep { ! exists $item->spec->{$_} } @$unique;
-
-    # ... then add that to the list of potential values to search.
-    my %criteria;
-    foreach my $colname (@{$unique}) {
-      my $value = $item->spec->{$colname};
-      if (ref($value) eq 'SCALAR') {
-        $value = $self->convert_backreference(
-          $self->backref_name($item, $colname), $$value,
-        );
-      }
-      my $classname = blessed($value);
-      if ( $classname && $classname->isa('DateTime') ) {
-        $value = $self->datetime_parser->format_datetime($value);
-      }
-
-      $criteria{$colname} = $value;
-    }
-
-    $rs = $rs->search(\%criteria);
-    $searched = merge($searched, \%criteria);
-  }
-
-  return unless keys %$searched;
-  my $row = $rs->search(undef, { rows => 1 })->first;
-  if ($row) {
-    push @{$self->{duplicates}{$item->source_name}}, {
-      criteria => $searched,
-      found    => { $row->get_columns },
-    };
-    $item->row($row);
-  }
-  return;
 }
 
 sub backref_name {
@@ -382,20 +153,6 @@ sub convert_backreference {
   }
 }
 
-sub fix_values {
-  my $self = shift;
-  my ($item) = @_;
-
-  while (my ($attr, $value) = each %{$item->spec}) {
-    # Decode a backreference
-    if (ref($value) eq 'SCALAR') {
-      $item->spec->{$attr} = $self->convert_backreference(
-        $self->backref_name($item, $attr), $$value,
-      );
-    }
-  }
-}
-
 sub fix_deferred_fks {
   my $self = shift;
   my ($item, $deferred_fks) = @_;
@@ -419,116 +176,6 @@ sub fix_deferred_fks {
     $item->row->$col($parent->get_column($fkcol));
   }
   $item->row->update if $item->row->get_dirty_columns;
-}
-
-sub fix_columns {
-  my $self = shift;
-  my ($item) = @_;
-
-  foreach my $c ( $item->source->columns ) {
-    my $col_name = $c->name;
-
-    my $sim_spec;
-    if ( exists $item->spec->{$col_name} ) {
-      if (
-        $c->is_in_pk && $c->is_auto_increment &&
-        !$item->allow_pk_set_value
-      ) {
-        warn sprintf(
-          "Primary-key autoincrement columns should not be hardcoded in tests (%s.%s = %s)",
-          $item->source_name, $col_name, $item->spec->{$col_name},
-        );
-      }
-
-      # This is the original way of specifying an override with a HASHREFREF.
-      # Reflection has realized it was an unnecessary distinction to a parent
-      # specification. Either it's a relationship hashref or a simspec hashref.
-      # We can never have both. It will be deprecated.
-      if (
-        reftype($item->spec->{$col_name}) eq 'REF' &&
-        reftype(${$item->spec->{$col_name}}) eq 'HASH'
-      ) {
-        warn "DEPRECATED: Use a regular HASHREF for overriding simspec. HASHREFREF will be removed in a future release.";
-        $sim_spec = ${ delete $item->spec->{$col_name} };
-      }
-      elsif (
-        reftype($item->spec->{$col_name}) eq 'HASH' &&
-        # Assume a blessed hash is a DBIC object
-        !blessed($item->spec->{$col_name}) &&
-        # Do not assume we understand something to be inflated/deflated
-        !$c->is_inflated
-      ) {
-        $sim_spec = delete $item->spec->{$col_name};
-      }
-      # Pass the value along to DBIC - we don't know how to deal with it.
-      else {
-        next; # DONE
-      }
-    }
-
-    $sim_spec //= $c->sim_spec;
-    if ( ref($sim_spec // '') eq 'HASH' ) {
-      if ( exists $sim_spec->{null_chance} && $c->is_nullable ) {
-        # Add check for not a number
-        if ( rand() < $sim_spec->{null_chance} ) {
-          $item->spec->{$col_name} = undef;
-          next;
-        }
-      }
-
-      if ( ref($sim_spec->{func} // '') eq 'CODE' ) {
-        $item->spec->{$col_name} = $sim_spec->{func}->($c->info);
-      }
-      elsif ( exists $sim_spec->{value} ) {
-        if (ref($sim_spec->{value} // '') eq 'ARRAY') {
-          my @v = @{$sim_spec->{value}};
-          $item->spec->{$col_name} = $v[rand @v];
-        }
-        else {
-          $item->spec->{$col_name} = $sim_spec->{value};
-        }
-      }
-      elsif ( $sim_spec->{type} ) {
-        my $meth = $self->{parent}->sim_type($sim_spec->{type});
-        if ( $meth ) {
-          $item->spec->{$col_name} = $meth->($c->info, $sim_spec, $self);
-        }
-        else {
-          warn "Type '$sim_spec->{type}' is not loaded";
-        }
-      }
-      else {
-        $item->spec->{$col_name} = $c->generate_value(die_on_unknown => 0);
-      }
-    }
-    # If it's not nullable, doesn't have a default value and isn't part of a
-    # primary key (could be auto-increment) or part of a unique key or part of a
-    # foreign key, then generate a value for it.
-    elsif (
-      !$c->is_nullable &&       # DONE
-      !$c->has_default_value &&
-      !$c->is_in_pk &&          # DONE
-      !$c->is_in_uk &&
-      !$c->is_in_fk
-    ) {
-      $item->spec->{$col_name} = $c->generate_value(die_on_unknown => 1);
-    }
-  }
-
-  # Oracle does not allow the "INSERT INTO x DEFAULT VALUES" syntax that DBIC
-  # wants to use. Therefore, find a PK column and set it to NULL. If there
-  # isn't one, complain loudly.
-  if ($self->is_oracle && keys(%{$item->spec}) == 0) {
-    my @pk_columns = grep {
-      $_->is_in_pk
-    } $item->source->columns;
-
-    die "Must specify something about some column or have a PK in Oracle"
-      unless @pk_columns;
-
-    # This will work even if there are multiple columns in the PK.
-    $item->spec->{$pk_columns[0]->name} = undef;
-  }
 }
 
 sub Xcreate_item {

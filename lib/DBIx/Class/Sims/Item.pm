@@ -151,6 +151,11 @@ sub find_any_match {
 
   my $rs = $self->source->resultset;
 
+  if ($self->meta->{restriction}) {
+    my $c = $self->meta->{restriction};
+    $rs = $rs->search( $c->{cond}, $c->{extra} );
+  }
+
   my $cond = {};
   foreach my $colname ( map { $_->name } $self->source->columns ) {
     next unless exists $self->spec->{$colname};
@@ -350,7 +355,7 @@ sub populate_parents {
       }
     }
 
-    my $cond;
+    my $spec = {};
     my $fkcol = $r->foreign_fk_col;
     my $proto = delete($self->spec->{$r->name}) // delete($self->spec->{$col});
     # TODO: Write a test if both the rel and the FK col are specified
@@ -368,15 +373,15 @@ sub populate_parents {
 
       # Assume any hashref is a Sims specification
       if (ref($proto) eq 'HASH') {
-        $cond = $proto;
+        $spec = $proto;
       }
       # Assume any unblessed scalar is a column value.
       elsif (!ref($proto)) {
-        $cond = { $fkcol => $proto };
+        $spec = { $fkcol => $proto };
       }
       # Use a referenced row
       #elsif (ref($proto) eq 'SCALAR') {
-      #  $cond = {
+      #  $spec = {
       #    $fkcol => $self->runner->convert_backreference(
       #      $self->runner->backref_name($self->runner, $r->name), $$proto, $fkcol,
       #    ),
@@ -387,8 +392,9 @@ sub populate_parents {
       }
     }
 
+    $spec->{__META__} //= {};
+
     my $fk_source = $r->target;
-=pod
     # If the child's column is within a UK, add a check to the $rs that ensures
     # we cannot pick a parent that's already being used.
     my @constraints = $self->source->unique_constraints_containing($col);
@@ -405,24 +411,23 @@ sub populate_parents {
         die "Too many inverse relationships for @{[$r->full_name]} (@{[$fk_source->name]} / $fkcol)\n" . np(@inverse);
       }
 
-      # We cannot add this relationship to the $cond because that would result
-      # in an infinite loop. So, restrict the $rs here.
-      $rs = $rs->search(
-        { join('.', $inverse[0]{rel}, $inverse[0]{col}) => undef },
-        { join => $inverse[0]{rel} },
-      );
+      # We cannot add this relationship to the $spec because that would result
+      # in an infinite loop. So, add a restriction to the parent's __META__
+      $spec->{__META__}{restriction} = {
+        cond  => { join('.', $inverse[0]{rel}, $inverse[0]{col}) => undef },
+        extra => { join => $inverse[0]{rel} },
+      };
     }
-=cut
+
     my $fk_item = DBIx::Class::Sims::Item->new(
       runner => $self->runner,
       source => $fk_source,
-      spec   => MyCloner::clone($cond // {}),
+      spec   => MyCloner::clone($spec // {}),
     );
     $fk_item->set_allow_pk_to($self);
     $fk_item->create;
-    my $parent = $fk_item->row;
 
-    $self->spec->{$col} = $parent->get_column($fkcol);
+    $self->spec->{$col} = $fk_item->row->get_column($fkcol);
   }
 }
 
