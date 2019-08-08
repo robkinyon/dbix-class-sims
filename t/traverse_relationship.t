@@ -79,7 +79,6 @@ BEGIN {
 use common qw(sims_test Schema);
 
 sims_test "Reference an attribute of a parent object" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => { name => 'foo' },
     Album => { artist => \'Artist[0]', name => \'Artist[0].name' },
@@ -91,7 +90,6 @@ sims_test "Reference an attribute of a parent object" => {
 };
 
 sims_test "Reference an attribute of a grandparent object" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => {
       name => 'They Might Be Giants',
@@ -113,7 +111,6 @@ sims_test "Reference an attribute of a grandparent object" => {
 };
 
 sims_test "Fail to reference a method of a backreference" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => { name => 'foo' },
     Album => { artist => \'Artist[0]', name => \'Artist[0]' },

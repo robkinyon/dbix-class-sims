@@ -118,41 +118,6 @@ sub are_columns_equal {
   sub clear_pending { %pending = (); }
 }
 
-sub backref_name {
-  my $self = shift;
-  my ($item, $colname) = @_;
-  return $item->source->name . '->' . $colname;
-}
-
-sub convert_backreference {
-  my $self = shift;
-  my ($backref_name, $proto, $default_method) = @_;
-
-  my ($table, $idx, $methods) = ($proto =~ /(.+)\[(\d+)\](?:\.(.+))?$/);
-  unless ($table && defined $idx) {
-    die "Unsure what to do about $backref_name => $proto\n";
-  }
-  unless (exists $self->{rows}{$table}) {
-    die "No rows in $table to reference\n";
-  }
-  unless (exists $self->{rows}{$table}[$idx]) {
-    die "Not enough ($idx) rows in $table to reference\n";
-  }
-
-  if ($methods) {
-    my @chain = split '\.', $methods;
-    my $obj = $self->{rows}{$table}[$idx];
-    $obj = $obj->$_ for @chain;
-    return $obj;
-  }
-  elsif ($default_method) {
-    return $self->{rows}{$table}[$idx]->$default_method;
-  }
-  else {
-    die "No method to call at $backref_name => $proto\n";
-  }
-}
-
 sub fix_deferred_fks {
   my $self = shift;
   my ($item, $deferred_fks) = @_;
@@ -235,6 +200,41 @@ sub Xcreate_item {
   $self->remove_item($item);
 
   return $item->row;
+}
+
+sub backref_name {
+  my $self = shift;
+  my ($item, $colname) = @_;
+  return $item->source->name . '->' . $colname;
+}
+
+sub convert_backreference {
+  my $self = shift;
+  my ($backref_name, $proto, $default_method) = @_;
+
+  my ($table, $idx, $methods) = ($proto =~ /(.+)\[(\d+)\](?:\.(.+))?$/);
+  unless ($table && defined $idx) {
+    die "Unsure what to do about $backref_name => $proto\n";
+  }
+  unless (exists $self->{rows}{$table}) {
+    die "No rows in $table to reference\n";
+  }
+  unless (exists $self->{rows}{$table}[$idx]) {
+    die "Not enough ($idx) rows in $table to reference\n";
+  }
+
+  if ($methods) {
+    my @chain = split '\.', $methods;
+    my $obj = $self->{rows}{$table}[$idx];
+    $obj = $obj->$_ for @chain;
+    return $obj;
+  }
+  elsif ($default_method) {
+    return $self->{rows}{$table}[$idx]->$default_method;
+  }
+  else {
+    die "No method to call at $backref_name => $proto\n";
+  }
 }
 
 sub run {

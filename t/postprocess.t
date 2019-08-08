@@ -102,15 +102,13 @@ sims_test "create child in postprocess" => {
 };
 
 sims_test "create grandchild via child from postprocess" => {
-  skip => 'Regressing until refactoring is done',
   spec => [
     {
       Artist => { name => 'foo' },
-      # This retrieves the existing row, does NOT update the name, but DOES
-      # create the child rows. This way, you can operate on a thing that exists.
+      # This retrieves the existing row and creates the child rows. This way,
+      # you can operate on a thing that already exists.
       Album => {
         artist_id => \'Artist[0].id',
-        name => 'not bar',
         track => { name => 'music' },
       },
     },

@@ -457,7 +457,6 @@ sims_test "Accept a hashref for children" => {
 };
 
 sims_test "Connect to the parent by reference" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => 3,
     Album  => {
@@ -476,7 +475,6 @@ sims_test "Connect to the parent by reference" => {
 };
 
 sims_test "Connect to the right parent by reference" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => [
       { name => 'first' },
@@ -504,7 +502,6 @@ sims_test "Connect to the right parent by reference" => {
 };
 
 sims_test "Use a parent's column by reference" => {
-  skip => 'Regressing until refactoring is done',
   spec => {
     Artist => { name => 'foo' },
     Album  => { name => \'Artist[0].name', artist => \'Artist[0]' },

@@ -66,6 +66,23 @@ sub row {
   return $self->{row};
 }
 
+sub spec_value {
+  my $self = shift;
+  my ($col) = @_;
+
+  return unless exists $self->spec->{$col};
+
+  my $v = $self->spec->{$col};
+  if (ref($v) eq 'SCALAR') {
+    $v = $self->runner->convert_backreference(
+      $self->runner->backref_name($self, $col),
+      ${$v},
+    );
+  }
+
+  return $v;
+}
+
 ################################################################################
 #
 # These are the helper methods
@@ -83,7 +100,7 @@ sub build_searcher_for_constraints {
       $matched_all_columns = 0;
       last;
     }
-    $to_find->{$c->name} = $self->spec->{$c->name};
+    $to_find->{$c->name} = $self->spec_value($c->name);
   }
 
   return $to_find if keys(%$to_find) && $matched_all_columns;
@@ -168,6 +185,20 @@ sub find_any_match {
   return $self->row;
 }
 
+sub fix_values {
+  my $self = shift;
+  my ($name, $item) = @_;
+
+  while (my ($attr, $value) = each %{$item}) {
+    # Decode a backreference
+    if (ref($value) eq 'SCALAR') {
+      $item->{$attr} = $self->convert_backreference(
+        $name, $attr, $$value,
+      );
+    }
+  }
+}
+
 ################################################################################
 #
 # These are the expected interface methods
@@ -186,7 +217,7 @@ sub create {
       next unless exists $self->{spec}{$col_name};
 
       my $row_value = $self->row->get_column($col_name);
-      my $spec_value = $self->{spec}{$col_name};
+      my $spec_value = $self->spec_value($col_name);
       unless (compare_values($row_value, $spec_value)) {
         push @failed, "\t$col_name: row(@{[$row_value//'[undef]']}) spec(@{[$spec_value//'[undef]']})\n";
       }
@@ -285,6 +316,12 @@ sub populate_columns {
       ) {
         $spec = $self->spec->{$col_name};
       }
+      elsif (reftype($self->spec->{$col_name}) eq 'SCALAR') {
+        $self->{create}{$col_name} = $self->runner->convert_backreference(
+          $self->runner->backref_name($self, $c->name),
+          ${$self->spec->{$col_name}},
+        );
+      }
       else {
         $self->{create}{$col_name} = $self->spec->{$col_name};
       }
@@ -375,18 +412,18 @@ sub populate_parents {
       if (ref($proto) eq 'HASH') {
         $spec = $proto;
       }
+      # Use a referenced row
+      elsif (ref($proto) eq 'SCALAR') {
+        $spec = {
+          $fkcol => $self->runner->convert_backreference(
+            $self->runner->backref_name($self, $r->name), $$proto, $fkcol,
+          ),
+        };
+      }
       # Assume any unblessed scalar is a column value.
       elsif (!ref($proto)) {
         $spec = { $fkcol => $proto };
       }
-      # Use a referenced row
-      #elsif (ref($proto) eq 'SCALAR') {
-      #  $spec = {
-      #    $fkcol => $self->runner->convert_backreference(
-      #      $self->runner->backref_name($self->runner, $r->name), $$proto, $fkcol,
-      #    ),
-      #  };
-      #}
       else {
         die "Unsure what to do about @{[$r->full_name]}():" . np($proto);
       }

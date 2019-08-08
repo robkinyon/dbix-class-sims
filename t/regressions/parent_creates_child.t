@@ -77,7 +77,6 @@ sims_test "parent builds a child, but we're creating a child" => {
 };
 
 sims_test "child refers to parent by backref" => {
-  skip => 'Regressing until refactoring is done',
   spec => [
     {
       Artist => 1,
