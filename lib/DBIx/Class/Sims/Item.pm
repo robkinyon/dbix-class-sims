@@ -31,12 +31,11 @@ sub initialize {
   # TODO: Should we check for _META__ or __META_ or __MTA__ etc?
   $self->{meta} = $self->spec->{__META__} // {};
 
+  $self->{created} = 0;
   $self->{create} = {};
 
   $self->{still_to_use} = { map { $_ => 1 } keys %{$self->spec} };
   delete $self->{still_to_use}{__META__};
-
-  # Should we quarantine_children() immediately?
 
   return;
 }
@@ -175,8 +174,13 @@ sub find_any_match {
 
   my $cond = {};
   foreach my $colname ( map { $_->name } $self->source->columns ) {
-    next unless exists $self->spec->{$colname};
-    $cond->{'me.' . $colname} = $self->spec->{$colname};
+    next unless exists $self->spec->{$colname} || exists $self->{create}{$colname};
+    if (exists $self->spec->{$colname}) {
+      $cond->{'me.' . $colname} = $self->spec->{$colname};
+    }
+    else {
+      $cond->{'me.' . $colname} = $self->{create}{$colname};
+    }
   }
 
   my $row = $rs->search($cond, { rows => 1 })->single;
@@ -208,6 +212,15 @@ sub fix_values {
 sub create {
   my $self = shift;
 
+  warn "Received @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
+
+  # If, in the current stack of in-flight items, we've attempted to make this
+  # exact item, die because we've obviously entered an infinite loop.
+  if ($self->runner->has_item($self)) {
+    die "ERROR: @{[$self->source_name]} (".np($self->spec).") was seen more than once\n";
+  }
+  $self->runner->add_item($self);
+
   $self->find_unique_match;
   if ($self->row) {
     my @failed;
@@ -233,7 +246,7 @@ sub create {
 
   $self->quarantine_children;
   unless ($self->row) {
-    $self->populate_parents;
+    $self->populate_parents(nullable => 0);
   }
 
   if ( ! $self->row && ! $self->meta->{create} ) {
@@ -243,20 +256,10 @@ sub create {
   unless ($self->row) {
     $self->populate_columns;
 
-    # Things were passed in, but don't exist in the table.
-    if (!$self->runner->{ignore_unknown_columns} && %{$self->{still_to_use}}) {
-      my $msg = "The following names are in the spec, but not the table @{[$self->source_name]}\n";
-      $msg .= join ',', sort keys %{$self->{still_to_use}};
-      $msg .= "\n";
-      die $msg;
-    }
-
     $self->oracle_ensure_populated_pk;
 
-    #warn np($self->{create});
-    #warn "Creating @{[$self->source_name]} (".np($self->spec).")\n" if $ENV{SIMS_DEBUG};
+    warn "Creating @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
     my $row = eval {
-      #warn 'Creating (' . np($self->{create}) . ")\n";
       $self->source->resultset->create($self->{create});
     }; if ($@) {
       my $e = $@;
@@ -265,8 +268,23 @@ sub create {
     }
     $self->row($row);
 
+    $self->{created} = 1;
+
     # This tracks everything that was created, not just what was requested.
     $self->runner->{created}{$self->source_name}++;
+
+    # This occurs when a FK condition was specified, but the column is
+    # nullable and we didn't find an existing parent row. We want to defer these
+    # because self-referential values need to be set after creation.
+    $self->populate_parents(nullable => 1);
+
+    # Things were passed in, but don't exist in the table.
+    if (!$self->runner->{ignore_unknown_columns} && %{$self->{still_to_use}}) {
+      my $msg = "The following names are in the spec, but not the table @{[$self->source_name]}\n";
+      $msg .= join ',', sort keys %{$self->{still_to_use}};
+      $msg .= "\n";
+      die $msg;
+    }
   }
   $self->build_children;
 
@@ -274,14 +292,20 @@ sub create {
     $self->source_name, $self->source->source, $self->row,
   );
 
+  $self->runner->remove_item($self);
+
+  if ($ENV{SIMS_DEBUG}) {
+    my %x = $self->row->get_columns;
+    warn "Finished @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).") (" . np(%x) . ")\n";
+  }
+
   return $self->row;
 }
 
 sub populate_columns {
   my $self = shift;
-  my ($col_spec) = @_;
 
-  foreach my $c ( $self->source->columns($col_spec) ) {
+  foreach my $c ( $self->source->columns_not_in_parent_relationships ) {
     my $col_name = $c->name;
 
     my $spec;
@@ -381,10 +405,18 @@ sub populate_columns {
 
 sub populate_parents {
   my $self = shift;
+  my %opts = @_;
 
   RELATIONSHIP:
   foreach my $r ( $self->source->parent_relationships ) {
     my $col = $r->self_fk_col;
+
+    if ( $opts{nullable} && !$self->source->column($col)->is_nullable ) {
+      next RELATIONSHIP;
+    }
+    if ( !$opts{nullable} && $self->source->column($col)->is_nullable ) {
+      next RELATIONSHIP;
+    }
 
     if (!$self->runner->{allow_relationship_column_names}) {
       if ($col ne $r->name && exists $self->spec->{$col}) {
@@ -392,19 +424,25 @@ sub populate_parents {
       }
     }
 
-    my $spec = {};
     my $fkcol = $r->foreign_fk_col;
     my $proto = delete($self->spec->{$r->name}) // delete($self->spec->{$col});
     # TODO: Write a test if both the rel and the FK col are specified
     delete $self->{still_to_use}{$r->name};
     delete $self->{still_to_use}{$col};
 
+    my $spec;
     if ($proto) {
       # Assume anything blessed is blessed into DBIC.
       # TODO: Write tests to force us to ensure things about blessed things.
       # This should do "blessed($x) && $x->can($fkcol)" and assume this is okay
       if (blessed($proto)) {
-        $self->spec->{$col} = $proto->get_column($fkcol);
+        if ($opts{nullable}) {
+          $self->row->set_column($col => $proto->get_column($fkcol));
+          $self->row->update;
+        }
+        else {
+          $self->{create}{$col} = $proto->get_column($fkcol);
+        }
         next RELATIONSHIP;
       }
 
@@ -427,6 +465,14 @@ sub populate_parents {
       else {
         die "Unsure what to do about @{[$r->full_name]}():" . np($proto);
       }
+    }
+
+    unless ( $spec ) {
+      if ( $self->source->column($col)->is_nullable ) {
+        next RELATIONSHIP;
+      }
+
+      $spec = {};
     }
 
     $spec->{__META__} //= {};
@@ -456,6 +502,7 @@ sub populate_parents {
       };
     }
 
+    warn "Parent (@{[$fk_source->name]}): " . np($spec) .$/ if $ENV{SIMS_DEBUG};
     my $fk_item = DBIx::Class::Sims::Item->new(
       runner => $self->runner,
       source => $fk_source,
@@ -464,13 +511,17 @@ sub populate_parents {
     $fk_item->set_allow_pk_to($self);
     $fk_item->create;
 
-    $self->spec->{$col} = $fk_item->row->get_column($fkcol);
+    if ($opts{nullable}) {
+      $self->row->set_column($col => $fk_item->row->get_column($fkcol));
+      $self->row->update;
+    }
+    else {
+      $self->{create}{$col} = $fk_item->row->get_column($fkcol);
+    }
   }
-}
 
-#sub populate_deferred_parents {
-#  my $self = shift;
-#}
+  return;
+}
 
 sub quarantine_children {
   my $self = shift;
@@ -479,8 +530,9 @@ sub quarantine_children {
   foreach my $r ( $self->source->child_relationships ) {
     if ($self->spec->{$r->name}) {
       $self->{children}{$r->name} = $self->spec->{$r->name};
-      delete $self->{still_to_use}{$r->name};
     }
+  } continue {
+    delete $self->{still_to_use}{$r->name};
   }
 
   return;
@@ -548,7 +600,7 @@ sub oracle_ensure_populated_pk {
       unless @pk_columns;
 
     # This will work even if there are multiple columns in the PK.
-    $self->spec->{$pk_columns[0]->name} = undef;
+    $self->{create}{$pk_columns[0]->name} = undef;
   }
 }
 

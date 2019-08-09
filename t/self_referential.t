@@ -37,13 +37,11 @@ BEGIN {
 use common qw(sims_test Schema);
 
 sims_test "Cyclic graphs throw an error" => {
-  skip => 'Regressing until refactoring is done',
   spec => { Company => 1 },
   dies => qr/expected directed acyclic graph/,
 };
 
 sims_test "Specify a toposort->skip breaks the cycle, but entered a loop" => {
-  skip => 'Regressing until refactoring is done',
   spec => [
     { Company => 1 },
     {
@@ -60,7 +58,6 @@ sims_test "Specify a toposort->skip breaks the cycle, but entered a loop" => {
 Schema->source('Company')->column_info('parent_id')->{is_nullable} = 1;
 
 sims_test "Specify a toposort->skip plus is_nullable breaks the cycle" => {
-  skip => 'Regressing until refactoring is done',
   spec => [
     { Company => 1 },
     {
@@ -79,7 +76,6 @@ sims_test "Specify a toposort->skip plus is_nullable breaks the cycle" => {
 # Note: This will find itself because the row is created, then it searches for
 # a row that can fit its parentage, which is itself.
 sims_test "Can find a parent on the skipped relationship" => {
-  skip => 'Regressing until refactoring is done',
   spec => [
     { Company => { parent => 1 } },
     {
@@ -101,7 +97,6 @@ sims_test "Can find a parent on the skipped relationship" => {
 };
 
 sims_test "Can build a parent on the skipped relationship" => {
-  skip => 'Regressing until refactoring is done',
   spec => [
     { Company => { parent => { id => 2 } } },
     {
@@ -125,7 +120,6 @@ sims_test "Can build a parent on the skipped relationship" => {
 };
 
 sims_test "Can force-create a parent on the skipped relationship" => {
-  skip => 'Regressing until refactoring is done',
   spec => [
     { Company => { parent => { __META__ => { create => 1 } } } },
     {
@@ -138,12 +132,12 @@ sims_test "Can force-create a parent on the skipped relationship" => {
   ],
   expect => {
     Company => [
-      { id => 1, parent_id => undef },
-      { id => 2, parent_id => 1 },
+      { id => 1, parent_id => 2 },
+      { id => 2, parent_id => undef },
     ],
   },
   rv => {
-    Company => { id => 2, parent_id => 1 },
+    Company => { id => 1, parent_id => 2 },
   },
 };
 
@@ -172,7 +166,6 @@ sims_test "Can build children on the skipped relationship" => {
 };
 
 sims_test "Can point to myself on the skipped relationship" => {
-  skip => 'Regressing until refactoring is done',
   spec => [
     {
       Company => {

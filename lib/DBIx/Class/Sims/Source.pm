@@ -77,23 +77,22 @@ sub source { $_[0]{source} }
 
 sub columns {
   my $self = shift;
-  my ($spec) = @_;
-  $spec //= {};
-
-  return grep {
-    my $rv = 1;
-    while (my ($method, $result) = each %$spec) {
-      my $x = $_->$method;
-
-      # This is an implementation of xor
-      $rv &&= !(!$x != !$result);
-    }
-    $rv;
-  } values %{$self->{columns}};
+  return values %{$self->{columns}};
 }
 sub column {
   my $self = shift;
   return $self->{columns}{$_[0]};
+}
+
+sub columns_not_in_parent_relationships {
+  my $self = shift;
+
+  my %c = map { $_->name => $_ } $self->columns;
+  foreach my $r ( $self->parent_relationships ) {
+    delete $c{$r->self_fk_col};
+  }
+
+  return values %c;
 }
 
 sub relationships {

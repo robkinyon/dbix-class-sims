@@ -64,6 +64,7 @@ sub sims_test ($$) {
             ($rv, $addl) = $opts->{load_sims}->(Schema)
           };
           is $trap->leaveby, 'return', "load_sims runs to completion";
+          warn $trap->stderr if $ENV{SIMS_DEBUG} && $trap->stderr;
         }
         else {
           my @args = ref($opts->{spec}//'') eq 'ARRAY'
@@ -87,6 +88,7 @@ sub sims_test ($$) {
               warn $trap->die;
               return; # Don't continue the test if we die unexpectedly.
             }
+            warn $trap->stderr if $ENV{SIMS_DEBUG} && $trap->stderr;
           }
         }
 
@@ -107,6 +109,7 @@ sub sims_test ($$) {
             end();
           };
           my @x = ResultSet($name)->all;
+          warn("$name: " . np(@x)) if $ENV{SIMS_DEBUG};
           is(
             \@x, $check,
             "Rows in database for $name are expected",
