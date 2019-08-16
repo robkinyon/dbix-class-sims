@@ -37,6 +37,8 @@ sub initialize {
   $self->{still_to_use} = { map { $_ => 1 } keys %{$self->spec} };
   delete $self->{still_to_use}{__META__};
 
+  $self->{skip_relationship} = {};
+
   return;
 }
 
@@ -65,21 +67,19 @@ sub row {
   return $self->{row};
 }
 
-sub spec_value {
+sub has_value {
+  my $self = shift;
+  my ($col) = @_;
+  return exists $self->spec->{$col} || exists $self->{create}{$col};
+}
+sub value {
   my $self = shift;
   my ($col) = @_;
 
-  return unless exists $self->spec->{$col};
-
-  my $v = $self->spec->{$col};
-  if (ref($v) eq 'SCALAR') {
-    $v = $self->runner->convert_backreference(
-      $self->runner->backref_name($self, $col),
-      ${$v},
-    );
-  }
-
-  return $v;
+  return unless $self->has_value($col);
+  return exists $self->spec->{$col}
+    ? $self->spec->{$col}
+    : $self->{create}{$col};
 }
 
 ################################################################################
@@ -95,11 +95,11 @@ sub build_searcher_for_constraints {
   my $to_find = {};
   my $matched_all_columns = 1;
   foreach my $c ( map { @$_ } @constraints ) {
-    unless (exists $self->spec->{$c->name}) {
+    unless ($self->has_value($c->name)) {
       $matched_all_columns = 0;
       last;
     }
-    $to_find->{$c->name} = $self->spec_value($c->name);
+    $to_find->{$c->name} = $self->value($c->name);
   }
 
   return $to_find if keys(%$to_find) && $matched_all_columns;
@@ -174,13 +174,8 @@ sub find_any_match {
 
   my $cond = {};
   foreach my $colname ( map { $_->name } $self->source->columns ) {
-    next unless exists $self->spec->{$colname} || exists $self->{create}{$colname};
-    if (exists $self->spec->{$colname}) {
-      $cond->{'me.' . $colname} = $self->spec->{$colname};
-    }
-    else {
-      $cond->{'me.' . $colname} = $self->{create}{$colname};
-    }
+    next unless $self->has_value($colname);
+    $cond->{'me.' . $colname} = $self->value($colname);
   }
 
   my $row = $rs->search($cond, { rows => 1 })->single;
@@ -189,18 +184,48 @@ sub find_any_match {
   return $self->row;
 }
 
-sub fix_values {
+sub resolve_direct_values {
   my $self = shift;
-  my ($name, $item) = @_;
 
-  while (my ($attr, $value) = each %{$item}) {
-    # Decode a backreference
-    if (ref($value) eq 'SCALAR') {
-      $item->{$attr} = $self->convert_backreference(
-        $name, $attr, $$value,
-      );
+  # Iterate through all the columns.
+  #  * If a column is in a relationship, resolve based on the relationship
+  #    * Objects
+  #    * Backreferences with method default
+  #  * Otherwise, resolve based the column
+  #    * Backreferences without method default
+  foreach my $c ( $self->source->columns ) {
+    my $value = $self->spec->{$c->name};
+
+    if ( $c->is_in_fk ) {
+      # XXX What should happen if $c is in multiple relationships?
+      my $r = $c->{fks}[0];
+      my $fkcol = $r->foreign_fk_col;
+      # TODO: Write tests to force us to ensure things about blessed things.
+      # This should do "blessed($x) && $x->can($fkcol)" and assume this is okay
+      if (blessed($value)) {
+        # XXX If we hit this spot, skip this relationship in populate_parents()
+        $self->spec->{$c->name} = $value->get_column($fkcol);
+        $self->{skip_relationship}{$r->name} = 1;
+      }
+      elsif (ref($value) eq 'SCALAR') {
+        $self->spec->{$c->name} = $self->runner->convert_backreference(
+          $self->runner->backref_name($self, $r->name),
+          $$value,
+          $fkcol,
+        );
+      }
+    }
+    else {
+      if (reftype($value) eq 'SCALAR') {
+        $self->spec->{$c->name} = $self->runner->convert_backreference(
+          $self->runner->backref_name($self, $c->name),
+          ${$value},
+        );
+      }
     }
   }
+
+  return;
 }
 
 ################################################################################
@@ -221,6 +246,13 @@ sub create {
   }
   $self->runner->add_item($self);
 
+  # This resolves all of the values that can be resolved immediately.
+  #   * Back references
+  #   * Objects
+  $self->resolve_direct_values;
+
+  warn "After RDV @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
+
   $self->find_unique_match;
   if ($self->row) {
     my @failed;
@@ -230,7 +262,7 @@ sub create {
       next unless exists $self->{spec}{$col_name};
 
       my $row_value = $self->row->get_column($col_name);
-      my $spec_value = $self->spec_value($col_name);
+      my $spec_value = $self->value($col_name);
       unless (compare_values($row_value, $spec_value)) {
         push @failed, "\t$col_name: row(@{[$row_value//'[undef]']}) spec(@{[$spec_value//'[undef]']})\n";
       }
@@ -430,11 +462,19 @@ sub populate_parents {
     delete $self->{still_to_use}{$r->name};
     delete $self->{still_to_use}{$col};
 
+    if ($self->{skip_relationship}{$r->name}) {
+      if ($opts{nullable}) {
+        $self->row->set_column($col => $proto);
+        $self->row->update;
+      }
+      else {
+        $self->{create}{$col} = $proto;
+      }
+      next RELATIONSHIP;
+    }
+
     my $spec;
     if ($proto) {
-      # Assume anything blessed is blessed into DBIC.
-      # TODO: Write tests to force us to ensure things about blessed things.
-      # This should do "blessed($x) && $x->can($fkcol)" and assume this is okay
       if (blessed($proto)) {
         if ($opts{nullable}) {
           $self->row->set_column($col => $proto->get_column($fkcol));

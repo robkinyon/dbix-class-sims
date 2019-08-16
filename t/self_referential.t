@@ -142,7 +142,6 @@ sims_test "Can force-create a parent on the skipped relationship" => {
 };
 
 sims_test "Can build children on the skipped relationship" => {
-  skip => 'Regressing until refactoring is done',
   spec => [
       { Company => { children => 2 } },
       {
