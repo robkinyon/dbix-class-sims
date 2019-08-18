@@ -9,6 +9,7 @@ use strictures 2;
 
 use DDP;
 
+use DateTime::Event::Random;
 use String::Random qw( random_regex );
 
 # Requires the following attributes:
@@ -152,9 +153,7 @@ sub generate_value {
     );
   }
   elsif ( $self->is_datetime ) {
-    return random_regex(
-      '20\d{2}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}'
-    );
+    return DateTime::Event::Random->datetime;
   }
   elsif ( $opts{die_on_unknown} ) {
     die "ERROR: @{[$self->source->name]}\.@{[$self->name]} is not nullable, but I don't know how to handle @{[$self->info->{data_type}]}\n";
