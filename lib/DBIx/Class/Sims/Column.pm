@@ -153,7 +153,11 @@ sub generate_value {
     );
   }
   elsif ( $self->is_datetime ) {
-    return DateTime::Event::Random->datetime;
+    my $dt_set = DateTime::Event::Random->new(
+      start => DateTime->new( year => 1900 ),
+      end   => DateTime->new( year => 2100 ),
+    );
+    return $dt_set->next( DateTime->today )->datetime;
   }
   elsif ( $opts{die_on_unknown} ) {
     die "ERROR: @{[$self->source->name]}\.@{[$self->name]} is not nullable, but I don't know how to handle @{[$self->info->{data_type}]}\n";
