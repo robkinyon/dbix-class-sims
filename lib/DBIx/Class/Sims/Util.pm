@@ -6,7 +6,10 @@ use 5.010_001;
 use strictures 2;
 
 use base 'Exporter';
-our @EXPORT_OK = qw( compare_values normalize_aoh reftype );
+our @EXPORT_OK = qw(
+  compare_values normalize_aoh reftype
+  powerset powerset_lazy
+);
 
 use Scalar::Util ();
 
@@ -42,6 +45,31 @@ sub normalize_aoh {
   }
 
   return;
+}
+
+# Copied in from PowerSet::Lazy
+sub powerset {
+  return [[]] if @_ == 0;
+  my $first = shift;
+  my $pow = &powerset;
+  [ map { [$first, @$_ ], [ @$_] } @$pow ];
+}
+
+sub powerset_lazy {
+  my @set = @_;
+  my @odometer = (1) x @set;
+  my $FINISHED;
+  return sub {
+    return if $FINISHED;
+    my @result;
+    my $adjust = 1;
+    for (0 .. $#odometer) {
+      push @result, $set[$_]  if $odometer[$_];
+      $adjust = $odometer[$_] = 1 - $odometer[$_] if $adjust;
+    }
+    $FINISHED = (@result == 0);
+            \@result;
+  };
 }
 
 1;

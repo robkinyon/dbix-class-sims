@@ -10,10 +10,13 @@ use strictures 2;
 
 use DDP;
 
-use List::PowerSet qw(powerset);
+#use List::PowerSet qw(powerset);
 use Scalar::Util qw( blessed );
 
-use DBIx::Class::Sims::Util qw( normalize_aoh reftype compare_values );
+use DBIx::Class::Sims::Util qw(
+  normalize_aoh reftype compare_values
+  powerset powerset_lazy
+);
 
 sub new {
   my $class = shift;
