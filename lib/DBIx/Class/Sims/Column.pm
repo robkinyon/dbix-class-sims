@@ -43,17 +43,17 @@ my %types = (
     blob tinyblob mediumblob longblob
   ))},
   # These will be unhandled
-  #datetime => [qw(
-  #  date
-  #  datetime
-  #  timestamp
-  #  year
-  #)],
-  #unknown => [qw(
+  datetime => {( map { $_ => 1 } qw(
+    date
+    datetime
+    timestamp
+    year
+  ))},
+  #unknown => {( map { $_ => 1 } qw(
   #  enum set bit json
   #  geometry point linestring polygon
   #  multipoint multilinestring multipolygon geometrycollection
-  #)],
+  #))},
 );
 
 sub initialize {
@@ -63,6 +63,7 @@ sub initialize {
   $self->{uks} = [];
   $self->{fks} = [];
 
+  $self->info->{data_type} //= 'unknown';
   if ( exists $types{numeric}{$self->info->{data_type}} ) {
     $self->{type} = 'numeric';
   }
@@ -71,6 +72,9 @@ sub initialize {
   }
   elsif ( exists $types{string}{$self->info->{data_type}} ) {
     $self->{type} = 'string';
+  }
+  elsif ( exists $types{datetime}{$self->info->{data_type}} ) {
+    $self->{type} = 'datetime';
   }
   else {
     $self->{type} = 'unknown';
@@ -118,9 +122,10 @@ sub in_uk { push @{shift->{uks}}, $_[0]; return }
 sub is_in_fk { @{shift->{fks}} != 0 }
 sub in_fk { push @{shift->{fks}}, $_[0]; return }
 
-sub is_numeric { shift->{type} eq 'numeric' }
-sub is_decimal { shift->{type} eq 'decimal' }
-sub is_string  { shift->{type} eq 'string' }
+sub is_datetime { shift->{type} eq 'datetime' }
+sub is_decimal  { shift->{type} eq 'decimal' }
+sub is_numeric  { shift->{type} eq 'numeric' }
+sub is_string   { shift->{type} eq 'string' }
 #sub is_unknown { shift->{type} eq 'unknown' }
 
 sub generate_value {
@@ -144,6 +149,11 @@ sub generate_value {
     my $max = $spec->{max} // $self->info->{data_length} // $self->info->{size} // $min;
     return random_regex(
       '\w' . "{$min,$max}"
+    );
+  }
+  elsif ( $self->is_datetime ) {
+    return random_regex(
+      '20\d{2}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}'
     );
   }
   elsif ( $opts{die_on_unknown} ) {
