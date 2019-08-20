@@ -426,7 +426,10 @@ sub populate_columns {
       }
       elsif (
         !$c->is_nullable &&
-        !$c->is_in_pk
+        !$c->is_in_pk &&
+        !$c->has_default_value
+        # These clauses were in the original code. Do they still need to exist?
+        # && !$c->is_in_uk
       ) {
         $self->{create}{$col_name} = $c->generate_value(die_on_unknown => 1);
       }
