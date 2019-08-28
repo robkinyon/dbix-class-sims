@@ -322,9 +322,14 @@ sub create {
     $self->source_name, $self->source->source, $self->spec,
   );
 
+  warn "After preprocess @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
+
   $self->quarantine_children;
+  warn "After quarantine_children @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
+
   unless ($self->row) {
     $self->populate_parents(nullable => 0);
+    warn "After populate_parents @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
   }
 
   if ( ! $self->row && ! $self->meta->{create} ) {
@@ -333,6 +338,7 @@ sub create {
 
   unless ($self->row) {
     $self->populate_columns;
+    warn "After populate_columns @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
 
     $self->oracle_ensure_populated_pk;
 
