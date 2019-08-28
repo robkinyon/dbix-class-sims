@@ -269,7 +269,7 @@ sims_test "Fail to generate a child due to a bad value" => {
       albums => \'bad value',
     },
   },
-  dies => qr/Don't know what to do with Artist->album/,
+  dies => qr/Unsure what to do about Artist->albums => bad value/,
 };
 
 sims_test "Use a constraint to force a child row" => {

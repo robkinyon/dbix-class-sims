@@ -73,16 +73,16 @@ sub row {
 sub has_value {
   my $self = shift;
   my ($col) = @_;
-  return exists $self->spec->{$col} || exists $self->{create}{$col};
+  return exists $self->{create}{$col} || exists $self->spec->{$col};
 }
 sub value {
   my $self = shift;
   my ($col) = @_;
 
   return unless $self->has_value($col);
-  return exists $self->spec->{$col}
-    ? $self->spec->{$col}
-    : $self->{create}{$col};
+  return exists $self->{create}{$col}
+    ? $self->{create}{$col}
+    : $self->spec->{$col};
 }
 
 ################################################################################
@@ -190,42 +190,85 @@ sub find_any_match {
 sub resolve_direct_values {
   my $self = shift;
 
-  # Iterate through all the columns.
-  #  * If a column is in a relationship, resolve based on the relationship
-  #    * Objects
-  #    * Backreferences with method default
-  #  * Otherwise, resolve based the column
-  #    * Backreferences without method default
-  foreach my $c ( $self->source->columns ) {
-    my $value = $self->spec->{$c->name};
+  my @unknowns;
+  while ( my ($k,$v) = each %{$self->spec} ) {
+    # Ignore __META__
+    next if $k eq '__META__';
 
-    if ( $c->is_in_fk ) {
-      # XXX What should happen if $c is in multiple relationships?
-      my $r = $c->{fks}[0];
+    # If $k is a relationship, handle that.
+    if ( my $r = $self->source->relationship($k) ) {
       my $fkcol = $r->foreign_fk_col;
-      # TODO: Write tests to force us to ensure things about blessed things.
-      # This should do "blessed($x) && $x->can($fkcol)" and assume this is okay
-      if (blessed($value)) {
-        # XXX If we hit this spot, skip this relationship in populate_parents()
-        $self->spec->{$c->name} = $value->get_column($fkcol);
+      if (blessed($v)) {
+        $self->{create}{$r->self_fk_col} = $v->get_column($fkcol);
         $self->{skip_relationship}{$r->name} = 1;
       }
-      elsif (ref($value) eq 'SCALAR') {
-        $self->spec->{$c->name} = $self->runner->convert_backreference(
-          $self->runner->backref_name($self, $r->name),
-          $$value,
+      elsif (ref($v) eq 'SCALAR') {
+        $self->{create}{$r->self_fk_col} = $self->runner->convert_backreference(
+          $self->runner->backref_name($self, $k),
+          ${$v},
           $fkcol,
         );
       }
     }
-    else {
-      if (reftype($value) eq 'SCALAR') {
-        $self->spec->{$c->name} = $self->runner->convert_backreference(
-          $self->runner->backref_name($self, $c->name),
-          ${$value},
-        );
+    # If $k is a column,
+    elsif ( my $c = $self->source->column($k) ) {
+      # If $k is in a relationship, find the appropriate one via the class.
+      if ( $c->is_in_fk ) {
+        # Find the appropriate FK.
+        if ( my $kls = blessed $v ) {
+          my @rels = grep {
+            $kls eq $_->foreign_class
+          } $c->fks;
+
+          if ( @rels != 1 ) {
+            die "ERROR: @{[$self->source_name]} Cannot figure out what relationship belongs to $k (@{[np $v]})!\n@{[join ',', sort map{$_->name}@rels]}";
+          }
+          my $r = $rels[0];
+
+          $self->{create}{$k} = $v->get_column($r->foreign_fk_col);
+          $self->{skip_relationship}{$_->name} = 1 for $c->fks;
+        }
+        elsif (ref($v) eq 'SCALAR') {
+          my ($kls_base) = ${$v} =~ /([^:]+)\[/;
+          my @rels = grep {
+            my ($k) = $_->foreign_class =~ /([^:]+)$/;
+            ${$v} =~ /$k/
+          } $c->fks;
+
+          if ( @rels != 1 ) {
+            die "ERROR: @{[$self->source_name]} Cannot figure out what relationship belongs to $k (@{[np $v]})!\n@{[join ',', sort map{$_->name}@rels]}";
+          }
+          my $r = $rels[0];
+
+          $self->{create}{$k} = $self->runner->convert_backreference(
+            $self->runner->backref_name($self, $r->name),
+            ${$v},
+            $r->foreign_fk_col,
+          );
+        }
+      }
+      # Else handle it via column
+      else {
+        if (reftype($v) eq 'SCALAR') {
+          $self->{create}{$k} = $self->runner->convert_backreference(
+            $self->runner->backref_name($self, $k),
+            ${$v},
+          );
+        }
       }
     }
+    # Otherwise, DIE DIE DIE
+    else {
+      push @unknowns, $k;
+    }
+  }
+
+  # Things were passed in, but don't exist in the table.
+  if (!$self->runner->{ignore_unknown_columns} && @unknowns) {
+    my $msg = "The following names are in the spec, but not the table @{[$self->source_name]}\n";
+    $msg .= join ',', sort @unknowns;
+    $msg .= "\n";
+    die $msg;
   }
 
   return;
@@ -298,7 +341,7 @@ sub create {
       $self->source->resultset->create($self->{create});
     }; if ($@) {
       my $e = $@;
-      warn "ERROR Creating @{[$self->source_name]} (".np($self->spec).")\n";
+      warn "ERROR Creating @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n";
       die $e;
     }
     $self->row($row);
@@ -312,14 +355,6 @@ sub create {
     # nullable and we didn't find an existing parent row. We want to defer these
     # because self-referential values need to be set after creation.
     $self->populate_parents(nullable => 1);
-
-    # Things were passed in, but don't exist in the table.
-    if (!$self->runner->{ignore_unknown_columns} && %{$self->{still_to_use}}) {
-      my $msg = "The following names are in the spec, but not the table @{[$self->source_name]}\n";
-      $msg .= join ',', sort keys %{$self->{still_to_use}};
-      $msg .= "\n";
-      die $msg;
-    }
   }
   $self->build_children;
 
@@ -342,6 +377,7 @@ sub populate_columns {
 
   foreach my $c ( $self->source->columns_not_in_parent_relationships ) {
     my $col_name = $c->name;
+    next if $self->{create}->{$col_name};
 
     my $spec;
     if ( exists $self->spec->{$col_name} ) {
@@ -469,13 +505,6 @@ sub populate_parents {
     delete $self->{still_to_use}{$col};
 
     if ($self->{skip_relationship}{$r->name}) {
-      if ($opts{nullable}) {
-        $self->row->set_column($col => $proto);
-        $self->row->update;
-      }
-      else {
-        $self->{create}{$col} = $proto;
-      }
       next RELATIONSHIP;
     }
 

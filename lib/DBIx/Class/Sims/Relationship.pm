@@ -92,5 +92,10 @@ sub foreign_fk_col  {
   return ($self->foreign_fk_cols(@_))[0];
 }
 
+sub foreign_class {
+  my $self = shift;
+  return $self->{info}{class};
+}
+
 1;
 __END__

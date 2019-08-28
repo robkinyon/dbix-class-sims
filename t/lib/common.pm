@@ -31,7 +31,7 @@ sub sims_test ($$) {
     Schema->deploy({ add_drop_table => 1 }) if $opts->{deploy} // 1;
     Schema->storage->dbh_do(sub {
       my ($st, $dbh) = @_; $dbh->do('PRAGMA foreign_keys = ON');
-    });
+    }) unless $opts->{skip_foreign_keys};
 
     foreach my $name (Schema->sources) {
       my $c = ResultSet($name)->count;
@@ -56,14 +56,24 @@ sub sims_test ($$) {
         if ($opts->{warning}) {
           is($trap->stderr, match($opts->{warning}), "Warning as expected");
         }
-        is(($trap->die // '') . "", match($opts->{dies}), 'Error message as expected');
+        my $continue = is(($trap->die // '') . "", match($opts->{dies}), 'Error message as expected');
+        unless ($continue) {
+          warn $trap->stderr;
+          warn $trap->die;
+          return; # Don't continue the test if we die unexpectedly.
+        }
       }
       else {
         if ($opts->{load_sims}) {
           trap {
             ($rv, $addl) = $opts->{load_sims}->(Schema)
           };
-          is $trap->leaveby, 'return', "load_sims runs to completion";
+          my $continue = is $trap->leaveby, 'return', "load_sims runs to completion";
+          unless ($continue) {
+            warn $trap->stderr;
+            warn $trap->die;
+            return; # Don't continue the test if we die unexpectedly.
+          }
           warn $trap->stderr if $ENV{SIMS_DEBUG} && $trap->stderr;
         }
         else {
@@ -109,7 +119,7 @@ sub sims_test ($$) {
             end();
           };
           my @x = ResultSet($name)->all;
-          warn("$name: " . np(@x)) if $ENV{SIMS_DEBUG};
+          #warn("$name: " . np(@x)) if $ENV{SIMS_DEBUG};
           is(
             \@x, $check,
             "Rows in database for $name are expected",

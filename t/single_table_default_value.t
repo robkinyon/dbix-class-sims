@@ -30,7 +30,6 @@ BEGIN {
 
 use common qw(sims_test);
 
-$ENV{SIMS_DEBUG} = 1;
 sims_test "Can use a default value for a char column" => {
   spec => {
     Country => {},

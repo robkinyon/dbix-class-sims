@@ -122,6 +122,7 @@ sub in_uk { push @{shift->{uks}}, $_[0]; return }
 
 sub is_in_fk { @{shift->{fks}} != 0 }
 sub in_fk { push @{shift->{fks}}, $_[0]; return }
+sub fks { @{shift->{fks}} }
 
 sub is_datetime { shift->{type} eq 'datetime' }
 sub is_decimal  { shift->{type} eq 'decimal' }

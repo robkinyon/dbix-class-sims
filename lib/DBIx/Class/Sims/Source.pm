@@ -81,6 +81,7 @@ sub columns {
 }
 sub column {
   my $self = shift;
+  return unless exists $self->{columns}{$_[0]};
   return $self->{columns}{$_[0]};
 }
 
@@ -101,6 +102,7 @@ sub relationships {
 }
 sub relationship {
   my $self = shift;
+  return unless exists $self->{relationships}{$_[0]};
   return $self->{relationships}{$_[0]};
 }
 
