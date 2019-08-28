@@ -283,7 +283,7 @@ sub resolve_direct_values {
 sub create {
   my $self = shift;
 
-  warn "Received @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
+  warn "Received @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
 
   # If, in the current stack of in-flight items, we've attempted to make this
   # exact item, die because we've obviously entered an infinite loop.
@@ -297,7 +297,7 @@ sub create {
   #   * Objects
   $self->resolve_direct_values;
 
-  warn "After RDV @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
+  warn "After RDV @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
 
   $self->find_unique_match;
   if ($self->row) {
@@ -322,14 +322,14 @@ sub create {
     $self->source_name, $self->source->source, $self->spec,
   );
 
-  warn "After preprocess @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
+  warn "After preprocess @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
 
   $self->quarantine_children;
-  warn "After quarantine_children @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
+  warn "After quarantine_children @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
 
   unless ($self->row) {
     $self->populate_parents(nullable => 0);
-    warn "After populate_parents @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
+    warn "After populate_parents @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
   }
 
   if ( ! $self->row && ! $self->meta->{create} ) {
@@ -338,11 +338,11 @@ sub create {
 
   unless ($self->row) {
     $self->populate_columns;
-    warn "After populate_columns @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
+    warn "After populate_columns @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
 
     $self->oracle_ensure_populated_pk;
 
-    warn "Creating @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
+    warn "Creating @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
     my $row = eval {
       $self->source->resultset->create($self->{create});
     }; if ($@) {
@@ -372,7 +372,7 @@ sub create {
 
   if ($ENV{SIMS_DEBUG}) {
     my %x = $self->row->get_columns;
-    warn "Finished @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).") (" . np(%x) . ")\n";
+    warn "Finished @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).") (" . np(%x) . ")\n";
   }
 
   return $self->row;
