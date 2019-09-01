@@ -109,6 +109,16 @@ sub build_searcher_for_constraints {
   return;
 }
 
+sub unique_id {
+  my $self = shift;
+  my ($row) = @_;
+
+  my @cols = $row->result_source->columns;
+  my %data = $row->get_columns;
+  my @vals = %data{@cols};
+  return ref($row) . join(',',@cols) . join(',',@vals);
+}
+
 sub find_unique_match {
   my $self = shift;
 
@@ -120,7 +130,7 @@ sub find_unique_match {
     my $row = $rs->search($to_find, { rows => 1 })->first;
     if ($row) {
       push @{$self->runner->{duplicates}{$self->source_name}}, {
-        criteria => $to_find,
+        criteria => [$to_find],
         found    => { $row->get_columns },
       };
       $self->row($row);
@@ -134,7 +144,7 @@ sub find_unique_match {
   #  * Otherwise, keep track of what we find for each combination (if at all)
   #    * If we have multiple finds, die.
   # TODO: Use List::Powerset->powerset_lazy() instead of powerset()
-  my @rows_found;
+  my %rows_found;
   foreach my $bundle (@{powerset(@uniques)}) {
     # Skip the all (already handled) and the empty (unneeded).
     next if @$bundle == 0 || @$bundle == @uniques;
@@ -144,18 +154,24 @@ sub find_unique_match {
 
     my $row = $rs->search($finder, { rows => 1 })->first;
     if ($row) {
-      push @rows_found, [ $finder, $row ];
+      my $unique_id = $self->unique_id($row);
+      $rows_found{$unique_id} //= {
+        row => $row,
+        finders => [],
+      };
+      push @{$rows_found{$unique_id}{finders}}, $finder;
     }
   }
 
-  if (@rows_found > 1) {
+  if (keys(%rows_found) > 1) {
     die "Rows found by multiple unique constraints";
   }
 
-  if (@rows_found == 1) {
-    my ($bundle, $row) = @{$rows_found[0]};
+  if (keys(%rows_found) == 1) {
+    my $x = (values %rows_found)[0];
+    my ($finders, $row) = @{$x}{qw(finders row)};
     push @{$self->runner->{duplicates}{$self->source_name}}, {
-      criteria => $bundle,
+      criteria => $finders,
       found    => { $row->get_columns },
     };
     $self->row($row);
@@ -296,8 +312,12 @@ sub create {
   #   * Back references
   #   * Objects
   $self->resolve_direct_values;
-
   warn "After RDV @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
+
+  $self->runner->{hooks}{preprocess}->(
+    $self->source_name, $self->source->source, $self->spec,
+  );
+  warn "After preprocess @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
 
   $self->find_unique_match;
   if ($self->row) {
@@ -318,11 +338,6 @@ sub create {
     }
   }
 
-  $self->runner->{hooks}{preprocess}->(
-    $self->source_name, $self->source->source, $self->spec,
-  );
-
-  warn "After preprocess @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
 
   $self->quarantine_children;
   warn "After quarantine_children @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};

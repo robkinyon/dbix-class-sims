@@ -67,9 +67,9 @@ subtest "Load and retrieve a row by single-column PK" => sub {
     addl => {
       duplicates => {
         Artist => [{
-          criteria => {
+          criteria => [{
             id => 1,
-          },
+          }],
           found => E(),
         }],
       },
@@ -107,9 +107,9 @@ subtest "Load and retrieve a row by single-column UK" => sub {
     addl => {
       duplicates => {
         Artist => [{
-          criteria => {
+          criteria => [{
             name => 'Bob',
-          },
+          }],
           found => E(),
         }],
       },

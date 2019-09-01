@@ -217,9 +217,9 @@ subtest "Load and retrieve a row by single-column PK" => sub {
     addl => {
       duplicates => {
         Artist => [{
-          criteria => {
+          criteria => [{
             id => 1,
-          },
+          }],
           found => E(),
         }],
       },

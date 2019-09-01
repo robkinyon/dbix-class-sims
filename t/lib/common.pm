@@ -153,7 +153,6 @@ sub sims_test ($$) {
           $opts->{addl}{duplicates} //= {};
           $opts->{addl}{seed} //= match(qr/^[\d.]+$/);
           $opts->{addl}{created} //= E();
-          #cmp_deeply($addl, $opts->{addl}, "Additional value is as expected");
           is($addl, $opts->{addl}, "Additional value is as expected");
         }
       }

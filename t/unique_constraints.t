@@ -74,9 +74,9 @@ subtest "Load and retrieve a row by single-column PK" => sub {
     addl => {
       duplicates => {
         Artist => [{
-          criteria => {
+          criteria => [{
             id => 1,
-          },
+          }],
           found => E(),
         }],
       },
@@ -107,9 +107,9 @@ subtest "Load and retrieve a row by single-column UK" => sub {
     addl => {
       duplicates => {
         Artist => [{
-          criteria => {
+          criteria => [{
             name => 'Bob',
-          },
+          }],
           found => E(),
         }],
       },
@@ -140,10 +140,10 @@ subtest "Load and retrieve a row by multi-col UK" => sub {
     addl => {
       duplicates => {
         Artist => [{
-          criteria => {
+          criteria => [{
             city => 'AB',
             state => 'CD',
-          },
+          }],
           found => E(),
         }],
       },
@@ -179,14 +179,77 @@ subtest "Load, then retrieve a row by other UK" => sub {
     addl => {
       duplicates => {
         Artist => [{
-          criteria => {
+          criteria => [{
             city => 'AB',
             state => 'CD',
-          },
+          }],
           found => E(),
         }],
       },
     },
+  };
+};
+
+# Create a test where multiple uniques constraints are satisfied by the same row
+subtest "Load a row satisfying multiple UKs, but not PK" => sub {
+  sims_test "Create the row" => {
+    spec => {
+      Artist => { name => 'Bob' },
+    },
+    expect => {
+      Artist => { id => 1, name => 'Bob', city => 'AB', state => 'CD' },
+    },
+  };
+
+  sims_test "Find the row" => {
+    deploy => 0,
+    loaded => {
+      Artist => 1,
+    },
+    spec => {
+      Artist => { name => 'Bob', city => 'AB', state => 'CD' },
+    },
+    expect => {
+      Artist => { id => 1, name => 'Bob', city => 'AB', state => 'CD' },
+    },
+    addl => {
+      duplicates => {
+        Artist => [{
+          criteria => [
+            E(), E(), E(), # This is found by 3 different key combinations
+          ],
+          found => E(),
+        }],
+      },
+    },
+  };
+};
+
+subtest "Load two rows satisfying multiple UKs and die" => sub {
+  sims_test "Create the rows" => {
+    spec => {
+      Artist => [
+        { name => 'Alice', city => 'AB', state => 'CD' },
+        { name => 'Bob', city => 'BC', state => 'DE' },
+      ],
+    },
+    expect => {
+      Artist => [
+        { id => 1, name => 'Alice', city => 'AB', state => 'CD' },
+        { id => 2, name => 'Bob', city => 'BC', state => 'DE' },
+      ],
+    },
+  };
+
+  sims_test "Throw an error" => {
+    deploy => 0,
+    loaded => {
+      Artist => 2,
+    },
+    spec => {
+      Artist => { name => 'Bob', city => 'AB', state => 'CD' },
+    },
+    dies => qr/Rows found by multiple unique constraints/,
   };
 };
 
