@@ -334,7 +334,7 @@ sub create {
       }
     }
     if (@failed) {
-      die "ERROR Retrieving unique @{[$self->source_name]} (".np($self->spec).")\n" . join('', sort @failed);
+      die "ERROR Retrieving unique @{[$self->source_name]} (".np($self->spec).")\n" . join('', sort @failed) . $/ . np($self->runner->{duplicates}{$self->source_name}{criteria});
     }
   }
 
