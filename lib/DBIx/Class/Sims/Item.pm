@@ -116,7 +116,7 @@ sub unique_id {
   my @cols = $row->result_source->columns;
   my %data = $row->get_columns;
   my @vals = %data{@cols};
-  return ref($row) . join(',',@cols) . join(',',@vals);
+  return ref($row) . join(',',@cols) . join(',',map {$_//''} @vals);
 }
 
 sub find_unique_match {
