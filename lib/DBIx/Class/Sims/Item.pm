@@ -325,7 +325,7 @@ sub create {
     foreach my $c ( $self->source->columns ) {
       my $col_name = $c->name;
 
-      next unless exists $self->{spec}{$col_name};
+      next unless $self->has_value($col_name);
 
       my $row_value = $self->row->get_column($col_name);
       my $spec_value = $self->value($col_name);
