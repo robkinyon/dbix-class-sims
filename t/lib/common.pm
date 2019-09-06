@@ -119,7 +119,7 @@ sub sims_test ($$) {
             end();
           };
           my @x = ResultSet($name)->all;
-          #warn("$name: " . np(@x)) if $ENV{SIMS_DEBUG};
+          warn("EXPECT-CHECK $name: " . np(@x)) if $ENV{SIMS_DEBUG};
           is(
             \@x, $check,
             "Rows in database for $name are expected",
@@ -146,6 +146,7 @@ sub sims_test ($$) {
             end();
           }
         };
+        warn("RV-CHECK: " . np($rv)) if $ENV{SIMS_DEBUG};
         is( $rv, $check, "Return value is as expected" );
 
         if ($opts->{addl}) {

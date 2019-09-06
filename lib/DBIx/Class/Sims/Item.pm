@@ -102,7 +102,11 @@ sub build_searcher_for_constraints {
       $matched_all_columns = 0;
       last;
     }
-    $to_find->{$c->name} = $self->value($c->name);
+
+    # Undefined values cannot be searched over because undefined values appear
+    # different to the UK, but appear the same in a query. Therefore, this
+    # searcher cannot work.
+    $to_find->{$c->name} = $self->value($c->name) // return;
   }
 
   return $to_find if keys(%$to_find) && $matched_all_columns;
