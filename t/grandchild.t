@@ -112,14 +112,6 @@ sims_test "Create ancestors via unmet grandparent specification" => {
 };
 
 sims_test "Find grandparent by DBIC row" => {
-  skip => "Currently broken because of missing test below.",
-  spec => {
-    Track => {
-      album => {
-        artist => { name => 'cdef' },
-      },
-    },
-  },
   load_sims => sub {
     my ($schema) = @_;
     my $rv = $schema->load_sims({

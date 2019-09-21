@@ -180,6 +180,7 @@ sub load_sims {
       $opts->{ignore_unknown_columns} //= 0;
       $opts->{allow_relationship_column_names} //= 0;
       $opts->{die_on_failure} //= 1;
+      $opts->{die_on_unique_mismatch} //= 1;
     }
 
     my $runner = DBIx::Class::Sims::Runner->new(
@@ -197,6 +198,7 @@ sub load_sims {
       ignore_unknown_tables => $opts->{ignore_unknown_tables} // 0,
       ignore_unknown_columns => $opts->{ignore_unknown_columns} // 0,
       allow_relationship_column_names => $opts->{allow_relationship_column_names} // 1,
+      die_on_unique_mismatch => $opts->{die_on_unique_mismatch} // 1,
     );
 
     $rows = eval {
@@ -788,11 +790,21 @@ idea, but some schemas do this.)
 
 This defaults to 1.
 
+=head2 die_on_unique_mismatch
+
+If set to 0, this will prevent a die when an existing row is found that matches
+the unique columns set in the spec, but the other columns don't match. Instead,
+you will be responsible for checking C<< $additional->{error} >> yourself.
+
+This defaults to 1.
+
 =head2 strict_mode
 
 This sets the following options:
 
 =over 4
+
+=item * C<< die_on_failure => 1 >>
 
 =item * C<< ignore_unknown_columns => 0 >>
 
@@ -800,7 +812,7 @@ This sets the following options:
 
 =item * C<< allow_relationship_column_names => 0 >>
 
-=item * C<< die_on_failure => 1 >>
+=item * C<< die_on_unique_mismatch => 1 >>
 
 =back
 

@@ -256,4 +256,45 @@ subtest "Load, then retrieve by PK, but column mismatch" => sub {
   };
 };
 
+subtest "Load, then retrieve by PK, but column mismatch, no dying" => sub {
+  sims_test "Create the row" => {
+    spec => {
+      Artist => {
+        name => 'Bob',
+        hat_color => 'purple',
+      },
+    },
+    expect => {
+      Artist => { id => 1, name => 'Bob', hat_color => 'purple' },
+    },
+    addl => {
+      duplicates => {},
+    },
+  };
+
+  sims_test "Find the row" => {
+    deploy => 0,
+    loaded => {
+      Artist => 1,
+    },
+    spec => [
+      { Artist => { id => 1, name => 'Not Bob' } },
+      { allow_pk_set_value => 1, die_on_unique_mismatch => 0 },
+    ],
+    expect => {
+      Artist => { id => 1, name => 'Bob', hat_color => 'purple' },
+    },
+    addl => {
+      duplicates => {
+        Artist => [{
+          criteria => [{
+            id => 1,
+          }],
+          found => E(),
+        }],
+      },
+    },
+  };
+};
+
 done_testing;

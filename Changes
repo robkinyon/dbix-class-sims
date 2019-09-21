@@ -1,7 +1,7 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
 0.500000 Jul XX 2019 XX:XX:00 PDT
-   - THIS RELEASE CONTAINS MULTIPLE POTENTIALLY BREAKING BEHAVIOR CHANGES.
+   - THIS RELEASE CONTAINS MULTIPLE POTENTIALLY-BREAKING BEHAVIOR CHANGES.
    - Complete revamp of the internal architecture.
      - Most of the private attributes have been renamed.
      - Everything is now an object.
@@ -10,6 +10,7 @@ Revision history for DBIx::Class::Sims (ordered by revision number).
        - DBIC relationship data structure (hashes and CODE)
    - Retrieving unique rows will raise an error if the row doesn't match the
      provided spec.
+     - Set `die_on_unique_mismatch => 0` to disable this
 
 0.401000 Jun 09 2019 12:30:00 PDT
    - Provide a nice way to print DateTime objects in SIMS_DEBUG mode.

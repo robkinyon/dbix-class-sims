@@ -172,7 +172,7 @@ sims_test "Autogenerate a parent with a name" => {
 
 # QUESTION: Do we want this test?
 sims_test "Specify a parent and override a sims-spec" => {
-  skip => 'Regressing until refactoring is done',
+  skip => 'Unclear if we even want this test or not',
   spec => {
     Album => {
       artist => { name => { type => 'us_firstname' } },

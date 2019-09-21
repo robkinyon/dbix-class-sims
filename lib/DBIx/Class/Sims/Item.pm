@@ -324,7 +324,7 @@ sub create {
   warn "After preprocess @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
 
   $self->find_unique_match;
-  if ($self->row) {
+  if ($self->row && $self->runner->{die_on_unique_mismatch}) {
     my @failed;
     foreach my $c ( $self->source->columns ) {
       my $col_name = $c->name;
@@ -341,7 +341,6 @@ sub create {
       die "ERROR Retrieving unique @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n" . join('', sort @failed) . $/ . np($self->runner->{duplicates}{$self->source_name}[-1]{criteria});
     }
   }
-
 
   $self->quarantine_children;
   warn "After quarantine_children @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
