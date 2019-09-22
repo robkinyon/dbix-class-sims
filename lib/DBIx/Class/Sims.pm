@@ -174,6 +174,10 @@ sub load_sims {
       %{$opts->{toposort} // {}},
     );
 
+    if ( $opts->{topograph_trace} ) {
+      save_topograph(\@toposort, $opts->{topograph_trace});
+    }
+
     my $strict_mode = $opts->{strict_mode} // 0;
     if ($strict_mode) {
       $opts->{ignore_unknown_tables} //= 0;
@@ -229,7 +233,8 @@ sub load_sims {
   }
 }
 
-use YAML::Any qw( LoadFile Load );
+use JSON::MaybeXS qw( encode_json );
+use YAML::Any qw( LoadFile Load DumpFile );
 sub normalize_input {
   my ($proto) = @_;
 
@@ -290,6 +295,14 @@ sub massage_input {
   }, $struct);
 
   return $struct;
+}
+
+sub save_topograph {
+  my ($array, $filename) = @_;
+  open my $fh, '>', $filename;
+  print $fh encode_json($array);
+  close $fh;
+  #DumpFile($filename, $array);
 }
 
 1;
@@ -821,6 +834,13 @@ If you have explicitly set one of these options, it will override strict_mode.
 =head2 toposort
 
 This is passed directly to the call to C<< DBIx::Class::TopoSort->toposort >>.
+
+See L< DBIx::Class::TopoSort/toposort > for more information.
+
+=head2 topograph_trace
+
+If this is set, then the list of tables from the toposort graph will be written
+out in JSON to this file.
 
 =head2 hooks
 

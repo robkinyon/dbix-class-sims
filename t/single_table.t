@@ -1,9 +1,12 @@
 # vi:sw=2
 use strictures 2;
 
-use Test2::V0 qw( done_testing subtest E match );
+use Test2::V0 qw( done_testing subtest E match is ok );
 
 use lib 't/lib';
+
+use File::Path qw( remove_tree );
+use YAML::Any qw( LoadFile );
 
 BEGIN {
   use loader qw(build_schema);
@@ -295,6 +298,32 @@ subtest "Load, then retrieve by PK, but column mismatch, no dying" => sub {
       },
     },
   };
+};
+
+sims_test "Save topograph" => {
+  load_sims => sub {
+    my ($schema) = @_;
+
+    my $trace_file = '/tmp/trace';
+
+    remove_tree( $trace_file );
+
+    my @rv = $schema->load_sims(
+      { Artist => { name => 'foo' } },
+      { topograph_trace => $trace_file },
+    );
+
+    # Verify the trace was written out
+    my $trace = LoadFile( $trace_file );
+    is( $trace, [ 'Artist' ], 'Toposort trace is as expected' );
+
+    #remove_tree( $trace_file );
+
+    return @rv;
+  },
+  expect => {
+    Artist => { id => 1, name => 'foo', hat_color => undef },
+  },
 };
 
 done_testing;
