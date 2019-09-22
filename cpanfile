@@ -6,6 +6,7 @@ requires 'Data::Walk';
 requires 'DateTime';
 requires 'DBIx::Class::TopoSort' => '0.060000';
 requires 'Hash::Merge';
+requires 'JSON::MaybeXS';
 requires 'List::Util';
 requires 'List::MoreUtils';
 requires 'Scalar::Util';

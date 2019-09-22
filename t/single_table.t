@@ -4,6 +4,9 @@ use strictures 2;
 use Test::More;
 use Test::Deep;
 
+use File::Path qw( remove_tree );
+use YAML::Any qw( LoadFile );
+
 use lib 't/lib';
 
 BEGIN {
@@ -162,6 +165,58 @@ sims_test "See that null_chance=1 works" => {
   },
   expect => {
     Artist => { id => 1, name => any(qw/george bill/), hat_color => undef },
+  },
+};
+
+sims_test "Save topograph" => {
+  load_sims => sub {
+    my ($schema) = @_;
+
+    my $trace_file = '/tmp/trace';
+
+    remove_tree( $trace_file );
+
+    my @rv = $schema->load_sims(
+      { Artist => { name => 'foo' } },
+      { topograph_trace => $trace_file },
+    );
+
+    # Verify the trace was written out
+    my $trace = LoadFile( $trace_file );
+    cmp_bag( $trace, [ 'Artist' ], 'Toposort trace is as expected' );
+
+    remove_tree( $trace_file );
+
+    return @rv;
+  },
+  expect => {
+    Artist => { id => 1, name => 'foo', hat_color => undef },
+  },
+};
+
+sims_test "Load topograph" => {
+  load_sims => sub {
+    my ($schema) = @_;
+
+    my $trace_file = '/tmp/trace';
+
+    remove_tree( $trace_file );
+
+    open my $fh, '>', $trace_file;
+    print $fh '["Artist"]';
+    close $fh;
+
+    my @rv = $schema->load_sims(
+      { Artist => { name => 'foo' } },
+      { topograph_file => $trace_file },
+    );
+
+    remove_tree( $trace_file );
+
+    return @rv;
+  },
+  expect => {
+    Artist => { id => 1, name => 'foo', hat_color => undef },
   },
 };
 
