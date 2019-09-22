@@ -317,7 +317,33 @@ sims_test "Save topograph" => {
     my $trace = LoadFile( $trace_file );
     is( $trace, [ 'Artist' ], 'Toposort trace is as expected' );
 
-    #remove_tree( $trace_file );
+    remove_tree( $trace_file );
+
+    return @rv;
+  },
+  expect => {
+    Artist => { id => 1, name => 'foo', hat_color => undef },
+  },
+};
+
+sims_test "Load topograph" => {
+  load_sims => sub {
+    my ($schema) = @_;
+
+    my $trace_file = '/tmp/trace';
+
+    remove_tree( $trace_file );
+
+    open my $fh, '>', $trace_file;
+    print $fh '["Artist"]';
+    close $fh;
+
+    my @rv = $schema->load_sims(
+      { Artist => { name => 'foo' } },
+      { topograph_file => $trace_file },
+    );
+
+    remove_tree( $trace_file );
 
     return @rv;
   },

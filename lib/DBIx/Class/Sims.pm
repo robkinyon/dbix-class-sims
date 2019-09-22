@@ -169,10 +169,16 @@ sub load_sims {
     $additional->{seed} = $opts->{seed} //= rand(time & $$);
     srand($opts->{seed});
 
-    my @toposort = DBIx::Class::TopoSort->toposort(
-      $schema,
-      %{$opts->{toposort} // {}},
-    );
+    my @toposort;
+    if ( $opts->{topograph_file} ) {
+      @toposort = load_topograph($opts->{topograph_file});
+    }
+    else {
+      @toposort = DBIx::Class::TopoSort->toposort(
+        $schema,
+        %{$opts->{toposort} // {}},
+      );
+    }
 
     if ( $opts->{topograph_trace} ) {
       save_topograph(\@toposort, $opts->{topograph_trace});
@@ -233,8 +239,8 @@ sub load_sims {
   }
 }
 
-use JSON::MaybeXS qw( encode_json );
-use YAML::Any qw( LoadFile Load DumpFile );
+use JSON::MaybeXS qw( decode_json encode_json );
+use YAML::Any qw( LoadFile Load );
 sub normalize_input {
   my ($proto) = @_;
 
@@ -297,12 +303,21 @@ sub massage_input {
   return $struct;
 }
 
+sub load_topograph {
+  my ($filename) = @_;
+  my $data = do {
+    local $/;
+    open my $fh, '<', $filename;
+    <$fh>;
+  };
+  return @{decode_json($data)};
+}
+
 sub save_topograph {
   my ($array, $filename) = @_;
   open my $fh, '>', $filename;
   print $fh encode_json($array);
   close $fh;
-  #DumpFile($filename, $array);
 }
 
 1;
@@ -841,6 +856,15 @@ See L< DBIx::Class::TopoSort/toposort > for more information.
 
 If this is set, then the list of tables from the toposort graph will be written
 out in JSON to this file.
+
+=head2 topograph_file
+
+If this is set, then the list of tables of the toposort graph will be read from
+this file in JSON. It's expected that it will return a list of strings.
+
+If this is set, then the toposort option will be ignored.
+
+This is often best used with the topograph_trace option.
 
 =head2 hooks
 
