@@ -352,4 +352,46 @@ sims_test "Load topograph" => {
   },
 };
 
+sims_test "Save object trace" => {
+  load_sims => sub {
+    my ($schema) = @_;
+
+    my $trace_file = '/tmp/trace';
+
+    remove_tree( $trace_file );
+
+    my @rv = $schema->load_sims(
+      { Artist => { name => 'foo' } },
+      { object_trace => $trace_file },
+    );
+
+    # Verify the trace was written out
+    my $trace = LoadFile( $trace_file );
+    is( $trace, {
+      objects => [
+        {
+          parent => 0,
+          seen => 1,
+          spec => {
+            name => 'foo',
+          },
+          #made => 1,
+          #created => {
+          #  name => 'foo',
+          #  hat_color => undef,
+          #},
+          #children => [],
+        },
+      ],
+    }, 'Toposort trace is as expected' );
+
+    remove_tree( $trace_file );
+
+    return @rv;
+  },
+  expect => {
+    Artist => { id => 1, name => 'foo', hat_color => undef },
+  },
+};
+
 done_testing;

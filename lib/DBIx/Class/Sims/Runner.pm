@@ -163,6 +163,12 @@ sub run {
     local *{'DateTime::_data_printer'} = sub { shift->iso8601 }
       unless DateTime->can('_data_printer');
 
+    $self->{ids} = {
+      seen => 1,
+      created => 1,
+    };
+    my @objects = ();
+
     $self->{rows} = {};
     my %still_to_use = map { $_ => 1 } keys %{$self->{spec}};
     while (1) {
@@ -171,6 +177,12 @@ sub run {
         delete $still_to_use{$name};
 
         while ( my $proto = shift @{$self->{spec}{$name}} ) {
+          push @objects, {
+            spec => MyCloner::clone($proto),
+            seen => $self->{ids}{seen}++,
+            parent => 0,
+          };
+
           $proto->{__META__} //= {};
           $proto->{__META__}{create} = 1;
 
@@ -204,6 +216,15 @@ sub run {
       $msg .= join ',', sort keys %still_to_use;
       $msg .= "\n";
       die $msg;
+    }
+
+    if ( $self->{object_trace} ) {
+      use JSON::MaybeXS qw( encode_json );
+      open my $fh, '>', $self->{object_trace};
+      print $fh encode_json({
+        objects => \@objects,
+      });
+      close $fh;
     }
 
     return $self->{rows};
