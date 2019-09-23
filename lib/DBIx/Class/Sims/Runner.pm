@@ -823,6 +823,12 @@ sub run {
   my $self = shift;
 
   return $self->schema->txn_do(sub {
+    $self->{ids} = {
+      seen => 1,
+      created => 1,
+    };
+    my @objects = ();
+
     $self->{rows} = {};
     my %still_to_use = map { $_ => 1 } keys %{$self->{spec}};
     while (1) {
@@ -831,6 +837,12 @@ sub run {
         delete $still_to_use{$name};
 
         while ( my $item = shift @{$self->{spec}{$name}} ) {
+          push @objects, {
+            spec => MyCloner::clone($item),
+            seen => $self->{ids}{seen}++,
+            parent => 0,
+          };
+
           if ($self->{allow_pk_set_value}) {
             set_allow_pk_to($item, 1);
           }
@@ -864,6 +876,15 @@ sub run {
       $msg .= join ',', sort keys %still_to_use;
       $msg .= "\n";
       die $msg;
+    }
+
+    if ( $self->{object_trace} ) {
+      use JSON::MaybeXS qw( encode_json );
+      open my $fh, '>', $self->{object_trace};
+      print $fh encode_json({
+        objects => \@objects,
+      });
+      close $fh;
     }
 
     return $self->{rows};

@@ -208,6 +208,8 @@ sub load_sims {
       allow_pk_set_value => $opts->{allow_pk_set_value} // 0,
       ignore_unknown_tables => $opts->{ignore_unknown_tables} // 0,
       allow_relationship_column_names => $opts->{allow_relationship_column_names} // 1,
+
+      object_trace => $opts->{object_trace},
     );
 
     $rows = eval {
@@ -845,6 +847,11 @@ this file in JSON. It's expected that it will return a list of strings.
 If this is set, then the toposort option will be ignored.
 
 This is often best used with the topograph_trace option.
+
+=head2 object_trace
+
+If this is set, then the ojbects found and created will be written out in JSON
+to this file.
 
 =head2 hooks
 
