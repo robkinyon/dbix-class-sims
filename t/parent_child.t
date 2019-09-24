@@ -1,9 +1,15 @@
 # vi:sw=2
 use strictures 2;
 
-use Test2::V0 qw( done_testing subtest E match );
+use Test2::V0 qw(
+  done_testing subtest E match is
+  array hash field item end
+);
 
 use lib 't/lib';
+
+use File::Path qw( remove_tree );
+use YAML::Any qw( LoadFile );
 
 BEGIN {
   use loader qw(build_schema);
@@ -541,6 +547,82 @@ sims_test "Cannot use column name" => {
     { allow_relationship_column_names => 0 },
   ],
   dies => qr/DBIx::Class::Sims::Runner::run\(\): Cannot use column artist_id - use relationship artist/s,
+};
+
+sims_test "Save object trace with an implicit parent" => {
+  load_sims => sub {
+    my ($schema) = @_;
+
+    my $trace_file = '/tmp/trace';
+
+    remove_tree( $trace_file );
+
+    my @rv = $schema->load_sims(
+      { Album => { name => 'bar1' } },
+      { object_trace => $trace_file },
+    );
+
+    # Verify the trace was written out
+    my $trace = LoadFile( $trace_file );
+    my $check = hash {
+      field objects => array {
+        item hash {
+          field parent => 0;
+          field seen => 1;
+          field table => 'Album';
+          field spec => hash {
+            field name => 'bar1';
+            end;
+          };
+          field made => 2;
+          field created => hash {
+            field name => 'bar1';
+            field artist_id => 1;
+            end;
+          };
+          #field children => array { end; };
+          end;
+        };
+        item hash {
+          field parent => 1;
+          field seen => 2;
+          field table => 'Artist';
+          field spec => hash {
+            end;
+          };
+          field made => 1;
+          field created => hash {
+            field id => 1;
+            end;
+          };
+          #field children => array{ end; };
+          end;
+        };
+        end;
+      };
+      end;
+    };
+    is( $trace, $check, 'Toposort trace is as expected' );
+
+    remove_tree( $trace_file );
+
+    return @rv;
+  },
+  expect => {
+    Artist => [
+      { id => 1, name => E() },
+    ],
+    Album  => [
+      { id => 1, name => 'bar1', artist_id => 1 },
+    ],
+  },
+  rv => sub { { Album => shift->{expect}{Album} } },
+  addl => {
+    created =>  {
+      Artist => 1,
+      Album => 1,
+    },
+  },
 };
 
 done_testing;

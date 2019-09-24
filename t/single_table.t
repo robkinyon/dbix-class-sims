@@ -1,7 +1,10 @@
 # vi:sw=2
 use strictures 2;
 
-use Test2::V0 qw( done_testing subtest E match is ok );
+use Test2::V0 qw(
+  done_testing subtest E match is ok
+  array hash field item end
+);
 
 use lib 't/lib';
 
@@ -352,7 +355,7 @@ sims_test "Load topograph" => {
   },
 };
 
-sims_test "Save object trace" => {
+sims_test "Save object trace for one object" => {
   load_sims => sub {
     my ($schema) = @_;
 
@@ -367,23 +370,30 @@ sims_test "Save object trace" => {
 
     # Verify the trace was written out
     my $trace = LoadFile( $trace_file );
-    is( $trace, {
-      objects => [
-        {
-          parent => 0,
-          seen => 1,
-          spec => {
-            name => 'foo',
-          },
-          #made => 1,
-          #created => {
-          #  name => 'foo',
-          #  hat_color => undef,
-          #},
-          #children => [],
-        },
-      ],
-    }, 'Toposort trace is as expected' );
+    my $check = hash {
+      field objects => array {
+        item hash {
+          field parent => 0;
+          field seen => 1;
+          field table => 'Artist';
+          field spec => hash {
+            field name => 'foo';
+            end;
+          };
+          field made => 1;
+          field created => hash {
+            field name => 'foo';
+            field hat_color => undef;
+            end;
+          };
+          #field children => array { end; };
+          end;
+        };
+        end;
+      };
+      end;
+    };
+    is( $trace, $check, 'Toposort trace is as expected' );
 
     remove_tree( $trace_file );
 
@@ -391,6 +401,81 @@ sims_test "Save object trace" => {
   },
   expect => {
     Artist => { id => 1, name => 'foo', hat_color => undef },
+  },
+};
+
+sims_test "Save object trace for two objects" => {
+  load_sims => sub {
+    my ($schema) = @_;
+
+    my $trace_file = '/tmp/trace';
+
+    remove_tree( $trace_file );
+
+    my @rv = $schema->load_sims(
+      {
+        Artist => [
+          { name => 'foo' },
+          { name => 'bar', hat_color => 'blue' },
+        ],
+      },
+      { object_trace => $trace_file },
+    );
+
+    # Verify the trace was written out
+    my $trace = LoadFile( $trace_file );
+    my $check = hash {
+      field objects => array {
+        item hash {
+          field parent => 0;
+          field seen => 1;
+          field table => 'Artist';
+          field spec => hash {
+            field name => 'foo';
+            end;
+          };
+          field made => 1;
+          field created => hash {
+            field name => 'foo';
+            field hat_color => undef;
+            end;
+          };
+          #field children => array { end; };
+          end;
+        };
+        item hash {
+          field parent => 0;
+          field seen => 2;
+          field table => 'Artist';
+          field spec => hash {
+            field name => 'bar';
+            field hat_color => 'blue';
+            end;
+          };
+          field made => 2;
+          field created => hash {
+            field name => 'bar';
+            field hat_color => 'blue';
+            end;
+          };
+          #field children => array{ end; };
+          end;
+        };
+        end;
+      };
+      end;
+    };
+    is( $trace, $check, 'Toposort trace is as expected' );
+
+    remove_tree( $trace_file );
+
+    return @rv;
+  },
+  expect => {
+    Artist => [
+      { id => 1, name => 'foo', hat_color => undef },
+      { id => 2, name => 'bar', hat_color => 'blue' },
+    ],
   },
 };
 

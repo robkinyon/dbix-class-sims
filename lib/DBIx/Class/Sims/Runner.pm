@@ -165,7 +165,7 @@ sub run {
 
     $self->{ids} = {
       seen => 1,
-      created => 1,
+      made => 1,
     };
     my @objects = ();
 
@@ -178,6 +178,7 @@ sub run {
 
         while ( my $proto = shift @{$self->{spec}{$name}} ) {
           push @objects, {
+            table => $name,
             spec => MyCloner::clone($proto),
             seen => $self->{ids}{seen}++,
             parent => 0,
@@ -190,6 +191,7 @@ sub run {
             runner => $self,
             source => $self->{sources}{$name},
             spec   => $proto,
+            trace  => $objects[-1],
           );
 
           if ($self->{allow_pk_set_value}) {

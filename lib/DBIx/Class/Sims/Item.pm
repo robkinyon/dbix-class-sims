@@ -375,6 +375,9 @@ sub create {
     # This tracks everything that was created, not just what was requested.
     $self->runner->{created}{$self->source_name}++;
 
+    $self->{trace}{made} = $self->{runner}{ids}{made}++;
+    $self->{trace}{created} = $self->{create};
+
     # This occurs when a FK condition was specified, but the column is
     # nullable and we didn't find an existing parent row. We want to defer these
     # because self-referential values need to be set after creation.

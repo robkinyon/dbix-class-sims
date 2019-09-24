@@ -141,10 +141,10 @@ sub sims_test ($$) {
                   }
                 };
               }
+              end;
             };
-
-            end();
           }
+          end;
         };
         warn("RV-CHECK: " . np($rv)) if $ENV{SIMS_DEBUG};
         is( $rv, $check, "Return value is as expected" );
