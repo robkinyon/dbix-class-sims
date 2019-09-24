@@ -163,11 +163,11 @@ sub run {
     local *{'DateTime::_data_printer'} = sub { shift->iso8601 }
       unless DateTime->can('_data_printer');
 
+    $self->{traces} = [];
     $self->{ids} = {
       seen => 1,
       made => 1,
     };
-    my @objects = ();
 
     $self->{rows} = {};
     my %still_to_use = map { $_ => 1 } keys %{$self->{spec}};
@@ -177,7 +177,7 @@ sub run {
         delete $still_to_use{$name};
 
         while ( my $proto = shift @{$self->{spec}{$name}} ) {
-          push @objects, {
+          push @{$self->{traces}}, {
             table => $name,
             spec => MyCloner::clone($proto),
             seen => $self->{ids}{seen}++,
@@ -191,7 +191,7 @@ sub run {
             runner => $self,
             source => $self->{sources}{$name},
             spec   => $proto,
-            trace  => $objects[-1],
+            trace  => $self->{traces}[-1],
           );
 
           if ($self->{allow_pk_set_value}) {
@@ -224,7 +224,7 @@ sub run {
       use JSON::MaybeXS qw( encode_json );
       open my $fh, '>', $self->{object_trace};
       print $fh encode_json({
-        objects => \@objects,
+        objects => $self->{traces},
       });
       close $fh;
     }

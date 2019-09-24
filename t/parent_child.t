@@ -592,7 +592,7 @@ sims_test "Save object trace with an implicit parent" => {
           };
           field made => 1;
           field created => hash {
-            field id => 1;
+            field name => E;
             end;
           };
           #field children => array{ end; };

@@ -577,8 +577,6 @@ sub populate_parents {
       $spec = {};
     }
 
-    $spec->{__META__} //= {};
-
     my $fk_source = $r->target;
     # If the child's column is within a UK, add a check to the $rs that ensures
     # we cannot pick a parent that's already being used.
@@ -598,6 +596,7 @@ sub populate_parents {
 
       # We cannot add this relationship to the $spec because that would result
       # in an infinite loop. So, add a restriction to the parent's __META__
+      $spec->{__META__} //= {};
       $spec->{__META__}{restriction} = {
         cond  => { join('.', $inverse[0]{rel}, $inverse[0]{col}) => undef },
         extra => { join => $inverse[0]{rel} },
@@ -605,10 +604,17 @@ sub populate_parents {
     }
 
     warn "Parent (@{[$fk_source->name]}): " . np($spec) .$/ if $ENV{SIMS_DEBUG};
+    push @{$self->{runner}{traces}}, {
+      table  => $fk_source->name,
+      spec   => MyCloner::clone($spec // {}),
+      seen   => $self->{runner}{ids}{seen}++,
+      parent => $self->{trace}{seen},
+    };
     my $fk_item = DBIx::Class::Sims::Item->new(
       runner => $self->runner,
       source => $fk_source,
       spec   => MyCloner::clone($spec // {}),
+      trace  => $self->{runner}{traces}[-1],
     );
     $fk_item->set_allow_pk_to($self);
     $fk_item->create;
