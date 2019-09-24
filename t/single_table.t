@@ -386,7 +386,6 @@ sims_test "Save object trace for one object" => {
             field hat_color => undef;
             end;
           };
-          #field children => array { end; };
           end;
         };
         end;
@@ -440,7 +439,6 @@ sims_test "Save object trace for two objects" => {
             field hat_color => undef;
             end;
           };
-          #field children => array { end; };
           end;
         };
         item hash {
@@ -458,7 +456,6 @@ sims_test "Save object trace for two objects" => {
             field hat_color => 'blue';
             end;
           };
-          #field children => array{ end; };
           end;
         };
         end;

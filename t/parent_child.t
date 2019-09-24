@@ -580,7 +580,6 @@ sims_test "Save object trace with an implicit parent" => {
             field artist_id => 1;
             end;
           };
-          #field children => array { end; };
           end;
         };
         item hash {
@@ -595,7 +594,6 @@ sims_test "Save object trace with an implicit parent" => {
             field name => E;
             end;
           };
-          #field children => array{ end; };
           end;
         };
         end;
@@ -617,6 +615,243 @@ sims_test "Save object trace with an implicit parent" => {
     ],
   },
   rv => sub { { Album => shift->{expect}{Album} } },
+  addl => {
+    created =>  {
+      Artist => 1,
+      Album => 1,
+    },
+  },
+};
+
+sims_test "Save object trace with a specified parent" => {
+  load_sims => sub {
+    my ($schema) = @_;
+
+    my $trace_file = '/tmp/trace';
+
+    remove_tree( $trace_file );
+
+    my @rv = $schema->load_sims(
+      { Album => { name => 'bar1', 'artist.name' => 'foo3' } },
+      { object_trace => $trace_file },
+    );
+
+    # Verify the trace was written out
+    my $trace = LoadFile( $trace_file );
+    my $check = hash {
+      field objects => array {
+        item hash {
+          field parent => 0;
+          field seen => 1;
+          field table => 'Album';
+          field spec => hash {
+            field name => 'bar1';
+            field artist => hash {
+              field name => 'foo3';
+              end;
+            };
+            end;
+          };
+          field made => 2;
+          field created => hash {
+            field name => 'bar1';
+            field artist_id => 1;
+            end;
+          };
+          end;
+        };
+        item hash {
+          field parent => 1;
+          field seen => 2;
+          field table => 'Artist';
+          field spec => hash {
+            field name => 'foo3';
+            end;
+          };
+          field made => 1;
+          field created => hash {
+            field name => 'foo3';
+            end;
+          };
+          end;
+        };
+        end;
+      };
+      end;
+    };
+    is( $trace, $check, 'Toposort trace is as expected' );
+
+    remove_tree( $trace_file );
+
+    return @rv;
+  },
+  expect => {
+    Artist => [
+      { id => 1, name => 'foo3' },
+    ],
+    Album  => [
+      { id => 1, name => 'bar1', artist_id => 1 },
+    ],
+  },
+  rv => sub { { Album => shift->{expect}{Album} } },
+  addl => {
+    created =>  {
+      Artist => 1,
+      Album => 1,
+    },
+  },
+};
+
+sims_test "Save object trace with a specified child" => {
+  load_sims => sub {
+    my ($schema) = @_;
+
+    my $trace_file = '/tmp/trace';
+
+    remove_tree( $trace_file );
+
+    my @rv = $schema->load_sims(
+      { Artist => { name => 'foo1', 'albums' => { name => 'bar1' } } },
+      { object_trace => $trace_file },
+    );
+
+    # Verify the trace was written out
+    my $trace = LoadFile( $trace_file );
+    my $check = hash {
+      field objects => array {
+        item hash {
+          field parent => 0;
+          field seen => 1;
+          field table => 'Artist';
+          field spec => hash {
+            field name => 'foo1';
+            field albums => hash {
+              field name => 'bar1';
+              end;
+            };
+            end;
+          };
+          field made => 1;
+          field created => hash {
+            field name => 'foo1';
+            end;
+          };
+          end;
+        };
+        item hash {
+          field parent => 0;
+          field seen => 2;
+          field table => 'Album';
+          field spec => hash {
+            field artist_id => 1;
+            field name => 'bar1';
+            field __META__ => hash {
+              field allow_pk_set_value => 1;
+              end;
+            };
+            end;
+          };
+          field made => 2;
+          field created => hash {
+            field artist_id => 1;
+            field name => 'bar1';
+            end;
+          };
+          end;
+        };
+        end;
+      };
+      end;
+    };
+    is( $trace, $check, 'Toposort trace is as expected' );
+
+    remove_tree( $trace_file );
+
+    return @rv;
+  },
+  expect => {
+    Artist => [
+      { id => 1, name => 'foo1' },
+    ],
+  },
+  #rv => sub { { Album => shift->{expect}{Album} } },
+  addl => {
+    created =>  {
+      Artist => 1,
+      Album => 1,
+    },
+  },
+};
+
+sims_test "Save object trace with children specified by number" => {
+  load_sims => sub {
+    my ($schema) = @_;
+
+    my $trace_file = '/tmp/trace';
+
+    remove_tree( $trace_file );
+
+    my @rv = $schema->load_sims(
+      { Artist => { name => 'foo1', 'albums' => 1 } },
+      { object_trace => $trace_file },
+    );
+
+    # Verify the trace was written out
+    my $trace = LoadFile( $trace_file );
+    my $check = hash {
+      field objects => array {
+        item hash {
+          field parent => 0;
+          field seen => 1;
+          field table => 'Artist';
+          field spec => hash {
+            field name => 'foo1';
+            field albums => 1;
+            end;
+          };
+          field made => 1;
+          field created => hash {
+            field name => 'foo1';
+            end;
+          };
+          end;
+        };
+        item hash {
+          field parent => 0;
+          field seen => 2;
+          field table => 'Album';
+          field spec => hash {
+            field artist_id => 1;
+            field __META__ => hash {
+              field allow_pk_set_value => 1;
+              end;
+            };
+            end;
+          };
+          field made => 2;
+          field created => hash {
+            field artist_id => 1;
+            field name => E;
+            end;
+          };
+          end;
+        };
+        end;
+      };
+      end;
+    };
+    is( $trace, $check, 'Toposort trace is as expected' );
+
+    remove_tree( $trace_file );
+
+    return @rv;
+  },
+  expect => {
+    Artist => [
+      { id => 1, name => 'foo1' },
+    ],
+  },
+  #rv => sub { { Album => shift->{expect}{Album} } },
   addl => {
     created =>  {
       Artist => 1,

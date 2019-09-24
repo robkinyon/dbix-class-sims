@@ -221,6 +221,9 @@ sub resolve_direct_values {
       if (blessed($v)) {
         $self->{create}{$r->self_fk_col} = $v->get_column($fkcol);
         $self->{skip_relationship}{$r->name} = 1;
+
+        # Otherwise, the tracer will try and write out a blessed object.
+        $self->{trace}{spec}{$r->self_fk_col} = $self->{create}{$r->self_fk_col};
       }
       elsif (ref($v) eq 'SCALAR') {
         $self->{create}{$r->self_fk_col} = $self->runner->convert_backreference(
@@ -247,6 +250,9 @@ sub resolve_direct_values {
 
           $self->{create}{$k} = $v->get_column($r->foreign_fk_col);
           $self->{skip_relationship}{$_->name} = 1 for $c->fks;
+
+          # Otherwise, the tracer will try and write out a blessed object.
+          $self->{trace}{spec}{$k} = $self->{create}{$k};
         }
         elsif (ref($v) eq 'SCALAR') {
           my ($kls_base) = ${$v} =~ /([^:]+)\[/;
@@ -544,6 +550,10 @@ sub populate_parents {
         }
         else {
           $self->{create}{$col} = $proto->get_column($fkcol);
+
+          # Otherwise, the tracer will try and write out a blessed object.
+          warn "Converting $col to @{[$self->{create}{$col}]}\n";
+          $self->{trace}{spec}{$col} = $self->{create}{$col};
         }
         next RELATIONSHIP;
       }
