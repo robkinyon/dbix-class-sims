@@ -240,15 +240,15 @@ sims_test "Save object trace" => {
         {
           parent => 0,
           seen => 1,
+          table => 'Artist',
           spec => {
             name => 'foo',
           },
-          #made => 1,
-          #created => {
-          #  name => 'foo',
-          #  hat_color => undef,
-          #},
-          #children => [],
+          made => 1,
+          created => {
+            name => 'foo',
+            hat_color => undef,
+          },
         },
       ],
     }, 'Toposort trace is as expected' );
@@ -259,6 +259,70 @@ sims_test "Save object trace" => {
   },
   expect => {
     Artist => { id => 1, name => 'foo', hat_color => undef },
+  },
+};
+
+sims_test "Save object trace for two objects" => {
+  load_sims => sub {
+    my ($schema) = @_;
+
+    my $trace_file = '/tmp/trace';
+
+    remove_tree( $trace_file );
+
+    my @rv = $schema->load_sims(
+      {
+        Artist => [
+          { name => 'foo' },
+          { name => 'bar', hat_color => 'blue' },
+        ],
+      },
+      { object_trace => $trace_file },
+    );
+
+    # Verify the trace was written out
+    my $trace = LoadFile( $trace_file );
+    cmp_deeply( $trace, {
+      objects => [
+        {
+          parent => 0,
+          seen => 1,
+          table => 'Artist',
+          spec => {
+            name => 'foo',
+          },
+          made => 1,
+          created => {
+            name => 'foo',
+            hat_color => undef,
+          },
+        },
+        {
+          parent => 0,
+          seen => 2,
+          table => 'Artist',
+          spec => {
+            name => 'bar',
+            hat_color => 'blue',
+          },
+          made => 2,
+          created => {
+            name => 'bar',
+            hat_color => 'blue',
+          },
+        },
+      ],
+    }, 'Toposort trace is as expected' );
+
+    remove_tree( $trace_file );
+
+    return @rv;
+  },
+  expect => {
+    Artist => [
+      { id => 1, name => 'foo', hat_color => undef },
+      { id => 2, name => 'bar', hat_color => 'blue' },
+    ],
   },
 };
 

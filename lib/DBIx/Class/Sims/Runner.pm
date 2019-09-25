@@ -761,7 +761,7 @@ sub fix_columns {
 
 sub create_item {
   my $self = shift;
-  my ($name, $item) = @_;
+  my ($name, $item, $trace) = @_;
 
   # If, in the current stack of in-flight items, we've attempted to make this
   # exact item, die because we've obviously entered an infinite loop.
@@ -805,6 +805,9 @@ sub create_item {
       }
       # This tracks everything that was created, not just what was requested.
       $self->{created}{$name}++;
+
+      $trace->{made} = $self->{ids}{made}++;
+      $trace->{created} = MyCloner::clone($item);
     }
 
     $self->fix_deferred_fks($name, $row, $deferred_fks);
@@ -823,11 +826,12 @@ sub run {
   my $self = shift;
 
   return $self->schema->txn_do(sub {
+    $self->{traces} = [];
     $self->{ids} = {
+      find => 1,
+      made => 1,
       seen => 1,
-      created => 1,
     };
-    my @objects = ();
 
     $self->{rows} = {};
     my %still_to_use = map { $_ => 1 } keys %{$self->{spec}};
@@ -837,7 +841,8 @@ sub run {
         delete $still_to_use{$name};
 
         while ( my $item = shift @{$self->{spec}{$name}} ) {
-          push @objects, {
+          push @{$self->{traces}}, {
+            table => $name,
             spec => MyCloner::clone($item),
             seen => $self->{ids}{seen}++,
             parent => 0,
@@ -855,7 +860,7 @@ sub run {
             local *{'DateTime::_data_printer'} = sub { shift->iso8601 }
               unless DateTime->can('_data_printer');
 
-            $self->create_item($name, $item);
+            $self->create_item($name, $item, $self->{traces}[-1]);
           };
 
           if ($self->{initial_spec}{$name}{$item}) {
@@ -882,7 +887,7 @@ sub run {
       use JSON::MaybeXS qw( encode_json );
       open my $fh, '>', $self->{object_trace};
       print $fh encode_json({
-        objects => \@objects,
+        objects => $self->{traces},
       });
       close $fh;
     }
