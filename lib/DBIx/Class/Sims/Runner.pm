@@ -165,8 +165,9 @@ sub run {
 
     $self->{traces} = [];
     $self->{ids} = {
-      seen => 1,
+      find => 1,
       made => 1,
+      seen => 1,
     };
 
     $self->{rows} = {};

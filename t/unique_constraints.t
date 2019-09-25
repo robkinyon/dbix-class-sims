@@ -1,9 +1,15 @@
 # vi:sw=2
 use strictures 2;
 
-use Test2::V0 qw( subtest done_testing E );
+use Test2::V0 qw(
+  done_testing subtest E is
+  array hash field item end bag
+);
 
 use lib 't/lib';
+
+use File::Path qw( remove_tree );
+use YAML::Any qw( LoadFile );
 
 BEGIN {
   use loader qw(build_schema);
@@ -83,6 +89,99 @@ subtest "Load and retrieve a row by single-column PK" => sub {
     },
   };
 };
+
+subtest "tracefile - Load and retrieve a row by single-column PK" => sub {
+  sims_test "Create the row" => {
+    spec => {
+      Artist => {
+        name => 'Bob',
+        city => 'Some',
+        state => 'Place',
+      },
+    },
+    expect => {
+      Artist => { id => 1, name => 'Bob', city => 'Some', state => 'Place' },
+    },
+    addl => {
+      duplicates => {},
+    },
+  };
+
+  sims_test "Find the row" => {
+    deploy => 0,
+    loaded => {
+      Artist => 1,
+    },
+    load_sims => sub {
+      my ($schema) = @_;
+
+      my $trace_file = '/tmp/trace';
+
+      remove_tree( $trace_file );
+
+      my @rv = $schema->load_sims(
+        { Artist => { id => 1 } },
+        { allow_pk_set_value => 1, object_trace => $trace_file },
+      );
+
+      # Verify the trace was written out
+      my $trace = LoadFile( $trace_file );
+      my $check = hash {
+        field objects => array {
+          item hash {
+            field parent => 0;
+            field seen => 1;
+            field table => 'Artist';
+            field spec => hash {
+              field id => 1;
+              end;
+            };
+            field find => 1;
+            field row => hash {
+              field id => 1;
+              field name => 'Bob';
+              field city => 'Some';
+              field state => 'Place';
+              end;
+            };
+            field criteria => bag {
+              item hash {
+                field id => 1;
+                end;
+              };
+              end;
+            };
+            field unique => 1;
+            end;
+          };
+          end;
+        };
+        end;
+      };
+      is( $trace, $check, 'Toposort trace is as expected' );
+
+      remove_tree( $trace_file );
+
+      return @rv;
+    },
+    expect => {
+      Artist => { id => 1, name => 'Bob', city => 'Some', state => 'Place' },
+    },
+    addl => {
+      duplicates => {
+        Artist => [{
+          criteria => [{
+            id => 1,
+          }],
+          found => E(),
+        }],
+      },
+    },
+  };
+};
+
+# TODO: Add tracefile to all subtests here
+# CONSIDER: Make tracefile part of sims_test
 
 subtest "Load and retrieve a row by single-column UK" => sub {
   sims_test "Create the row" => {

@@ -138,6 +138,12 @@ sub find_unique_match {
         found    => { $row->get_columns },
       };
       $self->row($row);
+
+      $self->{trace}{find} = $self->{runner}{ids}{find}++;
+      $self->{trace}{row} = { $row->get_columns };
+      $self->{trace}{criteria} = [$to_find];
+      $self->{trace}{unique} = 1;
+
       return;
     }
   }
@@ -179,6 +185,12 @@ sub find_unique_match {
       found    => { $row->get_columns },
     };
     $self->row($row);
+
+    $self->{trace}{find} = $self->{runner}{ids}{find}++;
+    $self->{trace}{row} = { $row->get_columns };
+    $self->{trace}{criteria} = $finders;
+    $self->{trace}{unique} = 1;
+
     return;
   }
 
