@@ -104,8 +104,13 @@ sub datetime_parser { shift->schema->storage->datetime_parser }
 sub set_allow_pk_to {
   my ($target, $source) = @_;
   if (ref $source) {
-    ($target->{__META__} //= {})->{allow_pk_set_value}
-      = ($source->{__META__} // {})->{allow_pk_set_value};
+    if (
+      exists $source->{__META__} &&
+      exists $source->{__META__}{allow_pk_set_value}
+    ) {
+      ($target->{__META__} //= {})->{allow_pk_set_value}
+        = $source->{__META__}{allow_pk_set_value};
+    }
   } else {
     ($target->{__META__} //= {})->{allow_pk_set_value} = $source;
   }
@@ -177,7 +182,7 @@ sub find_child_dependencies {
 
 sub fix_fk_dependencies {
   my $self = shift;
-  my ($name, $item) = @_;
+  my ($name, $item, $trace) = @_;
 
   # 1. If we have something, then:
   #   a. If it's a scalar, then, COND = { $fk => scalar }
@@ -293,9 +298,16 @@ sub fix_fk_dependencies {
       }
     }
     unless ($parent) {
+      push @{$self->{traces}}, {
+        table  => $fk_name,
+        spec   => MyCloner::clone($cond),
+        seen   => $self->{ids}{seen}++,
+        parent => $trace->{seen},
+      };
+
       my $fk_item = MyCloner::clone($cond);
       set_allow_pk_to($fk_item, $item);
-      $parent = $self->create_item($fk_name, $fk_item);
+      $parent = $self->create_item($fk_name, $fk_item, $self->{traces}[-1]);
     }
     $item->{$col} = $parent->get_column($fkcol);
   }
@@ -787,7 +799,7 @@ sub create_item {
 
   my ($child_deps) = $self->find_child_dependencies($name, $item);
   unless ($row) {
-    my ($deferred_fks) = $self->fix_fk_dependencies($name, $item);
+    my ($deferred_fks) = $self->fix_fk_dependencies($name, $item, $trace);
     $self->fix_values($name, $item);
 
     warn "Ensuring $name (".np($item).")\n" if $ENV{SIMS_DEBUG};

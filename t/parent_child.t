@@ -4,6 +4,9 @@ use strictures 2;
 use Test::More;
 use Test::Deep; # Needed for re() below
 
+use File::Path qw( remove_tree );
+use YAML::Any qw( LoadFile );
+
 use lib 't/lib';
 
 BEGIN {
@@ -520,6 +523,75 @@ sims_test "Cannot use column name" => {
     { allow_relationship_column_names => 0 },
   ],
   dies => qr/DBIx::Class::Sims::Runner::run\(\): Cannot use column artist_id - use relationship artist/s,
+};
+
+sims_test "Autogenerate a parent (with a trace)" => {
+  load_sims => sub {
+    my ($schema) = @_;
+
+    my $trace_file = '/tmp/trace';
+
+    remove_tree( $trace_file );
+
+    my @rv = $schema->load_sims(
+      {
+        Album => [
+          { name => 'bar1' },
+        ],
+      },
+      { object_trace => $trace_file },
+    );
+
+    # Verify the trace was written out
+    my $trace = LoadFile( $trace_file );
+    cmp_deeply( $trace, {
+      objects => [
+        {
+          parent => 0,
+          seen => 1,
+          table => 'Album',
+          spec => {
+            name => 'bar1',
+          },
+          made => 2,
+          created => {
+            name => 'bar1',
+            artist_id => 1,
+          },
+        },
+        {
+          parent => 1,
+          seen => 2,
+          table => 'Artist',
+          spec => {
+          },
+          made => 1,
+          created => {
+            name => re('.+'),
+          },
+        },
+      ],
+    }, 'Toposort trace is as expected' );
+
+    remove_tree( $trace_file );
+
+    return @rv;
+  },
+  expect => {
+    Artist => [
+      { id => 1, name => re('.+') },
+    ],
+    Album  => [
+      { id => 1, name => 'bar1', artist_id => 1 },
+    ],
+  },
+  rv => sub { { Album => shift->{expect}{Album} } },
+  addl => {
+    created =>  {
+      Artist => 1,
+      Album => 1,
+    },
+  },
 };
 
 done_testing;
