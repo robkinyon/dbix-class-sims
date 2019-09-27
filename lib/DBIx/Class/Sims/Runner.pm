@@ -405,7 +405,7 @@ sub unique_constraints_containing {
 
 sub find_by_unique_constraints {
   my $self = shift;
-  my ($name, $item) = @_;
+  my ($name, $item, $trace) = @_;
 
   my $source = $self->schema->source($name);
   my @uniques = map {
@@ -446,6 +446,12 @@ sub find_by_unique_constraints {
       criteria => $searched,
       found    => { $row->get_columns },
     };
+
+    $trace->{find} = $self->{ids}{find}++;
+    $trace->{row} = { $row->get_columns };
+    $trace->{criteria} = [$searched];
+    $trace->{unique} = 1;
+
     return $row;
   }
   return;
@@ -787,7 +793,7 @@ sub create_item {
   my $after_fix = np($item);
 
   # Don't keep going if we have already satisfy all UKs
-  my $row = $self->find_by_unique_constraints($name, $item);
+  my $row = $self->find_by_unique_constraints($name, $item, $trace);
   if ($row && $ENV{SIMS_DEBUG}) {
     warn "Found duplicate in $name:\n"
       . "\tbefore fix_columns (".np($before_fix).")\n"
@@ -803,7 +809,7 @@ sub create_item {
     $self->fix_values($name, $item);
 
     warn "Ensuring $name (".np($item).")\n" if $ENV{SIMS_DEBUG};
-    $row = $self->find_by_unique_constraints($name, $item);
+    $row = $self->find_by_unique_constraints($name, $item, $trace);
     unless ($row) {
       warn "Creating $name (".np($item).")\n" if $ENV{SIMS_DEBUG};
       $row = eval {

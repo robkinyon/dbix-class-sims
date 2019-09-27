@@ -4,6 +4,9 @@ use strictures 2;
 use Test::More;
 use Test::Deep;
 
+use File::Path qw( remove_tree );
+use YAML::Any qw( LoadFile );
+
 use lib 't/lib';
 
 BEGIN {
@@ -116,6 +119,72 @@ subtest "Load and retrieve a row by other UK" => sub {
     },
     spec => {
       Artist => { last_name => 'Swift' },
+    },
+    expect => {
+      Artist => { id => 1, first_name => 'Taylor', last_name => 'Swift' },
+    },
+  };
+};
+
+subtest "Load and retrieve a row by other UK" => sub {
+  sims_test "Create the row" => {
+    spec => {
+      Artist => { first_name => 'Taylor', last_name => 'Swift' },
+    },
+    expect => {
+      Artist => { id => 1, first_name => 'Taylor', last_name => 'Swift' },
+    },
+  };
+
+  sims_test "Find the row" => {
+    deploy => 0,
+    loaded => {
+      Artist => 1,
+    },
+    load_sims => sub {
+      my ($schema) = @_;
+
+      my $trace_file = '/tmp/trace';
+
+      remove_tree( $trace_file );
+
+      my @rv = $schema->load_sims(
+        {
+          Artist => { last_name => 'Swift' },
+        },
+        { object_trace => $trace_file },
+      );
+
+      # Verify the trace was written out
+      my $trace = LoadFile( $trace_file );
+      cmp_deeply( $trace, {
+        objects => [
+          {
+            parent => 0,
+            seen => 1,
+            table => 'Artist',
+            spec => {
+              last_name => 'Swift',
+            },
+            find => 1,
+            unique => 1,
+            row => {
+              id => 1,
+              first_name => 'Taylor',
+              last_name => 'Swift',
+            },
+            criteria => [
+              {
+                last_name => 'Swift',
+              },
+            ],
+          },
+        ],
+      }, 'Toposort trace is as expected' );
+
+      remove_tree( $trace_file );
+
+      return @rv;
     },
     expect => {
       Artist => { id => 1, first_name => 'Taylor', last_name => 'Swift' },
