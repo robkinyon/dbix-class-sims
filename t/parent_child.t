@@ -594,4 +594,210 @@ sims_test "Autogenerate a parent (with a trace)" => {
   },
 };
 
+sims_test "Autogenerate a parent with a name (with a trace)" => {
+  load_sims => sub {
+    my ($schema) = @_;
+
+    my $trace_file = '/tmp/trace';
+
+    remove_tree( $trace_file );
+
+    my @rv = $schema->load_sims(
+      {
+        Album => [
+          { name => 'bar1', 'artist.name' => 'foo3' },
+        ],
+      },
+      { object_trace => $trace_file },
+    );
+
+    # Verify the trace was written out
+    my $trace = LoadFile( $trace_file );
+    cmp_deeply( $trace, {
+      objects => [
+        {
+          parent => 0,
+          seen => 1,
+          table => 'Album',
+          spec => {
+            name => 'bar1',
+            artist => { name => 'foo3' },
+          },
+          made => 2,
+          created => {
+            name => 'bar1',
+            artist_id => 1,
+          },
+        },
+        {
+          parent => 1,
+          seen => 2,
+          table => 'Artist',
+          spec => {
+            name => 'foo3',
+          },
+          made => 1,
+          created => {
+            name => 'foo3',
+          },
+        },
+      ],
+    }, 'Toposort trace is as expected' );
+
+    remove_tree( $trace_file );
+
+    return @rv;
+  },
+  expect => {
+    Artist => [
+      { id => 1, name => 'foo3' },
+    ],
+    Album  => [
+      { id => 1, name => 'bar1', artist_id => 1 },
+    ],
+  },
+  rv => sub { { Album => shift->{expect}{Album} } },
+  addl => {
+    created =>  {
+      Artist => 1,
+      Album => 1,
+    },
+  },
+};
+
+sims_test "Autogenerate a parent with a name (with a trace)" => {
+  load_sims => sub {
+    my ($schema) = @_;
+
+    my $trace_file = '/tmp/trace';
+
+    remove_tree( $trace_file );
+
+    my @rv = $schema->load_sims(
+      {
+        Album => [
+          { name => 'bar1', 'artist.name' => 'foo3' },
+        ],
+      },
+      { object_trace => $trace_file },
+    );
+
+    # Verify the trace was written out
+    my $trace = LoadFile( $trace_file );
+    cmp_deeply( $trace, {
+      objects => [
+        {
+          parent => 0,
+          seen => 1,
+          table => 'Album',
+          spec => {
+            name => 'bar1',
+            artist => { name => 'foo3' },
+          },
+          made => 2,
+          created => {
+            name => 'bar1',
+            artist_id => 1,
+          },
+        },
+        {
+          parent => 1,
+          seen => 2,
+          table => 'Artist',
+          spec => {
+            name => 'foo3',
+          },
+          made => 1,
+          created => {
+            name => 'foo3',
+          },
+        },
+      ],
+    }, 'Toposort trace is as expected' );
+
+    remove_tree( $trace_file );
+
+    return @rv;
+  },
+  expect => {
+    Artist => [
+      { id => 1, name => 'foo3' },
+    ],
+    Album  => [
+      { id => 1, name => 'bar1', artist_id => 1 },
+    ],
+  },
+  rv => sub { { Album => shift->{expect}{Album} } },
+  addl => {
+    created =>  {
+      Artist => 1,
+      Album => 1,
+    },
+  },
+};
+
+sims_test "Auto-generate a child with a value (with a trace)" => {
+  load_sims => sub {
+    my ($schema) = @_;
+
+    my $trace_file = '/tmp/trace';
+
+    remove_tree( $trace_file );
+
+    my @rv = $schema->load_sims(
+      {
+        Artist => {
+          name => 'foo',
+          albums => [ { name => 'bar' } ],
+        },
+      },
+      { object_trace => $trace_file },
+    );
+
+    # Verify the trace was written out
+    my $trace = LoadFile( $trace_file );
+    cmp_deeply( $trace, {
+      objects => [
+        {
+          parent => 0,
+          seen => 1,
+          table => 'Artist',
+          spec => {
+            name => 'foo',
+            albums => [ { name => 'bar' } ],
+          },
+          made => 1,
+          created => {
+            name => 'foo',
+          },
+        },
+        {
+          parent => 0,
+          seen => 2,
+          table => 'Album',
+          spec => {
+            name => 'bar',
+            artist_id => 1,
+            __META__ => { allow_pk_set_value => 1 },
+          },
+          made => 2,
+          created => {
+            name => 'bar',
+            artist_id => 1,
+          },
+        },
+      ],
+    }, 'Toposort trace is as expected' );
+
+    remove_tree( $trace_file );
+
+    return @rv;
+  },
+  expect => {
+    Artist => [ { id => 1, name => 'foo' } ],
+    Album => [ { id => 1, name => 'bar', artist_id => 1 } ],
+  },
+  rv => sub { { Artist => shift->{expect}{Artist} } },
+};
+
 done_testing;

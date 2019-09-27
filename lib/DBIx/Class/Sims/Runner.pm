@@ -809,6 +809,10 @@ sub create_item {
       $row = eval {
         my $to_create = MyCloner::clone($item);
         delete $to_create->{__META__};
+
+        $trace->{made} = $self->{ids}{made}++;
+        $trace->{created} = MyCloner::clone($to_create);
+
         $self->schema->resultset($name)->create($to_create);
       }; if ($@) {
         my $e = $@;
@@ -817,9 +821,6 @@ sub create_item {
       }
       # This tracks everything that was created, not just what was requested.
       $self->{created}{$name}++;
-
-      $trace->{made} = $self->{ids}{made}++;
-      $trace->{created} = MyCloner::clone($item);
     }
 
     $self->fix_deferred_fks($name, $row, $deferred_fks);
