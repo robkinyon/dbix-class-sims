@@ -47,12 +47,12 @@ sims_test "Table doesn't exist (strict off)" => {
 
 sims_test "Table doesn't exist (strict mode)" => {
   spec => { NotThere => 1 },
-  dies => qr/DBIx::Class::Sims::Runner::run\(\): The following names are in the spec, but not the schema:.NotThere./s,
+  dies => qr/DBIx::Class::Sims::Runner::.*\(\): The following names are in the spec, but not the schema:.NotThere./s,
 };
 
 sims_test "Tables don't exist (strict mode) - shows sorting" => {
   spec => { NotThere => 1, AlsoNotThere => 1 },
-  dies => qr/DBIx::Class::Sims::Runner::run\(\): The following names are in the spec, but not the schema:.AlsoNotThere,NotThere./s,
+  dies => qr/DBIx::Class::Sims::Runner::.*\(\): The following names are in the spec, but not the schema:.AlsoNotThere,NotThere./s,
 };
 
 sims_test "Column doesn't exist" => {

@@ -10,6 +10,7 @@ use Data::Compare qw( Compare );
 use Hash::Merge qw( merge );
 use Scalar::Util qw( blessed reftype );
 use String::Random qw( random_regex );
+use Try::Tiny;
 
 use DBIx::Class::Sims::Util ();
 
@@ -834,13 +835,19 @@ sub create_item {
         my $to_create = MyCloner::clone($item);
         delete $to_create->{__META__};
 
-        $trace->{made} = $self->{ids}{made}++;
-        $trace->{created} = MyCloner::clone($to_create);
-        $trace->{created}{$_} = defined $trace->{created}{$_}
-          ? '' . $trace->{created}{$_} : undef
-          foreach keys %{$trace->{created}};
+        my $r = $self->schema->resultset($name)->create($to_create);
 
-        $self->schema->resultset($name)->create($to_create);
+        $trace->{made} = $self->{ids}{made}++;
+        $trace->{create_params} = MyCloner::clone($to_create);
+        $trace->{create_params}{$_} = defined $trace->{create_params}{$_}
+          ? '' . $trace->{create_params}{$_} : undef
+          foreach keys %{$trace->{create_params}};
+        $trace->{row} = { $r->get_columns };
+        $trace->{row}{$_} = defined $trace->{row}{$_}
+          ? '' . $trace->{row}{$_} : undef
+          foreach keys %{$trace->{row}};
+
+        return $r;
       }; if ($@) {
         my $e = $@;
         warn "ERROR Creating $name (".np($item).")\n";
@@ -865,64 +872,77 @@ sub create_item {
 sub run {
   my $self = shift;
 
-  return $self->schema->txn_do(sub {
-    $self->{traces} = [];
-    $self->{ids} = {
-      find => 1,
-      made => 1,
-      seen => 1,
-    };
+  try {
+    return $self->schema->txn_do(sub {
+      $self->{traces} = [];
+      $self->{ids} = {
+        find => 1,
+        made => 1,
+        seen => 1,
+      };
 
-    $self->{rows} = {};
-    my %still_to_use = map { $_ => 1 } keys %{$self->{spec}};
-    while (1) {
-      foreach my $name ( @{$self->{toposort}} ) {
-        next unless $self->{spec}{$name};
-        delete $still_to_use{$name};
+      $self->{rows} = {};
+      my %still_to_use = map { $_ => 1 } keys %{$self->{spec}};
+      while (1) {
+        foreach my $name ( @{$self->{toposort}} ) {
+          next unless $self->{spec}{$name};
+          delete $still_to_use{$name};
 
-        while ( my $item = shift @{$self->{spec}{$name}} ) {
-          push @{$self->{traces}}, {
-            table => $name,
-            spec => MyCloner::clone($item),
-            seen => $self->{ids}{seen}++,
-            parent => 0,
-          };
+          while ( my $item = shift @{$self->{spec}{$name}} ) {
+            push @{$self->{traces}}, {
+              table => $name,
+              spec => MyCloner::clone($item),
+              seen => $self->{ids}{seen}++,
+              parent => 0,
+            };
 
-          if ($self->{allow_pk_set_value}) {
-            set_allow_pk_to($item, 1);
+            if ($self->{allow_pk_set_value}) {
+              set_allow_pk_to($item, 1);
+            }
+
+            my $row = do {
+              no strict;
+
+              # DateTime objects print too big in SIMS_DEBUG mode, so provide a
+              # good way for DDP to print them nicely.
+              local *{'DateTime::_data_printer'} = sub { shift->iso8601 }
+                unless DateTime->can('_data_printer');
+
+              $self->create_item($name, $item, $self->{traces}[-1]);
+            };
+
+            if ($self->{initial_spec}{$name}{$item}) {
+              push @{$self->{rows}{$name} //= []}, $row;
+            }
           }
 
-          my $row = do {
-            no strict;
-
-            # DateTime objects print too big in SIMS_DEBUG mode, so provide a
-            # good way for DDP to print them nicely.
-            local *{'DateTime::_data_printer'} = sub { shift->iso8601 }
-              unless DateTime->can('_data_printer');
-
-            $self->create_item($name, $item, $self->{traces}[-1]);
-          };
-
-          if ($self->{initial_spec}{$name}{$item}) {
-            push @{$self->{rows}{$name} //= []}, $row;
-          }
+          $self->delete_pending($name);
         }
 
-        $self->delete_pending($name);
+        last unless $self->has_pending();
+        $self->clear_pending();
       }
 
-      last unless $self->has_pending();
-      $self->clear_pending();
-    }
+      # Things were passed in, but don't exist in the schema.
+      if (!$self->{ignore_unknown_tables} && %still_to_use) {
+        my $msg = "The following names are in the spec, but not the schema:\n";
+        $msg .= join ',', sort keys %still_to_use;
+        $msg .= "\n";
+        die $msg;
+      }
 
-    # Things were passed in, but don't exist in the schema.
-    if (!$self->{ignore_unknown_tables} && %still_to_use) {
-      my $msg = "The following names are in the spec, but not the schema:\n";
-      $msg .= join ',', sort keys %still_to_use;
-      $msg .= "\n";
-      die $msg;
-    }
+      if ( $self->{object_trace} ) {
+        use JSON::MaybeXS qw( encode_json );
+        open my $fh, '>', $self->{object_trace};
+        print $fh encode_json({
+          objects => $self->{traces},
+        });
+        close $fh;
+      }
 
+      return $self->{rows};
+    });
+  } catch {
     if ( $self->{object_trace} ) {
       use JSON::MaybeXS qw( encode_json );
       open my $fh, '>', $self->{object_trace};
@@ -932,8 +952,8 @@ sub run {
       close $fh;
     }
 
-    return $self->{rows};
-  });
+    die $_;
+  }
 }
 
 1;

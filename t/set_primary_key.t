@@ -34,7 +34,7 @@ sims_test "Can use a default value for a char PK" => {
   },
 };
 
-sims_test "Can use a default value for a char PK" => {
+sims_test "Can set a default value for a char PK" => {
   spec => {
     Country => { code => 'UK' },
   },

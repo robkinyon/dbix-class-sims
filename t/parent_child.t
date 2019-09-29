@@ -522,7 +522,7 @@ sims_test "Cannot use column name" => {
     },
     { allow_relationship_column_names => 0 },
   ],
-  dies => qr/DBIx::Class::Sims::Runner::run\(\): Cannot use column artist_id - use relationship artist/s,
+  dies => qr/DBIx::Class::Sims::Runner::.*\(\): Cannot use column artist_id - use relationship artist/s,
 };
 
 sims_test "Autogenerate a parent (with a trace)" => {
@@ -554,7 +554,12 @@ sims_test "Autogenerate a parent (with a trace)" => {
             name => 'bar1',
           },
           made => 2,
-          created => {
+          create_params => {
+            name => 'bar1',
+            artist_id => 1,
+          },
+          row => {
+            id => 1,
             name => 'bar1',
             artist_id => 1,
           },
@@ -566,7 +571,11 @@ sims_test "Autogenerate a parent (with a trace)" => {
           spec => {
           },
           made => 1,
-          created => {
+          create_params => {
+            name => re('.+'),
+          },
+          row => {
+            id => 1,
             name => re('.+'),
           },
         },
@@ -624,7 +633,12 @@ sims_test "Autogenerate a parent with a name (with a trace)" => {
             artist => { name => 'foo3' },
           },
           made => 2,
-          created => {
+          create_params => {
+            name => 'bar1',
+            artist_id => 1,
+          },
+          row => {
+            id => 1,
             name => 'bar1',
             artist_id => 1,
           },
@@ -637,7 +651,11 @@ sims_test "Autogenerate a parent with a name (with a trace)" => {
             name => 'foo3',
           },
           made => 1,
-          created => {
+          create_params => {
+            name => 'foo3',
+          },
+          row => {
+            id => 1,
             name => 'foo3',
           },
         },
@@ -695,7 +713,12 @@ sims_test "Autogenerate a parent with a name (with a trace)" => {
             artist => { name => 'foo3' },
           },
           made => 2,
-          created => {
+          create_params => {
+            name => 'bar1',
+            artist_id => 1,
+          },
+          row => {
+            id => 1,
             name => 'bar1',
             artist_id => 1,
           },
@@ -708,7 +731,11 @@ sims_test "Autogenerate a parent with a name (with a trace)" => {
             name => 'foo3',
           },
           made => 1,
-          created => {
+          create_params => {
+            name => 'foo3',
+          },
+          row => {
+            id => 1,
             name => 'foo3',
           },
         },
@@ -767,7 +794,11 @@ sims_test "Auto-generate a child with a value (with a trace)" => {
             albums => [ { name => 'bar' } ],
           },
           made => 1,
-          created => {
+          create_params => {
+            name => 'foo',
+          },
+          row => {
+            id => 1,
             name => 'foo',
           },
         },
@@ -781,7 +812,12 @@ sims_test "Auto-generate a child with a value (with a trace)" => {
             __META__ => { allow_pk_set_value => 1 },
           },
           made => 2,
-          created => {
+          create_params => {
+            name => 'bar',
+            artist_id => 1,
+          },
+          row => {
+            id => 1,
             name => 'bar',
             artist_id => 1,
           },

@@ -245,7 +245,12 @@ sims_test "Save object trace" => {
             name => 'foo',
           },
           made => 1,
-          created => {
+          create_params => {
+            name => 'foo',
+            hat_color => undef,
+          },
+          row => {
+            id => 1,
             name => 'foo',
             hat_color => undef,
           },
@@ -292,7 +297,12 @@ sims_test "Save object trace for two objects" => {
             name => 'foo',
           },
           made => 1,
-          created => {
+          create_params => {
+            name => 'foo',
+            hat_color => undef,
+          },
+          row => {
+            id => 1,
             name => 'foo',
             hat_color => undef,
           },
@@ -306,7 +316,12 @@ sims_test "Save object trace for two objects" => {
             hat_color => 'blue',
           },
           made => 2,
-          created => {
+          create_params => {
+            name => 'bar',
+            hat_color => 'blue',
+          },
+          row => {
+            id => 2,
             name => 'bar',
             hat_color => 'blue',
           },
