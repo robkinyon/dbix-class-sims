@@ -57,7 +57,7 @@ sub initialize {
     my $source = $self->schema->source($name);
 
     $self->{reqs}{$name} //= {};
-    foreach my $rel_name ( $source->relationships ) {
+    foreach my $rel_name ( sort $source->relationships ) {
       my $rel_info = $source->relationship_info($rel_name);
 
       if ($is_fk->($rel_info)) {
@@ -144,7 +144,7 @@ sub create_search {
 
   # This for-loop shouldn't exist. Instead, we should be able to use
   # fix_fk_dependencies() above. However, that breaks in mysterious ways.
-  foreach my $rel_name ($source->relationships) {
+  foreach my $rel_name (sort $source->relationships) {
     next unless exists $cond->{$rel_name};
     next unless (reftype($cond->{$rel_name}) // '') eq 'HASH';
 
@@ -168,7 +168,7 @@ sub find_child_dependencies {
   my (%child_deps);
   my $source = $self->schema->source($name);
   RELATIONSHIP:
-  foreach my $rel_name ( $source->relationships ) {
+  foreach my $rel_name ( sort $source->relationships ) {
     my $rel_info = $source->relationship_info($rel_name);
     unless ( $is_fk->($rel_info) ) {
       if ($item->{$rel_name}) {
@@ -196,7 +196,7 @@ sub fix_fk_dependencies {
   my (%deferred_fks);
   my $source = $self->schema->source($name);
   RELATIONSHIP:
-  foreach my $rel_name ( $source->relationships ) {
+  foreach my $rel_name ( sort $source->relationships ) {
     my $rel_info = $source->relationship_info($rel_name);
     unless ( $is_fk->($rel_info) ) {
       next RELATIONSHIP;
@@ -378,7 +378,7 @@ sub find_inverse_relationships {
   my $fksource = $self->schema->source($child);
 
   my @inverses;
-  foreach my $rel_name ( $fksource->relationships ) {
+  foreach my $rel_name ( sort $fksource->relationships ) {
     my $rel_info = $fksource->relationship_info($rel_name);
 
     # Skip relationships that aren't back towards the table we're coming from.
@@ -530,7 +530,7 @@ sub fix_child_dependencies {
   # In all cases, make sure to add { $fkcol => $row->get_column($col) } to the
   # child's $item
   my $source = $self->schema->source($name);
-  foreach my $rel_name ( $source->relationships ) {
+  foreach my $rel_name ( sort $source->relationships ) {
     my $rel_info = $source->relationship_info($rel_name);
     next if $is_fk->($rel_info);
     next unless $child_deps->{$rel_name} // $self->{reqs}{$name}{$rel_name};
