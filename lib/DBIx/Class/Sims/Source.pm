@@ -114,13 +114,13 @@ sub uniques {
 sub parent_relationships {
   my $self = shift;
 
-  return grep { $_->is_fk } $self->relationships;
+  return sort { $a->name cmp $b->name } grep { $_->is_fk } $self->relationships;
 }
 
 sub child_relationships {
   my $self = shift;
 
-  return grep { !$_->is_fk } $self->relationships;
+  return sort { $a->name cmp $b->name } grep { !$_->is_fk } $self->relationships;
 }
 
 sub resultset {
