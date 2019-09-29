@@ -29,6 +29,7 @@ requires 'List::PowerSet';
 requires 'List::Util';
 requires 'Scalar::Util';
 requires 'String::Random';
+requires 'Try::Tiny';
 requires 'YAML::Any'; # Removes a warning.
  
 test_requires 'File::Temp'        => '0.01';

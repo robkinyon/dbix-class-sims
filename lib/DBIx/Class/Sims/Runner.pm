@@ -10,6 +10,7 @@ use Data::Compare qw( Compare );
 use Hash::Merge qw( merge );
 use Scalar::Util qw( blessed );
 use String::Random qw( random_regex );
+use Try::Tiny;
 
 use DBIx::Class::Sims::Item;
 use DBIx::Class::Sims::Source;
@@ -156,71 +157,84 @@ sub convert_backreference {
 sub run {
   my $self = shift;
 
-  return $self->schema->txn_do(sub {
-    # DateTime objects print too big in SIMS_DEBUG mode, so provide a
-    # good way for DDP to print them nicely.
-    no strict 'refs';
-    local *{'DateTime::_data_printer'} = sub { shift->iso8601 }
-      unless DateTime->can('_data_printer');
+  try {
+    return $self->schema->txn_do(sub {
+      # DateTime objects print too big in SIMS_DEBUG mode, so provide a
+      # good way for DDP to print them nicely.
+      no strict 'refs';
+      local *{'DateTime::_data_printer'} = sub { shift->iso8601 }
+        unless DateTime->can('_data_printer');
 
-    $self->{traces} = [];
-    $self->{ids} = {
-      find => 1,
-      made => 1,
-      seen => 1,
-    };
+      $self->{traces} = [];
+      $self->{ids} = {
+        find => 1,
+        made => 1,
+        seen => 1,
+      };
 
-    $self->{rows} = {};
-    my %still_to_use = map { $_ => 1 } keys %{$self->{spec}};
-    while (1) {
-      foreach my $name ( @{$self->{toposort}} ) {
-        next unless $self->{spec}{$name};
-        delete $still_to_use{$name};
+      $self->{rows} = {};
+      my %still_to_use = map { $_ => 1 } keys %{$self->{spec}};
+      while (1) {
+        foreach my $name ( @{$self->{toposort}} ) {
+          next unless $self->{spec}{$name};
+          delete $still_to_use{$name};
 
-        while ( my $proto = shift @{$self->{spec}{$name}} ) {
-          push @{$self->{traces}}, {
-            table => $name,
-            spec => MyCloner::clone($proto),
-            seen => $self->{ids}{seen}++,
-            parent => 0,
-          };
+          while ( my $proto = shift @{$self->{spec}{$name}} ) {
+            push @{$self->{traces}}, {
+              table => $name,
+              spec => MyCloner::clone($proto),
+              seen => $self->{ids}{seen}++,
+              parent => 0,
+            };
 
-          $proto->{__META__} //= {};
-          $proto->{__META__}{create} = 1;
+            $proto->{__META__} //= {};
+            $proto->{__META__}{create} = 1;
 
-          my $item = DBIx::Class::Sims::Item->new(
-            runner => $self,
-            source => $self->{sources}{$name},
-            spec   => $proto,
-            trace  => $self->{traces}[-1],
-          );
+            my $item = DBIx::Class::Sims::Item->new(
+              runner => $self,
+              source => $self->{sources}{$name},
+              spec   => $proto,
+              trace  => $self->{traces}[-1],
+            );
 
-          if ($self->{allow_pk_set_value}) {
-            $item->set_allow_pk_to(1);
+            if ($self->{allow_pk_set_value}) {
+              $item->set_allow_pk_to(1);
+            }
+
+            my $row = $item->create;
+
+            if ($self->{initial_spec}{$name}{$item->spec}) {
+              push @{$self->{rows}{$name} //= []}, $row;
+            }
           }
 
-          my $row = $item->create;
-
-          if ($self->{initial_spec}{$name}{$item->spec}) {
-            push @{$self->{rows}{$name} //= []}, $row;
-          }
+          $self->delete_pending($name);
         }
 
-        $self->delete_pending($name);
+        last unless $self->has_pending();
+        $self->clear_pending();
       }
 
-      last unless $self->has_pending();
-      $self->clear_pending();
-    }
+      # Things were passed in, but don't exist in the schema.
+      if (!$self->{ignore_unknown_tables} && %still_to_use) {
+        my $msg = "The following names are in the spec, but not the schema:\n";
+        $msg .= join ',', sort keys %still_to_use;
+        $msg .= "\n";
+        die $msg;
+      }
 
-    # Things were passed in, but don't exist in the schema.
-    if (!$self->{ignore_unknown_tables} && %still_to_use) {
-      my $msg = "The following names are in the spec, but not the schema:\n";
-      $msg .= join ',', sort keys %still_to_use;
-      $msg .= "\n";
-      die $msg;
-    }
+      if ( $self->{object_trace} ) {
+        use JSON::MaybeXS qw( encode_json );
+        open my $fh, '>', $self->{object_trace};
+        print $fh encode_json({
+          objects => $self->{traces},
+        });
+        close $fh;
+      }
 
+      return $self->{rows};
+    });
+  } catch {
     if ( $self->{object_trace} ) {
       use JSON::MaybeXS qw( encode_json );
       open my $fh, '>', $self->{object_trace};
@@ -230,8 +244,8 @@ sub run {
       close $fh;
     }
 
-    return $self->{rows};
-  });
+    die $_;
+  }
 }
 
 1;

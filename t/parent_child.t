@@ -546,7 +546,7 @@ sims_test "Cannot use column name" => {
     },
     { allow_relationship_column_names => 0 },
   ],
-  dies => qr/DBIx::Class::Sims::Runner::run\(\): Cannot use column artist_id - use relationship artist/s,
+  dies => qr/DBIx::Class::Sims::Runner::.*\(\): Cannot use column artist_id - use relationship artist/s,
 };
 
 sims_test "Save object trace with an implicit parent" => {
@@ -575,7 +575,13 @@ sims_test "Save object trace with an implicit parent" => {
             end;
           };
           field made => 2;
-          field created => hash {
+          field create_params => hash {
+            field name => 'bar1';
+            field artist_id => 1;
+            end;
+          };
+          field row => hash {
+            field id => 1;
             field name => 'bar1';
             field artist_id => 1;
             end;
@@ -590,7 +596,12 @@ sims_test "Save object trace with an implicit parent" => {
             end;
           };
           field made => 1;
-          field created => hash {
+          field create_params => hash {
+            field name => E;
+            end;
+          };
+          field row => hash {
+            field id => 1;
             field name => E;
             end;
           };
@@ -653,7 +664,13 @@ sims_test "Save object trace with a specified parent" => {
             end;
           };
           field made => 2;
-          field created => hash {
+          field create_params => hash {
+            field name => 'bar1';
+            field artist_id => 1;
+            end;
+          };
+          field row => hash {
+            field id => 1;
             field name => 'bar1';
             field artist_id => 1;
             end;
@@ -669,7 +686,12 @@ sims_test "Save object trace with a specified parent" => {
             end;
           };
           field made => 1;
-          field created => hash {
+          field create_params => hash {
+            field name => 'foo3';
+            end;
+          };
+          field row => hash {
+            field id => 1;
             field name => 'foo3';
             end;
           };
@@ -732,7 +754,12 @@ sims_test "Save object trace with a specified child" => {
             end;
           };
           field made => 1;
-          field created => hash {
+          field create_params => hash {
+            field name => 'foo1';
+            end;
+          };
+          field row => hash {
+            field id => 1;
             field name => 'foo1';
             end;
           };
@@ -752,7 +779,13 @@ sims_test "Save object trace with a specified child" => {
             end;
           };
           field made => 2;
-          field created => hash {
+          field create_params => hash {
+            field artist_id => 1;
+            field name => 'bar1';
+            end;
+          };
+          field row => hash {
+            field id => 1;
             field artist_id => 1;
             field name => 'bar1';
             end;
@@ -810,7 +843,12 @@ sims_test "Save object trace with children specified by number" => {
             end;
           };
           field made => 1;
-          field created => hash {
+          field create_params => hash {
+            field name => 'foo1';
+            end;
+          };
+          field row => hash {
+            field id => 1;
             field name => 'foo1';
             end;
           };
@@ -829,7 +867,13 @@ sims_test "Save object trace with children specified by number" => {
             end;
           };
           field made => 2;
-          field created => hash {
+          field create_params => hash {
+            field artist_id => 1;
+            field name => E;
+            end;
+          };
+          field row => hash {
+            field id => 1;
             field artist_id => 1;
             field name => E;
             end;

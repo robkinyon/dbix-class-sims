@@ -394,7 +394,8 @@ sub create {
     $self->runner->{created}{$self->source_name}++;
 
     $self->{trace}{made} = $self->{runner}{ids}{made}++;
-    $self->{trace}{created} = $self->{create};
+    $self->{trace}{create_params} = $self->{create};
+    $self->{trace}{row} = { $row->get_columns };
 
     # This occurs when a FK condition was specified, but the column is
     # nullable and we didn't find an existing parent row. We want to defer these

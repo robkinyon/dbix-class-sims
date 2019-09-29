@@ -381,7 +381,13 @@ sims_test "Save object trace for one object" => {
             end;
           };
           field made => 1;
-          field created => hash {
+          field create_params => hash {
+            field name => 'foo';
+            field hat_color => undef;
+            end;
+          };
+          field row => hash {
+            field id => 1;
             field name => 'foo';
             field hat_color => undef;
             end;
@@ -434,7 +440,13 @@ sims_test "Save object trace for two objects" => {
             end;
           };
           field made => 1;
-          field created => hash {
+          field create_params => hash {
+            field name => 'foo';
+            field hat_color => undef;
+            end;
+          };
+          field row => hash {
+            field id => 1;
             field name => 'foo';
             field hat_color => undef;
             end;
@@ -451,7 +463,13 @@ sims_test "Save object trace for two objects" => {
             end;
           };
           field made => 2;
-          field created => hash {
+          field create_params => hash {
+            field name => 'bar';
+            field hat_color => 'blue';
+            end;
+          };
+          field row => hash {
+            field id => 2;
             field name => 'bar';
             field hat_color => 'blue';
             end;

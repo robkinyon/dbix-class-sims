@@ -45,22 +45,39 @@ sub sims_test ($$) {
       local $SIG{ALRM} = sub { die "test timeout\n" };
       alarm 1;
       if ($opts->{dies}) {
-        my @args = ref($opts->{spec}//'') eq 'ARRAY'
-          ? @{$opts->{spec}} : ($opts->{spec}//{});
-        trap {
-          ($rv, $addl) = $opts->{as_class_method}
-            ? DBIx::Class::Sims->load_sims(Schema, @args)
-            : Schema->load_sims(@args);
-        };
-        is($trap->leaveby, 'die', 'load_sims fails');
-        if ($opts->{warning}) {
-          is($trap->stderr, match($opts->{warning}), "Warning as expected");
+        if ($opts->{load_sims}) {
+          trap {
+            ($rv, $addl) = $opts->{load_sims}->(Schema)
+          };
+          is($trap->leaveby, 'die', 'load_sims fails');
+          if ($opts->{warning}) {
+            is($trap->stderr, match($opts->{warning}), "Warning as expected");
+          }
+          my $continue = is(($trap->die // '') . "", match($opts->{dies}), 'Error message as expected');
+          unless ($continue) {
+            warn $trap->stderr;
+            warn $trap->die;
+            return; # Don't continue the test if we die unexpectedly.
+          }
         }
-        my $continue = is(($trap->die // '') . "", match($opts->{dies}), 'Error message as expected');
-        unless ($continue) {
-          warn $trap->stderr;
-          warn $trap->die;
-          return; # Don't continue the test if we die unexpectedly.
+        else {
+          my @args = ref($opts->{spec}//'') eq 'ARRAY'
+            ? @{$opts->{spec}} : ($opts->{spec}//{});
+          trap {
+            ($rv, $addl) = $opts->{as_class_method}
+              ? DBIx::Class::Sims->load_sims(Schema, @args)
+              : Schema->load_sims(@args);
+          };
+          is($trap->leaveby, 'die', 'load_sims fails');
+          if ($opts->{warning}) {
+            is($trap->stderr, match($opts->{warning}), "Warning as expected");
+          }
+          my $continue = is(($trap->die // '') . "", match($opts->{dies}), 'Error message as expected');
+          unless ($continue) {
+            warn $trap->stderr;
+            warn $trap->die;
+            return; # Don't continue the test if we die unexpectedly.
+          }
         }
       }
       else {
