@@ -296,6 +296,21 @@ sub fix_fk_dependencies {
         $deferred_fks{$rel_name} = $cond;
         next RELATIONSHIP;
       }
+
+      if ($parent) {
+        push @{$self->{traces}}, {
+          table  => $fk_name,
+          spec   => MyCloner::clone($cond),
+          seen   => $self->{ids}{seen}++,
+          parent => $trace->{seen},
+          find   => $self->{ids}{find}++,
+          unique => 0,
+          row    => { $parent->get_columns },
+        };
+        $self->{traces}[-1]{row}{$_} = defined $self->{traces}[-1]{row}{$_}
+          ? '' . $self->{traces}[-1]{row}{$_} : undef
+          foreach keys %{$self->{traces}[-1]{row}};
+      }
     }
     unless ($parent) {
       push @{$self->{traces}}, {

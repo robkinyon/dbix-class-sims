@@ -786,6 +786,20 @@ sims_test "Auto-generate a child with a value (with a trace)" => {
             artist_id => 1,
           },
         },
+        {
+          find => 1,
+          seen => 3,
+          parent => 2,
+          row => {
+            id => 1,
+            name => 'foo',
+          },
+          spec => {
+            id => 1,
+          },
+          table => 'Artist',
+          unique => 0,
+        },
       ],
     }, 'Toposort trace is as expected' );
 
