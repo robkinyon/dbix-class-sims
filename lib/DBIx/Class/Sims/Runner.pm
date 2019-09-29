@@ -449,6 +449,9 @@ sub find_by_unique_constraints {
 
     $trace->{find} = $self->{ids}{find}++;
     $trace->{row} = { $row->get_columns };
+    $trace->{row}{$_} = defined $trace->{row}{$_}
+      ? '' . $trace->{row}{$_} : undef
+      foreach keys %{$trace->{row}};
     $trace->{criteria} = [$searched];
     $trace->{unique} = 1;
 
@@ -818,6 +821,9 @@ sub create_item {
 
         $trace->{made} = $self->{ids}{made}++;
         $trace->{created} = MyCloner::clone($to_create);
+        $trace->{created}{$_} = defined $trace->{created}{$_}
+          ? '' . $trace->{created}{$_} : undef
+          foreach keys %{$trace->{created}};
 
         $self->schema->resultset($name)->create($to_create);
       }; if ($@) {
