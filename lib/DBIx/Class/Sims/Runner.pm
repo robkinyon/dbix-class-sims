@@ -235,7 +235,13 @@ sub run {
       return $self->{rows};
     });
   } catch {
-    if ( $self->{object_trace} ) {
+    if (/neither allow_blessed, convert_blessed nor allow_tags settings are enabled/) {
+      use DDP;
+      open my $fh, '>', $self->{object_trace};
+      my %x = ( objects => $self->{traces} );
+      print $fh np(%x);
+    }
+    elsif ( $self->{object_trace} ) {
       use JSON::MaybeXS qw( encode_json );
       open my $fh, '>', $self->{object_trace};
       print $fh encode_json({

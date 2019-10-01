@@ -395,6 +395,9 @@ sub create {
 
     $self->{trace}{made} = $self->{runner}{ids}{made}++;
     $self->{trace}{create_params} = $self->{create};
+    $self->{trace}{create_params}{$_} = defined $self->{trace}{create_params}{$_}
+      ? '' . $self->{trace}{create_params}{$_} : undef
+      foreach keys %{$self->{trace}{create_params}};
     $self->{trace}{row} = { $row->get_columns };
 
     # This occurs when a FK condition was specified, but the column is
