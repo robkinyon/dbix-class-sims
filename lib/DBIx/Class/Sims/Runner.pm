@@ -235,23 +235,33 @@ sub run {
       return $self->{rows};
     });
   } catch {
-    if (/neither allow_blessed, convert_blessed nor allow_tags settings are enabled/) {
-      use DDP;
+    my $e = $_;
+
+    if ( $self->{object_trace} ) {
       open my $fh, '>', $self->{object_trace};
-      my %x = ( objects => $self->{traces} );
-      print $fh np(%x);
-    }
-    elsif ( $self->{object_trace} ) {
-      use JSON::MaybeXS qw( encode_json );
-      open my $fh, '>', $self->{object_trace};
-      print $fh encode_json({
-        objects => $self->{traces},
-      });
+
+      # Try our hardest to write out in JSON. If that doesn't work, write it
+      # out in DDP.
+      try {
+        use JSON::MaybeXS qw( encode_json );
+        print $fh encode_json({
+          objects => $self->{traces},
+        });
+      } catch {
+        my $e2 = $_;
+
+        use DDP;
+        my %x = ( objects => $self->{traces} );
+        print $fh np(%x);
+
+        warn "Couldn't write out in JSON ($e2). Using DDP instead\n";
+      };
+
       close $fh;
     }
 
-    die $_;
-  }
+    die $e;
+  };
 }
 
 1;
