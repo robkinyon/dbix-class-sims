@@ -232,7 +232,15 @@ sub find_any_match {
   }
 
   my $row = $rs->search($cond, { rows => 1 })->single;
-  $self->row($row) if $row;
+  if ($row) {
+    $self->row($row);
+
+    $self->{trace}{find} = $self->{runner}{ids}{find}++;
+    $self->{trace}{row} = $self->make_jsonable( { $row->get_columns } );
+    $self->{trace}{criteria} = [ $cond ];
+    $self->{trace}{unique} = 0;
+  }
+
 
   return $self->row;
 }
