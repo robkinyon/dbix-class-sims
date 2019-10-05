@@ -658,6 +658,7 @@ sub populate_parents {
       spec   => MyCloner::clone($spec // {}),
       seen   => $self->{runner}{ids}{seen}++,
       parent => $self->{trace}{seen},
+      via    => 'populate_parents',
     };
     my $fk_item = DBIx::Class::Sims::Item->new(
       runner => $self->runner,
@@ -737,7 +738,19 @@ sub build_children {
       # because the child then needs a parent ::Item that tries to create a
       # child, and so forth.
       $child->{$fkcol} = $self->row;
-      $self->runner->add_child($fk_source, $fkcol, $child, $self->source_name);
+      $self->runner->add_child({
+        adder  => $self->source_name,
+        source => $fk_source,
+        fkcol  => $fkcol,
+        child  => $child,
+        trace  => {
+          table  => $fk_source->name,
+          spec   => MyCloner::clone($child),
+          seen   => $self->{runner}{ids}{seen}++,
+          parent => $self->{trace}{seen},
+          via    => 'add_child',
+        },
+      });
     }
   }
 }

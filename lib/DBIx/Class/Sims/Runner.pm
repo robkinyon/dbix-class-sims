@@ -90,11 +90,23 @@ sub are_columns_equal {
   my %added_by;
   sub add_child {
     my $self = shift;
-    my ($source, $fkcol, $child, $adder) = @_;
+    my ($opts) = @_;
+    my ($source, $fkcol, $child, $adder, $trace) = @{$opts}{qw(
+      source fkcol child adder trace
+    )};
+
     # If $child has the same keys (other than parent columns) as another row
     # added by a different parent table, then set the foreign key for this
     # parent in the existing row.
     foreach my $compare (@{$self->{spec}{$source->name}}) {
+      # Don't mess with the specs we were provided.
+      # next if ref($compare) eq 'HASH';
+
+      # Handle the case of a child added with its trace.
+      if ( ref($compare) eq 'ARRAY' ) {
+        $compare = $compare->[0];
+      }
+
       next if exists $added_by{$adder} && exists $added_by{$adder}{$compare};
       if ($self->are_columns_equal($source, $child, $compare)) {
         $compare->{$fkcol} = $child->{$fkcol};
@@ -102,7 +114,7 @@ sub are_columns_equal {
       }
     }
 
-    push @{$self->{spec}{$source->name}}, $child;
+    push @{$self->{spec}{$source->name}}, [ $child, $trace ];
     $added_by{$adder} //= {};
     $added_by{$adder}{$child} = !!1;
     $self->add_pending($source->name);
@@ -180,12 +192,19 @@ sub run {
           delete $still_to_use{$name};
 
           while ( my $proto = shift @{$self->{spec}{$name}} ) {
-            push @{$self->{traces}}, {
-              table => $name,
-              spec => MyCloner::clone($proto),
-              seen => $self->{ids}{seen}++,
-              parent => 0,
-            };
+            # This is the case of a child added via add_child()
+            if ( ref($proto) eq 'ARRAY' ) {
+              ($proto, my $trace) = @{$proto};
+              push @{$self->{traces}}, $trace;
+            }
+            else {
+              push @{$self->{traces}}, {
+                table => $name,
+                spec => MyCloner::clone($proto),
+                seen => $self->{ids}{seen}++,
+                parent => 0,
+              };
+            }
 
             $proto->{__META__} //= {};
             $proto->{__META__}{create} = 1;

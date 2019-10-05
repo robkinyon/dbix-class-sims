@@ -590,6 +590,7 @@ sims_test "Save object trace with an implicit parent" => {
         };
         item hash {
           field parent => 1;
+          field via => 'populate_parents';
           field seen => 2;
           field table => 'Artist';
           field spec => hash {
@@ -679,6 +680,7 @@ sims_test "Save object trace with a specified parent" => {
         };
         item hash {
           field parent => 1;
+          field via => 'populate_parents';
           field seen => 2;
           field table => 'Artist';
           field spec => hash {
@@ -766,7 +768,8 @@ sims_test "Save object trace with a specified child" => {
           end;
         };
         item hash {
-          field parent => 0;
+          field parent => 1;
+          field via => 'add_child';
           field seen => 2;
           field table => 'Album';
           field spec => hash {
@@ -855,7 +858,8 @@ sims_test "Save object trace with children specified by number" => {
           end;
         };
         item hash {
-          field parent => 0;
+          field parent => 1;
+          field via => 'add_child';
           field seen => 2;
           field table => 'Album';
           field spec => hash {
