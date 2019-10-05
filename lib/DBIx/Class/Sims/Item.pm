@@ -85,6 +85,24 @@ sub value {
     : $self->spec->{$col};
 }
 
+sub make_jsonable {
+  my $self = shift;
+  my ($item) = @_;
+
+  # Deference all scalar references. This happens when we retrieve a row and
+  # it has something like { update_time => \'current_timestamp' }
+  $item->{$_} = reftype($item->{$_}) eq 'SCALAR'
+    ? ${$item->{$_}} : $item->{$_}
+    for keys %{$item};
+
+  # Stringify everything, otherwise JSON::MaybeXS gets confused
+  $item->{$_} = defined $item->{$_}
+    ? '' . $item->{$_} : undef
+    foreach keys %{$item};
+
+  return $item;
+}
+
 ################################################################################
 #
 # These are the helper methods
@@ -140,7 +158,7 @@ sub find_unique_match {
       $self->row($row);
 
       $self->{trace}{find} = $self->{runner}{ids}{find}++;
-      $self->{trace}{row} = { $row->get_columns };
+      $self->{trace}{row} = $self->make_jsonable( { $row->get_columns } );
       $self->{trace}{criteria} = [$to_find];
       $self->{trace}{unique} = 1;
 
@@ -187,7 +205,7 @@ sub find_unique_match {
     $self->row($row);
 
     $self->{trace}{find} = $self->{runner}{ids}{find}++;
-    $self->{trace}{row} = { $row->get_columns };
+    $self->{trace}{row} = $self->make_jsonable( { $row->get_columns } );
     $self->{trace}{criteria} = $finders;
     $self->{trace}{unique} = 1;
 
@@ -394,11 +412,8 @@ sub create {
     $self->runner->{created}{$self->source_name}++;
 
     $self->{trace}{made} = $self->{runner}{ids}{made}++;
-    $self->{trace}{create_params} = $self->{create};
-    $self->{trace}{create_params}{$_} = defined $self->{trace}{create_params}{$_}
-      ? '' . $self->{trace}{create_params}{$_} : undef
-      foreach keys %{$self->{trace}{create_params}};
-    $self->{trace}{row} = { $row->get_columns };
+    $self->{trace}{create_params} = $self->make_jsonable( $self->{create} );
+    $self->{trace}{row} = $self->make_jsonable( { $row->get_columns } );
 
     # This occurs when a FK condition was specified, but the column is
     # nullable and we didn't find an existing parent row. We want to defer these
