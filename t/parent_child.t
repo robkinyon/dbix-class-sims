@@ -566,6 +566,7 @@ sims_test "Autogenerate a parent (with a trace)" => {
         },
         {
           parent => 1,
+          via => 'populate_parents',
           seen => 2,
           table => 'Artist',
           spec => {
@@ -645,86 +646,7 @@ sims_test "Autogenerate a parent with a name (with a trace)" => {
         },
         {
           parent => 1,
-          seen => 2,
-          table => 'Artist',
-          spec => {
-            name => 'foo3',
-          },
-          made => 1,
-          create_params => {
-            name => 'foo3',
-          },
-          row => {
-            id => 1,
-            name => 'foo3',
-          },
-        },
-      ],
-    }, 'Toposort trace is as expected' );
-
-    remove_tree( $trace_file );
-
-    return @rv;
-  },
-  expect => {
-    Artist => [
-      { id => 1, name => 'foo3' },
-    ],
-    Album  => [
-      { id => 1, name => 'bar1', artist_id => 1 },
-    ],
-  },
-  rv => sub { { Album => shift->{expect}{Album} } },
-  addl => {
-    created =>  {
-      Artist => 1,
-      Album => 1,
-    },
-  },
-};
-
-sims_test "Autogenerate a parent with a name (with a trace)" => {
-  load_sims => sub {
-    my ($schema) = @_;
-
-    my $trace_file = '/tmp/trace';
-
-    remove_tree( $trace_file );
-
-    my @rv = $schema->load_sims(
-      {
-        Album => [
-          { name => 'bar1', 'artist.name' => 'foo3' },
-        ],
-      },
-      { object_trace => $trace_file },
-    );
-
-    # Verify the trace was written out
-    my $trace = LoadFile( $trace_file );
-    cmp_deeply( $trace, {
-      objects => [
-        {
-          parent => 0,
-          seen => 1,
-          table => 'Album',
-          spec => {
-            name => 'bar1',
-            artist => { name => 'foo3' },
-          },
-          made => 2,
-          create_params => {
-            name => 'bar1',
-            artist_id => 1,
-          },
-          row => {
-            id => 1,
-            name => 'bar1',
-            artist_id => 1,
-          },
-        },
-        {
-          parent => 1,
+          via => 'populate_parents',
           seen => 2,
           table => 'Artist',
           spec => {
@@ -803,7 +725,8 @@ sims_test "Auto-generate a child with a value (with a trace)" => {
           },
         },
         {
-          parent => 0,
+          parent => 1,
+          via => 'add_child',
           seen => 2,
           table => 'Album',
           spec => {
@@ -826,6 +749,7 @@ sims_test "Auto-generate a child with a value (with a trace)" => {
           find => 1,
           seen => 3,
           parent => 2,
+          via => 'populate_parents',
           row => {
             id => 1,
             name => 'foo',

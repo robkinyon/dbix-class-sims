@@ -304,6 +304,7 @@ sub fix_fk_dependencies {
           spec   => MyCloner::clone($cond),
           seen   => $self->{ids}{seen}++,
           parent => $trace->{seen},
+          via    => 'populate_parents',
           find   => $self->{ids}{find}++,
           unique => 0,
           row    => { $parent->get_columns },
@@ -319,6 +320,7 @@ sub fix_fk_dependencies {
         spec   => MyCloner::clone($cond),
         seen   => $self->{ids}{seen}++,
         parent => $trace->{seen},
+        via    => 'populate_parents',
       };
 
       my $fk_item = MyCloner::clone($cond);
@@ -349,11 +351,15 @@ sub fix_fk_dependencies {
 
   sub add_child {
     my $self = shift;
-    my ($src, $fkcol, $row, $adder) = @_;
+    my ($src, $fkcol, $row, $adder, $trace) = @_;
     # If $row has the same keys (other than parent columns) as another row
     # added by a different parent table, then set the foreign key for this
     # parent in the existing row.
     foreach my $compare (@{$self->{spec}{$src}}) {
+      if ( ref($compare) eq 'ARRAY' ) {
+        $compare = $compare->[0];
+      }
+
       next if exists $added_by{$adder} && exists $added_by{$adder}{$compare};
       if ($self->are_columns_equal($src, $row, $compare)) {
         $compare->{$fkcol} = $row->{$fkcol};
@@ -361,7 +367,7 @@ sub fix_fk_dependencies {
       }
     }
 
-    push @{$self->{spec}{$src}}, $row;
+    push @{$self->{spec}{$src}}, [ $row, $trace ];
     $added_by{$adder} //= {};
     $added_by{$adder}{$row} = !!1;
     $pending{$src} = 1;
@@ -521,7 +527,7 @@ sub fix_values {
 
 sub fix_child_dependencies {
   my $self = shift;
-  my ($name, $row, $child_deps) = @_;
+  my ($name, $row, $child_deps, $trace) = @_;
 
   # 1. If we have something, then:
   #   a. If it's not an array, then make it an array
@@ -558,7 +564,13 @@ sub fix_child_dependencies {
     foreach my $child (@children) {
       set_allow_pk_to($child, 1);
       $child->{$fkcol} = $row->get_column($col);
-      $self->add_child($fk_name, $fkcol, $child, $name);
+      $self->add_child($fk_name, $fkcol, $child, $name, {
+        table  => $fk_name,
+        spec   => MyCloner::clone($child),
+        seen   => $self->{ids}{seen}++,
+        parent => $trace->{seen},
+        via    => 'add_child',
+      });
     }
   }
 }
@@ -860,7 +872,7 @@ sub create_item {
     $self->fix_deferred_fks($name, $row, $deferred_fks);
   }
 
-  $self->fix_child_dependencies($name, $row, $child_deps);
+  $self->fix_child_dependencies($name, $row, $child_deps, $trace);
 
   $self->{hooks}{postprocess}->($name, $source, $row);
 
@@ -889,12 +901,18 @@ sub run {
           delete $still_to_use{$name};
 
           while ( my $item = shift @{$self->{spec}{$name}} ) {
-            push @{$self->{traces}}, {
-              table => $name,
-              spec => MyCloner::clone($item),
-              seen => $self->{ids}{seen}++,
-              parent => 0,
-            };
+            if ( ref($item) eq 'ARRAY' ) {
+              ($item, my $trace) = @{$item};
+              push @{$self->{traces}}, $trace;
+            }
+            else {
+              push @{$self->{traces}}, {
+                table => $name,
+                spec => MyCloner::clone($item),
+                seen => $self->{ids}{seen}++,
+                parent => 0,
+              };
+            }
 
             if ($self->{allow_pk_set_value}) {
               set_allow_pk_to($item, 1);
