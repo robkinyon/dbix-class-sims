@@ -9,9 +9,15 @@ use DDP;
 use Data::Compare qw( Compare );
 use Hash::Merge qw( merge );
 use Scalar::Util qw( blessed reftype );
-use String::Random qw( random_regex );
 use Try::Tiny;
 
+# The type functions are given a runner object, so have all the random functions
+# be available as methods on the runner object.
+use DBIx::Class::Sims::Random qw(
+  random_integer random_decimal
+  random_regex random_string
+  random_item random_choice
+);
 use DBIx::Class::Sims::Util ();
 
 ###### FROM HERE ######
@@ -633,6 +639,34 @@ my %types = (
   #)],
 );
 
+sub generate_value {
+  my $self = shift;
+  my ($name, $col_name, $info, $sim_spec, $is, $die_on_unknown) = @_;
+  $sim_spec //= {};
+
+  if ( $is->{numeric}->($info->{data_type})) {
+    my $min = $sim_spec->{min} // 0;
+    my $max = $sim_spec->{max} // 100;
+
+    return $self->random_integer($min, $max);
+  }
+  elsif ( $is->{decimal}->($info->{data_type})) {
+    my $min = $sim_spec->{min} // 0;
+    my $max = $sim_spec->{max} // 100;
+
+    return $self->random_decimal($min, $max);
+  }
+  elsif ( $is->{string}->($info->{data_type})) {
+    my $min = $sim_spec->{min} // 1;
+    my $max = $sim_spec->{max} // $info->{data_length} // $info->{size} // $min;
+
+    return $self->random_regex('\w' . "{$min,$max}");
+  }
+  elsif ( $die_on_unknown ) {
+    die "ERROR: $name\.$col_name is not nullable, but I don't know how to handle $info->{data_type}\n";
+  }
+}
+
 sub fix_columns {
   my $self = shift;
   my ($name, $item) = @_;
@@ -708,7 +742,7 @@ sub fix_columns {
     if ( ref($sim_spec // '') eq 'HASH' ) {
       if ( exists $sim_spec->{null_chance} && $info->{is_nullable} ) {
         # Add check for not a number
-        if ( rand() < $sim_spec->{null_chance} ) {
+        if ( $self->random_choice($sim_spec->{null_chance}) ) {
           $item->{$col_name} = undef;
           next;
         }
@@ -723,8 +757,7 @@ sub fix_columns {
       }
       elsif ( exists $sim_spec->{value} ) {
         if (ref($sim_spec->{value} // '') eq 'ARRAY') {
-          my @v = @{$sim_spec->{value}};
-          $item->{$col_name} = $v[rand @v];
+          $item->{$col_name} = $self->random_item( $sim_spec->{value} );
         }
         else {
           $item->{$col_name} = $sim_spec->{value};
@@ -740,23 +773,9 @@ sub fix_columns {
         }
       }
       else {
-        if ( $is{numeric}->($info->{data_type})) {
-          my $min = $sim_spec->{min} // 0;
-          my $max = $sim_spec->{max} // 100;
-          $item->{$col_name} = int(rand($max-$min))+$min;
-        }
-        elsif ( $is{decimal}->($info->{data_type})) {
-          my $min = $sim_spec->{min} // 0;
-          my $max = $sim_spec->{max} // 100;
-          $item->{$col_name} = rand($max-$min)+$min;
-        }
-        elsif ( $is{string}->($info->{data_type})) {
-          my $min = $sim_spec->{min} // 1;
-          my $max = $sim_spec->{max} // $info->{data_length} // $info->{size} // $min;
-          $item->{$col_name} = random_regex(
-            '\w' . "{$min,$max}"
-          );
-        }
+        $item->{$col_name} = $self->generate_value(
+          $name, $col_name, $info, $sim_spec, \%is, 0,
+        );
       }
     }
     # If it's not nullable, doesn't have a default value and isn't part of a
@@ -769,26 +788,9 @@ sub fix_columns {
       !$is{in_uk}->($col_name) &&
       !$self->{is_fk}{$name}{$col_name}
     ) {
-      if ( $is{numeric}->($info->{data_type})) {
-        my $min = 0;
-        my $max = 100;
-        $item->{$col_name} = int(rand($max-$min))+$min;
-      }
-      elsif ( $is{decimal}->($info->{data_type})) {
-        my $min = 0;
-        my $max = 100;
-        $item->{$col_name} = rand($max-$min)+$min;
-      }
-      elsif ( $is{string}->($info->{data_type})) {
-        my $min = 1;
-        my $max = $info->{data_length} // $info->{size} // $min;
-        $item->{$col_name} = random_regex(
-          '\w' . "{$min,$max}"
-        );
-      }
-      else {
-        die "ERROR: $name\.$col_name is not nullable, but I don't know how to handle $info->{data_type}\n";
-      }
+      $item->{$col_name} = $self->generate_value(
+        $name, $col_name, $info, $sim_spec, \%is, 1,
+      );
     }
   }
 

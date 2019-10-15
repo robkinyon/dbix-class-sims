@@ -210,6 +210,7 @@ sub load_sims {
       allow_relationship_column_names => $opts->{allow_relationship_column_names} // 1,
 
       object_trace => $opts->{object_trace},
+      predictable_values => $opts->{predictable_values},
     );
 
     $rows = eval {

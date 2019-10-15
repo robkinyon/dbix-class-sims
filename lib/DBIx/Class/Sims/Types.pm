@@ -14,29 +14,29 @@ DBIx::Class::Sims->set_sim_types({
   )
 });
 
-use String::Random qw( random_regex random_string );
-
 {
   my @tlds = qw(
     com net org gov mil co.uk co.es
   );
 
   sub email_address {
-    my ($info) = @_;
+    my ($info, undef, $runner) = @_;
 
-    my $size = $info->{size} // 7;
+    my $size = $info->{data_length} // $info->{size} // 7;
     if ( $size < 7 ) {
       return '';
     }
 
-    my $tld = $tlds[rand @tlds];
+    # This is okay with predictable_values because random_item() returns the
+    # 0th index.
+    my $tld = $runner->random_item(\@tlds);
     while ( $size - length($tld) < 4 ) {
-      $tld = $tlds[rand @tlds];
+      $tld = $runner->random_item(\@tlds);
     }
 
     # Don't always create an address to fill the full amount.
-    if ( $size > 20 && rand() < .5 ) {
-      $size -= int(rand($size-20));
+    if ( $size > 20 && $runner->random_choice(.5) ) {
+      $size -= $runner->random_integer(0, $size-20);
     }
 
     $size -= length($tld) + 1 + 1; # + . for $tld + @
@@ -45,15 +45,15 @@ use String::Random qw( random_regex random_string );
     my $acct_size = int($size/2);
     $size -= $acct_size;
 
-    my $acct = random_string( "0"x$acct_size, ['a'..'z','A'..'Z','0'..'9'] );
-    if ( $acct_size > 5 && rand() < 0.1 ) {
-      my $n = int(rand($acct_size - 4)) + 2;
+    my $acct = $runner->random_string("0"x$acct_size, ['a'..'z','A'..'Z','0'..'9'] );
+    if ( $acct_size > 5 && $runner->random_choice(.1) ) {
+      my $n = $runner->random_integer(0, $acct_size - 4) + 2;
       substr($acct, $n, 1) = '+';
     }
 
-    my $domain = random_string( "c"x$size );
+    my $domain = $runner->random_string("c"x$size);
     if ( $size > 5 ) {
-      my $n = int(rand($size - 4)) + 2;
+      my $n = $runner->random_integer(0, $size - 4) + 2;
       substr($domain, $n, 1) = '.';
     }
 
@@ -62,7 +62,8 @@ use String::Random qw( random_regex random_string );
 }
 
 sub ip_address {
-  return join '.', map { int(rand(255)) + 1 } 1 .. 4;
+  my (undef, undef, $runner) = @_;
+  return join '.', map { $runner->random_integer(0, 256) } 1 .. 4;
 }
 
 {
@@ -79,21 +80,22 @@ sub ip_address {
   );
 
   sub us_address {
+    my (undef, undef, $runner) = @_;
     # Assume a varchar-like column type with enough space.
 
-    if ( rand() < .7 ) {
+    if ( $runner->random_choice(.7) ) {
       # We want to change this so that distribution is by number of digits, then
       # randomly within the numbers.
-      my $number = int(rand(99999));
+      my $number = $runner->random_integer(1, 99999);
 
-      my $street_name = $street_names[rand @street_names];
-      my $street_type = $street_types[rand @street_types];
+      my $street_name = $runner->random_item(\@street_names);
+      my $street_type = $runner->random_item(\@street_types);
 
       return "$number $street_name $street_type";
     }
     else {
-      my $po = rand() < .5 ? 'PO' : 'P.O.';
-      return "$po Box " . int(rand(9999));
+      my $po = $runner->random_choice(.5) ? 'PO' : 'P.O.';
+      return "$po Box " . $runner->random_integer(1, 99999);
     }
   }
 }
@@ -107,8 +109,9 @@ sub ip_address {
   );
 
   sub us_city {
+    my (undef, undef, $runner) = @_;
     # Assume a varchar-like column type with enough space.
-    return $city_names[rand @city_names];
+    return $runner->random_item(\@city_names);
   }
 }
 
@@ -118,8 +121,9 @@ sub ip_address {
   );
 
   sub us_county {
+    my (undef, undef, $runner) = @_;
     # Assume a varchar-like column type with enough space.
-    return $county_names[rand @county_names];
+    return $runner->random_item(\@county_names);
   }
 }
 
@@ -133,8 +137,9 @@ sub ip_address {
   );
 
   sub us_firstname {
+    my (undef, undef, $runner) = @_;
     # Assume a varchar-like column type with enough space.
-    return $first_names[rand @first_names],
+    return $runner->random_item(\@first_names);
   }
 }
 
@@ -148,8 +153,9 @@ sub ip_address {
   );
 
   sub us_lastname {
+    my (undef, undef, $runner) = @_;
     # Assume a varchar-like column type with enough space.
-    return $last_names[rand @last_names],
+    return $runner->random_item(\@last_names);
   }
 }
 
@@ -161,20 +167,21 @@ sub ip_address {
   );
 
   sub us_name {
+    my (undef, undef, $runner) = @_;
     # Assume a varchar-like column type with enough space.
 
     my @name = us_firstname(@_);
 
     # 10% chance of adding a middle initial
-    if ( rand() < 0.1 ) {
-      push @name, $letters[rand @letters] . '.';
+    if ( $runner->random_choice(.1) ) {
+      push @name, $runner->random_item(\@letters) . '.';
     }
 
     push @name, us_lastname(@_);
 
     # 10% chance of adding a suffix
-    if ( rand() < 0.1 ) {
-      push @name, $suffixes[rand @suffixes];
+    if ( $runner->random_choice(.1) ) {
+      push @name, $runner->random_item(\@suffixes);
     }
 
     return join ' ', @name;
@@ -182,43 +189,45 @@ sub ip_address {
 }
 
 sub us_phone {
-  my ($info) = @_;
+  my ($info, undef, $runner) = @_;
 
   # Assume a varchar-like column type.
-  my $length = $info->{size} // 8;
+  my $length = $info->{data_length} // $info->{size} // 8;
   if ( $length < 7 ) {
     return '';
   }
   elsif ( $length == 7 ) {
-    return random_regex('\d{7}');
+    return $runner->random_regex('\d{7}');
   }
   elsif ( $length < 10 ) {
-    return random_regex('\d{3}-\d{4}');
+    return $runner->random_regex('\d{3}-\d{4}');
   }
   elsif ( $length < 12 ) {
-    return random_regex('\d{10}');
+    return $runner->random_regex('\d{10}');
   }
   elsif ( $length == 12 ) {
-    return random_regex('\d{3}-\d{3}-\d{4}');
+    return $runner->random_regex('\d{3}-\d{3}-\d{4}');
   }
   # random_regex() throws a warning no matter how I try to specify the parens.
   # It does the right thing, but noisily. So, just concatenate them.
   elsif ( $length == 13 ) {
-    return '(' . random_regex('\d{3}') . ')' . random_regex('\d{3}-\d{4}');
+    return '(' . $runner->random_regex('\d{3}') . ')' . $runner->random_regex('\d{3}-\d{4}');
   }
   else { #if ( $length >= 14 ) {
-    return '(' . random_regex('\d{3}') . ') ' . random_regex('\d{3}-\d{4}');
+    return '(' . $runner->random_regex('\d{3}') . ') ' . $runner->random_regex('\d{3}-\d{4}');
   }
 }
 
 sub us_ssntin {
+  my (undef, undef, $runner) = @_;
+
   # Give strong preference to a SSN
-  if ( rand() < .8 ) {
-    return random_regex('\d{3}-\d{2}-\d{4}');
+  if ( $runner->random_choice(.8) ) {
+    return $runner->random_regex('\d{3}-\d{2}-\d{4}');
   }
   # But still generate employer TINs to mix it up.
   else {
-    return random_regex('\d{2}-\d{7}');
+    return $runner->random_regex('\d{2}-\d{7}');
   }
 }
 
@@ -284,39 +293,39 @@ sub us_ssntin {
     [ VI => 'Virgin Islands' ],
   );
   sub us_state {
-    my ($info) = @_;
+    my ($info, undef, $runner) = @_;
 
     # Assume a varchar-like column type.
-    my $length = $info->{size} // 2;
+    my $length = $info->{data_length} // $info->{size} // 2;
     if ( $length == 2 ) {
-      return $states[rand @states][0];
+      return $runner->random_item(\@states)->[0];
     }
-    return substr($states[rand @states][1], 0, $length);
+    return substr($runner->random_item(\@states)->[1], 0, $length);
   }
 }
 
 sub us_zipcode {
-  my ($info) = @_;
+  my ($info, undef, $runner) = @_;
 
   my $datatype = $info->{data_type};
   if ( $datatype eq 'varchar' || $datatype eq 'char' ) {
-    my $length = $info->{size} // 9;
+    my $length = $info->{data_length} // $info->{size} // 10;
     if ( $length < 5 ) {
       return '';
     }
     elsif ( $length < 9 ) {
-      return random_regex('\d{5}');
+      return $runner->random_regex('\d{5}');
     }
     elsif ( $length == 9 ) {
-      return random_regex('\d{9}');
+      return $runner->random_regex('\d{9}');
     }
     else {
-      return random_regex('\d{5}-\d{4}');
+      return $runner->random_regex('\d{5}-\d{4}');
     }
   }
   # Treat it as an int.
   else {
-    return int(rand(99999));
+    return $runner->random_integer(0, 99999);
   }
 }
 

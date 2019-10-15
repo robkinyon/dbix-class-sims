@@ -4,17 +4,13 @@ use warnings FATAL => 'all';
 
 use Test::More;
 
-use_ok 'DBIx::Class::Sims::Types';
+use lib 't/lib';
+use types qw(types_test);
 
-my $sub = DBIx::Class::Sims::Types->can('us_name');
-
-my $info = {
-  data_type => 'varchar',
-  sim => { type => 'us_name' },
+types_test us_name => {
+  tests => [
+    [ { data_type => 'varchar'}, qr/^\w+ (?:\w\. )?[\w']+(?: \w+)?(?: .+)?$/, 'Aidan A. Jones Jr' ],
+  ],
 };
-my $expected = qr/^\w+ (?:\w\. )?[\w']+(?: \w+)?(?: .+)?$/;
-for ( 1 .. 1000 ) {
-  like( $sub->($info), $expected );
-}
 
 done_testing;
