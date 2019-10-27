@@ -10,7 +10,15 @@ use strictures 2;
 use DDP;
 
 use DateTime::Event::Random;
-use String::Random qw( random_regex );
+#use String::Random qw( random_regex );
+
+# The type functions are given a column object, so have all the random functions
+# be available as methods on the column object.
+use DBIx::Class::Sims::Random qw(
+  random_integer random_decimal
+  random_string random_regex
+  random_item random_choice
+);
 
 # Requires the following attributes:
 # * source
@@ -81,6 +89,9 @@ sub initialize {
     $self->{type} = 'unknown';
   }
 
+  # This is to conform to the interface expected by the types tests.
+  $self->{predictable_values} = $self->source->runner->{predictable_values};
+
   return;
 }
 
@@ -149,7 +160,7 @@ sub generate_value {
   elsif ( $self->is_string ) {
     my $min = $spec->{min} // 1;
     my $max = $spec->{max} // $self->info->{data_length} // $self->info->{size} // $min;
-    return random_regex(
+    return $self->random_regex(
       '\w' . "{$min,$max}"
     );
   }

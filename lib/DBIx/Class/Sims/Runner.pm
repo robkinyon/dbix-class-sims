@@ -7,9 +7,6 @@ use strictures 2;
 use DDP;
 
 use Data::Compare qw( Compare );
-use Hash::Merge qw( merge );
-use Scalar::Util qw( blessed );
-use String::Random qw( random_regex );
 use Try::Tiny;
 
 use DBIx::Class::Sims::Item;

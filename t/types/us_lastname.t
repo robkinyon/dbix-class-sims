@@ -3,15 +3,13 @@ use strictures 2;
 
 use Test2::V0 qw( done_testing like );
 
-my $sub = DBIx::Class::Sims::Types->can('us_lastname');
+use lib 't/lib';
+use types qw(types_test);
 
-my $info = {
-  data_type => 'varchar',
-  sim => { type => 'us_lastname' },
+types_test us_lastname => {
+  tests => [
+    [ { data_type => 'varchar' }, qr/^[\w']+(?: \w+)?(?: .+)?$/, 'Jones' ],
+  ],
 };
-my $expected = qr/^[\w']+(?: \w+)?(?: .+)?$/;
-for ( 1 .. 1000 ) {
-  like( $sub->($info), $expected );
-}
 
 done_testing;

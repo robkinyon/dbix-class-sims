@@ -211,6 +211,7 @@ sub load_sims {
       die_on_unique_mismatch => $opts->{die_on_unique_mismatch} // 1,
 
       object_trace => $opts->{object_trace},
+      predictable_values => $opts->{predictable_values},
     );
 
     $rows = eval {

@@ -500,7 +500,8 @@ sub populate_columns {
         if (ref($spec // '') eq 'HASH') {
           if ( exists $spec->{null_chance} && $c->is_nullable ) {
             # Add check for not a number
-            if ( rand() < $spec->{null_chance} ) {
+            #if ( rand() < $spec->{null_chance} ) {
+            if ( $c->random_choice($spec->{null_chance}) ) {
               $self->{create}{$col_name} = undef;
               next;
             }
@@ -511,8 +512,9 @@ sub populate_columns {
           }
           elsif ( exists $spec->{value} ) {
             if (ref($spec->{value} // '') eq 'ARRAY') {
-              my @v = @{$spec->{value}};
-              $self->{create}{$col_name} = $v[rand @v];
+              #my @v = @{$spec->{value}};
+              #$self->{create}{$col_name} = $v[rand @v];
+              $self->{create}{$col_name} = $c->random_item( $spec->{value} );
             }
             else {
               $self->{create}{$col_name} = $spec->{value};
