@@ -444,6 +444,31 @@ sub create {
   return $self->row;
 }
 
+sub value_from_spec {
+  my $self = shift;
+  my ($c, $spec) = @_;
+
+  if ( ref($spec->{func} // '') eq 'CODE' ) {
+    return $spec->{func}->($c->info);
+  }
+  elsif ( exists $spec->{value} ) {
+    if (ref($spec->{value} // '') eq 'ARRAY') {
+      return $c->random_item( $spec->{value} );
+    }
+    else {
+      return $spec->{value};
+    }
+  }
+  elsif ( $spec->{type} ) {
+    my $meth = $self->runner->parent->sim_type($spec->{type})
+      // die "Type '$spec->{type}' is not loaded";
+    return $meth->($c->info, $spec, $c);
+  }
+  else {
+    return $c->generate_value(die_on_unknown => 0);
+  }
+}
+
 sub populate_columns {
   my $self = shift;
 
@@ -500,38 +525,12 @@ sub populate_columns {
         if (ref($spec // '') eq 'HASH') {
           if ( exists $spec->{null_chance} && $c->is_nullable ) {
             # Add check for not a number
-            #if ( rand() < $spec->{null_chance} ) {
             if ( $c->random_choice($spec->{null_chance}) ) {
               $self->{create}{$col_name} = undef;
               next;
             }
           }
-
-          if ( ref($spec->{func} // '') eq 'CODE' ) {
-            $self->{create}{$col_name} = $spec->{func}->($c->info);
-          }
-          elsif ( exists $spec->{value} ) {
-            if (ref($spec->{value} // '') eq 'ARRAY') {
-              #my @v = @{$spec->{value}};
-              #$self->{create}{$col_name} = $v[rand @v];
-              $self->{create}{$col_name} = $c->random_item( $spec->{value} );
-            }
-            else {
-              $self->{create}{$col_name} = $spec->{value};
-            }
-          }
-          elsif ( $spec->{type} ) {
-            my $meth = $self->runner->parent->sim_type($spec->{type});
-            if ( $meth ) {
-              $self->{create}{$col_name} = $meth->($c->info, $spec, $c);
-            }
-            else {
-              warn "Type '$spec->{type}' is not loaded";
-            }
-          }
-          else {
-            $self->{create}{$col_name} = $c->generate_value(die_on_unknown => 0);
-          }
+          $self->{create}{$col_name} = $self->value_from_spec($c, $spec);
         }
       }
       elsif (
@@ -626,6 +625,7 @@ sub populate_parents {
       }
 
       $spec = {};
+#$spec //= $c->sim_spec;
     }
 
     my $fk_source = $r->target;

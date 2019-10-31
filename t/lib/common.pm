@@ -128,8 +128,8 @@ sub sims_test ($$) {
           my $check = bag {
             foreach my $exp ( @$expect ) {
               item object {
-                while ( my ($kx,$vx) = each(%$exp) ) {
-                  call $kx => $vx;
+                while ( my ($k,$v) = each(%$exp) ) {
+                  call $k => $v;
                 }
               };
             }
@@ -153,8 +153,8 @@ sub sims_test ($$) {
             field $n => bag {
               foreach my $exp ( @$e ) {
                 item object {
-                  while ( my ($kx,$vx) = each %$exp ) {
-                    call $kx => $vx;
+                  while ( my ($k,$v) = each %$exp ) {
+                    call $k => $v;
                   }
                 };
               }

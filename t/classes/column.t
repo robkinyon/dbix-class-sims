@@ -56,9 +56,13 @@ BEGIN {
 use common qw(Schema);
 =cut
 
+my $source = bless {
+  runner => { predictable_values => 0 },
+}, 'DBIx::Class::Sims::Source';
+
 subtest 'normal' => sub {
   my $col = DBIx::Class::Sims::Column->new(
-    source => undef,
+    source => $source,
     name => 'bar',
     info => {
       data_type => 'int',
@@ -73,7 +77,7 @@ subtest 'normal' => sub {
 
 subtest 'primary key' => sub {
   my $col = DBIx::Class::Sims::Column->new(
-    source => undef,
+    source => $source,
     name => 'bar',
     info => {
       data_type => 'int',
@@ -90,7 +94,7 @@ subtest 'primary key' => sub {
 
 subtest 'unique key' => sub {
   my $col = DBIx::Class::Sims::Column->new(
-    source => undef,
+    source => $source,
     name => 'bar',
     info => {
       data_type => 'int',

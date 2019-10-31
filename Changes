@@ -11,6 +11,7 @@ Revision history for DBIx::Class::Sims (ordered by revision number).
    - Retrieving unique rows will raise an error if the row doesn't match the
      provided spec.
      - Set `die_on_unique_mismatch => 0` to disable this
+   - Using a type that isn't loaded will raise an error vs a warning.
 
 0.401000 Jun 09 2019 12:30:00 PDT
    - Provide a nice way to print DateTime objects in SIMS_DEBUG mode.
