@@ -618,6 +618,14 @@ sub populate_parents {
         die "Unsure what to do about @{[$r->full_name]}():" . np($proto);
       }
     }
+    elsif ($self->source->column($col)->sim_spec) {
+      $spec = {
+        $fkcol => $self->value_from_spec(
+          $self->source->column($col),
+          $self->source->column($col)->sim_spec,
+        ),
+      };
+    }
 
     unless ( $spec ) {
       if ( $self->source->column($col)->is_nullable ) {
@@ -625,7 +633,6 @@ sub populate_parents {
       }
 
       $spec = {};
-#$spec //= $c->sim_spec;
     }
 
     my $fk_source = $r->target;
