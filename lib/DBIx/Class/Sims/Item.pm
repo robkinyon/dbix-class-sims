@@ -619,11 +619,16 @@ sub populate_parents {
       }
     }
     elsif ($self->source->column($col)->sim_spec) {
+      my $c = $self->source->column($col);
+      my $sp = $c->sim_spec;
+      if ( exists $sp->{null_chance} && $c->is_nullable ) {
+        # Add check for not a number
+        if ( $c->random_choice($sp->{null_chance}) ) {
+          next RELATIONSHIP;
+        }
+      }
       $spec = {
-        $fkcol => $self->value_from_spec(
-          $self->source->column($col),
-          $self->source->column($col)->sim_spec,
-        ),
+        $fkcol => $self->value_from_spec($c, $sp),
       };
     }
 

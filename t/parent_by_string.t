@@ -58,7 +58,6 @@ use common qw(sims_test Schema);
 
 {
   local Schema->source('Album')->column_info('artist_name')->{sim}{value} = 'foo';
-  #local $ENV{SIMS_DEBUG} = 1;
   sims_test "Connect parent/child by sim" => {
     spec => {
       Artist => [

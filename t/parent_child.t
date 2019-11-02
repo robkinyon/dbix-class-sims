@@ -590,7 +590,7 @@ sims_test "Save object trace with an implicit parent" => {
         };
         item hash {
           field parent => 1;
-          field via => 'populate_parents';
+          field via => 'populate_parents/artist';
           field seen => 2;
           field table => 'Artist';
           field spec => hash {
@@ -680,7 +680,7 @@ sims_test "Save object trace with a specified parent" => {
         };
         item hash {
           field parent => 1;
-          field via => 'populate_parents';
+          field via => 'populate_parents/artist';
           field seen => 2;
           field table => 'Artist';
           field spec => hash {
