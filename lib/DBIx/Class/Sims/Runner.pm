@@ -310,7 +310,7 @@ sub fix_fk_dependencies {
           spec   => MyCloner::clone($cond),
           seen   => $self->{ids}{seen}++,
           parent => $trace->{seen},
-          via    => 'populate_parents',
+          via    => "populate_parents/${rel_name}",
           find   => $self->{ids}{find}++,
           unique => 0,
           row    => { $parent->get_columns },
@@ -326,7 +326,7 @@ sub fix_fk_dependencies {
         spec   => MyCloner::clone($cond),
         seen   => $self->{ids}{seen}++,
         parent => $trace->{seen},
-        via    => 'populate_parents',
+        via    => "populate_parents/${rel_name}",
       };
 
       my $fk_item = MyCloner::clone($cond);
