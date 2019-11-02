@@ -667,7 +667,7 @@ sub populate_parents {
       spec   => MyCloner::clone($spec // {}),
       seen   => $self->{runner}{ids}{seen}++,
       parent => $self->{trace}{seen},
-      via    => 'populate_parents',
+      via    => "populate_parents/@{[$r->name]}",
     };
     my $fk_item = DBIx::Class::Sims::Item->new(
       runner => $self->runner,
