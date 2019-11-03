@@ -105,6 +105,8 @@ use DBIx::Class::Sims::Types;
 use DBIx::Class::Sims::Runner;
 use DBIx::Class::Sims::Util qw( normalize_aoh reftype );
 
+Hash::Merge::set_behavior('RIGHT_PRECEDENT');
+
 sub add_sims {
   my $class = shift;
   my ($schema, $source, @remainder) = @_;
@@ -281,7 +283,10 @@ sub massage_input {
 
         # Expand the dot-naming convention.
         while ( $k =~ /([^.]*)\.(.*)/ ) {
-          $t->{$1} = { $2 => delete($t->{$k}) };
+          $t->{$1} = merge(
+            ($t->{$1} // {}),
+            { $2 => delete($t->{$k}) },
+          );
           $t = $t->{$1}; $k = $2;
         }
 

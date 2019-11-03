@@ -36,6 +36,15 @@ my @tests = (
     start => { abcd => [ { 'a.b.c' => 'd' } ] },
     expected => { abcd => [ { a => { 'b' => { 'c' => 'd' } } } ] },
   },
+  {
+    start => { account => { org => { name => 'Abc' } }, 'account.name' => 'Abc' },
+    expected => {
+      account => {
+        name => 'Abc',
+        org => { name => 'Abc' },
+      },
+    }
+  }
 );
 
 foreach my $test ( @tests ) {
