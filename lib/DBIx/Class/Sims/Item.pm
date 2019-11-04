@@ -85,6 +85,17 @@ sub value {
     : $self->spec->{$col};
 }
 
+sub has_parent_values {
+  my $self = shift;
+
+  foreach my $r ( $self->source->parent_relationships ) {
+    my $col = $r->self_fk_col;
+    return 1 if $self->spec->{$r->name} // $self->spec->{$col};
+  }
+
+  return;
+}
+
 sub make_jsonable {
   my $self = shift;
   my ($item) = @_;
@@ -241,7 +252,6 @@ sub find_any_match {
     $self->{trace}{unique} = 0;
   }
 
-
   return $self->row;
 }
 
@@ -355,6 +365,15 @@ sub create {
     die "ERROR: @{[$self->source_name]} (".np($self->spec).") was seen more than once\n";
   }
   $self->runner->add_item($self);
+
+  # Try to find a match with what was given if this is a parent request. But,
+  # we cannot do that if we have parent values.
+  if ( ! $self->row && ! $self->meta->{create} && ! $self->has_parent_values ) {
+    if ( $self->find_any_match ) {
+      $self->runner->remove_item($self);
+      return $self->row;
+    }
+  }
 
   # This resolves all of the values that can be resolved immediately.
   #   * Back references
