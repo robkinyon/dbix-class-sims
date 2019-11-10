@@ -413,6 +413,27 @@ sub create {
     warn "After populate_parents @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
   }
 
+  unless ($self->row) {
+    $self->find_unique_match;
+    if ($self->row && $self->runner->{die_on_unique_mismatch}) {
+      my @failed;
+      foreach my $c ( $self->source->columns ) {
+        my $col_name = $c->name;
+
+        next unless $self->has_value($col_name);
+
+        my $row_value = $self->row->get_column($col_name);
+        my $spec_value = $self->value($col_name);
+        unless (compare_values($row_value, $spec_value)) {
+          push @failed, "\t$col_name: row(@{[$row_value//'[undef]']}) spec(@{[$spec_value//'[undef]']})\n";
+        }
+      }
+      if (@failed) {
+        die "ERROR Retrieving unique @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n" . join('', sort @failed) . $/ . np($self->runner->{duplicates}{$self->source_name}[-1]{criteria});
+      }
+    }
+  }
+
   if ( ! $self->row && ! $self->meta->{create} ) {
     $self->find_any_match;
   }

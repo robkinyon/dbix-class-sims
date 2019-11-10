@@ -155,5 +155,4 @@ subtest "Fail because a spec matches different rows in each UK" => sub {
   };
 };
 
-done_testing
-
+done_testing;

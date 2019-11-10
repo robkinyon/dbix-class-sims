@@ -352,4 +352,4 @@ subtest "Load two rows satisfying multiple UKs and die" => sub {
   };
 };
 
-done_testing
+done_testing;

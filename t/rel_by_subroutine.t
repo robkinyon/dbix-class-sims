@@ -65,4 +65,4 @@ sims_test "Create a child via rel by subroutine" => {
   },
 };
 
-done_testing
+done_testing;

@@ -118,4 +118,4 @@ sims_test "Fail to reference a method of a backreference" => {
   dies => qr/No method to call at Album->name => Artist\[0\]/,
 };
 
-done_testing
+done_testing;
