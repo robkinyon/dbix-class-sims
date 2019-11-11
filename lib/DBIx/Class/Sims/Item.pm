@@ -435,18 +435,18 @@ sub create {
   }
   $self->runner->add_item($self);
 
+  # This resolves all of the values that can be resolved immediately.
+  #   * Back references
+  #   * Objects
+  $self->resolve_direct_values;
+  warn "After RDV @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
+
   # Try to find a match with what was given if this is a parent request. But,
   # we cannot do that if we have parent values.
   if ( $self->attempt_to_find({ unique => 0, no_parent_values => 1 }) ) {
     $self->runner->remove_item($self);
     return $self->row;
   }
-
-  # This resolves all of the values that can be resolved immediately.
-  #   * Back references
-  #   * Objects
-  $self->resolve_direct_values;
-  warn "After RDV @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
 
   $self->runner->{hooks}{preprocess}->(
     $self->source_name, $self->source->source, $self->spec,
