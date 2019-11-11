@@ -45,7 +45,7 @@ BEGIN {
 use common qw(sims_test Schema);
 
 subtest "Load and retrieve a row by single-column UK" => sub {
-  sims_test "Create the row" => {
+  sims_test "Create the rows" => {
     spec => {
       Artist => [
         { name => 'Bob', state => 'A', city => 'B' },

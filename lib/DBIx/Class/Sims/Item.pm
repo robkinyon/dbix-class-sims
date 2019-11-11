@@ -231,6 +231,10 @@ sub find_any_match {
 
   my $rs = $self->source->resultset;
 
+  # This is for handling the case where a FK is within a UK in the child. This
+  # ensures we cannot select a parent whose PK is already in use in the child.
+  # We don't check for this in find_unique_match() because the UK is all that
+  # matters there.
   if ($self->meta->{restriction}) {
     my $c = $self->meta->{restriction};
     $rs = $rs->search( $c->{cond}, $c->{extra} );
@@ -250,6 +254,55 @@ sub find_any_match {
     $self->{trace}{row} = $self->make_jsonable( { $row->get_columns } );
     $self->{trace}{criteria} = [ $cond ];
     $self->{trace}{unique} = 0;
+  }
+
+  return $self->row;
+}
+
+sub attempt_to_find {
+  my $self = shift;
+  my ($opts) = @_;
+
+  $opts //= {};
+  $opts->{unique} //= 1;
+  $opts->{any} //= 1;
+  $opts->{no_parent_values} //= 0;
+
+  # First, find_unique_match.
+  # If row, handle die_on_unique_mismatch
+  if ($opts->{unique}) {
+    unless ($self->row) {
+      $self->find_unique_match;
+      if ($self->row && $self->runner->{die_on_unique_mismatch}) {
+        my @failed;
+        foreach my $c ( $self->source->columns ) {
+          my $col_name = $c->name;
+
+          next unless $self->has_value($col_name);
+
+          my $row_value = $self->row->get_column($col_name);
+          my $spec_value = $self->value($col_name);
+          unless (compare_values($row_value, $spec_value)) {
+            push @failed, "\t$col_name: row(@{[$row_value//'[undef]']}) spec(@{[$spec_value//'[undef]']})\n";
+          }
+        }
+        if (@failed) {
+          die "ERROR Retrieving unique @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n" . join('', sort @failed) . $/ . np($self->runner->{duplicates}{$self->source_name}[-1]{criteria});
+        }
+      }
+    }
+  }
+
+  # Else, find_any_match, but only if parent_values matches
+  if ($opts->{any}) {
+    if ( ! $self->row && ! $self->meta->{create} ) {
+      if ( $opts->{no_parent_values} ) {
+        $self->find_any_match if ! $self->has_parent_values;
+      }
+      else {
+        $self->find_any_match;
+      }
+    }
   }
 
   return $self->row;
@@ -354,6 +407,22 @@ sub resolve_direct_values {
 #
 ################################################################################
 
+# Sequence:
+# has_item/add_item
+# resolve_direct_values
+# X finders(parent_values => 0) <---- return immediately if find_any
+# populate_columns <---- add comment for why it is before preprocess
+# preprocess       <---- add comment for why it is before quarantine_children
+# quarantine_children
+# X finders(parent_values => 0)
+# fix_parents(null => 0)
+# X finders(parent_values => 1)
+# create
+# fix_parents(null => 1)
+# fix_children
+# postprocess
+# remove_item
+
 sub create {
   my $self = shift;
 
@@ -368,11 +437,9 @@ sub create {
 
   # Try to find a match with what was given if this is a parent request. But,
   # we cannot do that if we have parent values.
-  if ( ! $self->row && ! $self->meta->{create} && ! $self->has_parent_values ) {
-    if ( $self->find_any_match ) {
-      $self->runner->remove_item($self);
-      return $self->row;
-    }
+  if ( $self->attempt_to_find({ unique => 0, no_parent_values => 1 }) ) {
+    $self->runner->remove_item($self);
+    return $self->row;
   }
 
   # This resolves all of the values that can be resolved immediately.
@@ -386,24 +453,9 @@ sub create {
   );
   warn "After preprocess @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
 
-  $self->find_unique_match;
-  if ($self->row && $self->runner->{die_on_unique_mismatch}) {
-    my @failed;
-    foreach my $c ( $self->source->columns ) {
-      my $col_name = $c->name;
-
-      next unless $self->has_value($col_name);
-
-      my $row_value = $self->row->get_column($col_name);
-      my $spec_value = $self->value($col_name);
-      unless (compare_values($row_value, $spec_value)) {
-        push @failed, "\t$col_name: row(@{[$row_value//'[undef]']}) spec(@{[$spec_value//'[undef]']})\n";
-      }
-    }
-    if (@failed) {
-      die "ERROR Retrieving unique @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n" . join('', sort @failed) . $/ . np($self->runner->{duplicates}{$self->source_name}[-1]{criteria});
-    }
-  }
+  $self->attempt_to_find({
+    any => 0,
+  });
 
   $self->quarantine_children;
   warn "After quarantine_children @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
@@ -413,30 +465,7 @@ sub create {
     warn "After populate_parents @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
   }
 
-  unless ($self->row) {
-    $self->find_unique_match;
-    if ($self->row && $self->runner->{die_on_unique_mismatch}) {
-      my @failed;
-      foreach my $c ( $self->source->columns ) {
-        my $col_name = $c->name;
-
-        next unless $self->has_value($col_name);
-
-        my $row_value = $self->row->get_column($col_name);
-        my $spec_value = $self->value($col_name);
-        unless (compare_values($row_value, $spec_value)) {
-          push @failed, "\t$col_name: row(@{[$row_value//'[undef]']}) spec(@{[$spec_value//'[undef]']})\n";
-        }
-      }
-      if (@failed) {
-        die "ERROR Retrieving unique @{[$self->source_name]} (".np($self->spec).") (".np($self->{create}).")\n" . join('', sort @failed) . $/ . np($self->runner->{duplicates}{$self->source_name}[-1]{criteria});
-      }
-    }
-  }
-
-  if ( ! $self->row && ! $self->meta->{create} ) {
-    $self->find_any_match;
-  }
+  $self->attempt_to_find;
 
   unless ($self->row) {
     $self->populate_columns;
