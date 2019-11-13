@@ -435,14 +435,9 @@ sub create {
   }
   $self->runner->add_item($self);
 
-  # This resolves all of the values that can be resolved immediately.
-  #   * Back references
-  #   * Objects
-  $self->resolve_direct_values;
-  warn "After RDV @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
-
   # Try to find a match with what was given if this is a parent request. But,
-  # we cannot do that if we have parent values.
+  # we cannot do that if we have parent values because we haven't resolved FKs
+  # yet.
   if ( $self->attempt_to_find({ unique => 0, no_parent_values => 1 }) ) {
     $self->runner->remove_item($self);
     return $self->row;
@@ -453,9 +448,13 @@ sub create {
   );
   warn "After preprocess @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
 
-  $self->attempt_to_find({
-    any => 0,
-  });
+  # This resolves all of the values that can be resolved immediately.
+  #   * Back references
+  #   * Objects
+  $self->resolve_direct_values;
+  warn "After RDV @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
+
+  $self->attempt_to_find({ any => 0 });
 
   $self->quarantine_children;
   warn "After quarantine_children @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
@@ -465,14 +464,17 @@ sub create {
     warn "After populate_parents @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
   }
 
-  $self->attempt_to_find;
+  $self->attempt_to_find({ any => 0 });
 
   unless ($self->row) {
     $self->populate_columns;
     warn "After populate_columns @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
-
     $self->oracle_ensure_populated_pk;
+  }
 
+  $self->attempt_to_find;
+
+  unless ($self->row) {
     warn "Creating @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
     my $row = eval {
       $self->source->resultset->create($self->{create});
@@ -543,6 +545,7 @@ sub populate_columns {
 
   foreach my $c ( $self->source->columns_not_in_parent_relationships ) {
     my $col_name = $c->name;
+    # XXX Should this be exists or direct check?
     next if $self->{create}->{$col_name};
 
     my $spec;
