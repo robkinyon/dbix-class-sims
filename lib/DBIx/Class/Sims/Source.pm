@@ -123,9 +123,13 @@ sub child_relationships {
   return sort { $a->name cmp $b->name } grep { !$_->is_fk } $self->relationships;
 }
 
+sub schema {
+  my $self = shift;
+  return $self->runner->schema;
+}
 sub resultset {
   my $self = shift;
-  return $self->runner->schema->resultset($self->name);
+  return $self->schema->resultset($self->name);
 }
 
 sub unique_columns {

@@ -44,10 +44,10 @@ sims_test "Modify provided value in preprocess" => {
     {
       hooks => {
         preprocess => sub {
-          my ($name, $source, $item) = @_;
-          if ($name eq 'Artist') {
-            $item->{name} =~ s/x//;
-            $item->{derived_name} //= uc($item->{name});
+          my ($source, $spec) = @_;
+          if ($source->name eq 'Artist') {
+            $spec->{name} =~ s/x//;
+            $spec->{derived_name} //= uc($spec->{name});
           }
         },
       },
@@ -70,10 +70,10 @@ sims_test "Modify generated value in preprocess" => {
     {
       hooks => {
         preprocess => sub {
-          my ($name, $source, $item) = @_;
-          if ($name eq 'Artist') {
-            $item->{name} =~ s/x//;
-            $item->{derived_name} //= uc($item->{name});
+          my ($source, $spec) = @_;
+          if ($source->name eq 'Artist') {
+            $spec->{name} =~ s/x//;
+            $spec->{derived_name} //= uc($spec->{name});
           }
         },
       },

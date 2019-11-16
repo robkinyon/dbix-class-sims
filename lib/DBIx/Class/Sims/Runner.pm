@@ -163,6 +163,14 @@ sub convert_backreference {
   }
 }
 
+sub call_hook {
+  my $self = shift;
+  my $phase = shift;
+
+  return unless exists $self->{hooks}{$phase};
+  return $self->{hooks}{$phase}->(@_);
+}
+
 sub run {
   my $self = shift;
 

@@ -78,8 +78,9 @@ sims_test "create child in postprocess" => {
     {
       hooks => {
         postprocess => sub {
-          my ($name, $source, $row) = @_;
-          if ($name eq 'Artist') {
+          my ($source, $row) = @_;
+
+          if ($source->name eq 'Artist') {
             my $rs = $source->schema->resultset('Album');
             unless ($rs->find($row->id)) {
               $rs->create({
@@ -116,8 +117,9 @@ sims_test "create grandchild via child from postprocess" => {
       allow_pk_set_value => 1,
       hooks => {
         postprocess => sub {
-          my ($name, $source, $row) = @_;
-          if ($name eq 'Artist') {
+          my ($source, $row) = @_;
+
+          if ($source->name eq 'Artist') {
             my $rs = $source->schema->resultset('Album');
             unless ($rs->find($row->id)) {
               $rs->create({

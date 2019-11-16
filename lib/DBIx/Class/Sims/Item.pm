@@ -34,6 +34,7 @@ sub initialize {
   # TODO: Should we check for _META__ or __META_ or __MTA__ etc?
   $self->{meta} = $self->spec->{__META__} // {};
 
+  # XXX Is this attribute used anywhere?
   $self->{created} = 0;
   $self->{create} = {};
 
@@ -443,8 +444,8 @@ sub create {
     return $self->row;
   }
 
-  $self->runner->{hooks}{preprocess}->(
-    $self->source_name, $self->source->source, $self->spec,
+  $self->runner->call_hook(preprocess =>
+    $self->source, $self->spec,
   );
   warn "After preprocess @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
 
@@ -501,8 +502,8 @@ sub create {
   }
   $self->build_children;
 
-  $self->runner->{hooks}{postprocess}->(
-    $self->source_name, $self->source->source, $self->row,
+  $self->runner->call_hook(postprocess =>
+    $self->source, $self->row,
   );
 
   $self->runner->remove_item($self);

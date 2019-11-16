@@ -141,11 +141,6 @@ sub load_sims {
   my $spec = massage_input($schema, normalize_input($spec_proto));
   my $opts = normalize_input($opts_proto);
 
-  # 2: Create the rows in toposorted order
-  my $hooks = $opts->{hooks} // {};
-  $hooks->{preprocess}  //= sub {};
-  $hooks->{postprocess} //= sub {};
-
   # Create a lookup of the items passed in so we can return them back.
   my $initial_spec = {};
   foreach my $name (keys %$spec) {
@@ -201,8 +196,9 @@ sub load_sims {
       toposort => \@toposort,
       initial_spec => $initial_spec,
       spec => $spec,
-      hooks => $hooks,
       constraints => normalize_input($opts->{constraints} // {}),
+
+      hooks => $opts->{hooks} // {},
 
       # Set this to false to throw a warning if a PK auto-increment column
       # has a value set. It defaults to false. Set to true to disable.
@@ -890,14 +886,37 @@ hooks:
 
 =item * preprocess
 
-This receives C<$name, $source, $spec> and ignores any return value. C<$spec>
-is the hashref that will be passed to C<< $schema->resultset($name)->create() >>.
-This hook is expected to modify C<$spec> as needed.
+This receives C<$source, $spec> and ignores any return value.
+
+=over 4
+
+=item * C<$source>
+
+This is a L<DBIx::Class::Sims::Source/> object.
+
+=item * C<$spec>
+
+This is the Sims specification that was received. You are expected to modify
+this as needed.
+
+=back
 
 =item * postprocess
 
-This receives C<$name, $source, $row> and ignores any return value. This hook
-is expected to modify the newly-created row object as needed.
+This receives C<$source, $row> and ignores any return value.
+
+=over 4
+
+=item * C<$source>
+
+This is a L<DBIx::Class::Sims::Source/> object.
+
+=item * C<$row>
+
+This is the L<DBIx::Class::Row/> that was either found or created. You are
+expected to modify this as needed.
+
+=back
 
 =back
 
