@@ -1087,7 +1087,7 @@ Because they're a child relationship, they are deferred until the time that
 model is handled in the toposorted graph. They are not created now because they
 might associate with a different parent that has not been created yet.
 
-=item 14. The preprocess hook fires.
+=item 14. The postprocess hook fires.
 
 You can modify the created/found row as necessary.
 
