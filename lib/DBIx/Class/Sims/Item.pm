@@ -481,7 +481,6 @@ sub create {
   $self->attempt_to_find;
 
   unless ($self->row) {
-    # XXX Need a $self->column($name)->set_value($value)
     $self->runner->call_hook(before_create =>
       $self->source, $self,
     );
