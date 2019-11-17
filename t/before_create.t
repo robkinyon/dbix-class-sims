@@ -34,7 +34,7 @@ BEGIN {
 
 use common qw(sims_test);
 
-sims_test "Modify provided value in preprocess" => {
+sims_test "Modify provided value in before_create" => {
   spec => [
     {
       Artist => [
@@ -43,11 +43,14 @@ sims_test "Modify provided value in preprocess" => {
     },
     {
       hooks => {
-        preprocess => sub {
-          my ($source, $spec) = @_;
+        before_create => sub {
+          my ($source, $item) = @_;
           if ($source->name eq 'Artist') {
-            $spec->{name} =~ s/x//;
-            $spec->{derived_name} //= uc($spec->{name});
+            my $name = $item->value('name');
+            $name =~ s/x//;
+            $item->set_value(name => $name);
+
+            $item->set_value(derived_name => uc($name));
           }
         },
       },
@@ -61,19 +64,21 @@ sims_test "Modify provided value in preprocess" => {
   },
 };
 
-=pod
-sims_test "Modify generated value in preprocess" => {
+sims_test "Modify generated value in before_create" => {
   spec => [
     {
       Artist => 1,
     },
     {
       hooks => {
-        preprocess => sub {
-          my ($source, $spec) = @_;
+        before_create => sub {
+          my ($source, $item) = @_;
           if ($source->name eq 'Artist') {
-            $spec->{name} =~ s/x//;
-            $spec->{derived_name} //= uc($spec->{name});
+            my $name = $item->value('name');
+            $name =~ s/x//;
+            $item->set_value(name => $name);
+
+            $item->set_value(derived_name => uc($name));
           }
         },
       },
@@ -86,6 +91,5 @@ sims_test "Modify generated value in preprocess" => {
     Artist => { id => 1, name => 'abcyz', derived_name => 'ABCYZ' },
   },
 };
-=cut
 
 done_testing;
