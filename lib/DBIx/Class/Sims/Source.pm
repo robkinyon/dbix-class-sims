@@ -27,7 +27,7 @@ sub initialize {
   my $self = shift;
 
   # Do this first so all the other methods work properly.
-  $self->{source} = $self->runner->schema->source($self->name);
+  $self->{source} = $self->schema->source($self->name);
 
   $self->{columns} = {};
   foreach my $col_name ( $self->source->columns ) {
@@ -188,3 +188,66 @@ sub find_inverse_relationships {
 
 1;
 __END__
+
+=head1 NAME
+
+DBIx::Class::Sims::Source - The Sims wrapper of a L<DBIx::Class::ResultSource/>
+
+=head1 PURPOSE
+
+This object wraps a L<DBIx::Class::ResultSource/> and provides a set of useful
+methods around it.
+
+=head1 METHODS
+
+=head2 name()
+
+Returns the name of this source.
+
+=head2 source()
+
+Returns the wrapped L<DBIx::Class::ResultSource/>.
+
+=head2 resultset()
+
+Returns a resultset for the wrapped L<DBIx::Class::ResultSource/>.
+
+=head2 columns()
+
+Returns a list of the L<DBIx::Class::Sims::Column/>s.
+
+=head2 column($name)
+
+Returns the L<DBIx::Class::Sims::Column/> for C<$name>.
+
+=head2 columns_not_in_parent_relationships()
+
+Returns a list of the L<DBIx::Class::Sims::Column/>s that aren't in a FK.
+
+=head2 relationships()
+
+Returns a list of the L<DBIx::Class::Sims::Relationship/>s.
+
+=head2 relationship($name)
+
+Returns the L<DBIx::Class::Sims::Relationship/> for C<$name>.
+
+=head2 parent_relationships()
+
+Returns a list of the L<DBIx::Class::Sims::Relationship/>s that are parents.
+
+=head2 child_relationships()
+
+Returns a list of the L<DBIx::Class::Sims::Relationship/>s that are children.
+
+=head1 AUTHOR
+
+Rob Kinyon <rob.kinyon@gmail.com>
+
+=head1 LICENSE
+
+Copyright (c) 2013 Rob Kinyon. All Rights Reserved.
+This is free software, you may use it and distribute it under the same terms
+as Perl itself.
+
+=cut

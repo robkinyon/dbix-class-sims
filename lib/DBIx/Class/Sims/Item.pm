@@ -85,6 +85,11 @@ sub value {
     ? $self->{create}{$col}
     : $self->spec->{$col};
 }
+sub set_value {
+  my $self = shift;
+  my ($col, $val) = @_;
+  $self->{create}{$col} = $val;
+}
 
 sub has_parent_values {
   my $self = shift;
@@ -321,18 +326,18 @@ sub resolve_direct_values {
     if ( my $r = $self->source->relationship($k) ) {
       my $fkcol = $r->foreign_fk_col;
       if (blessed($v)) {
-        $self->{create}{$r->self_fk_col} = $v->get_column($fkcol);
+        $self->set_value($r->self_fk_col, $v->get_column($fkcol));
         $self->{skip_relationship}{$r->name} = 1;
 
         # Otherwise, the tracer will try and write out a blessed object.
         $self->{trace}{spec}{$r->self_fk_col} = $self->{create}{$r->self_fk_col};
       }
       elsif (ref($v) eq 'SCALAR') {
-        $self->{create}{$r->self_fk_col} = $self->runner->convert_backreference(
+        $self->set_value($r->self_fk_col, $self->runner->convert_backreference(
           $self->runner->backref_name($self, $k),
           ${$v},
           $fkcol,
-        );
+        ));
       }
     }
     # If $k is a column,
@@ -350,7 +355,7 @@ sub resolve_direct_values {
           }
           my $r = $rels[0];
 
-          $self->{create}{$k} = $v->get_column($r->foreign_fk_col);
+          $self->set_value($k, $v->get_column($r->foreign_fk_col));
           $self->{skip_relationship}{$_->name} = 1 for $c->fks;
 
           # Otherwise, the tracer will try and write out a blessed object.
@@ -368,20 +373,20 @@ sub resolve_direct_values {
           }
           my $r = $rels[0];
 
-          $self->{create}{$k} = $self->runner->convert_backreference(
+          $self->set_value($k, $self->runner->convert_backreference(
             $self->runner->backref_name($self, $r->name),
             ${$v},
             $r->foreign_fk_col,
-          );
+          ));
         }
       }
       # Else handle it via column
       else {
         if (reftype($v) eq 'SCALAR') {
-          $self->{create}{$k} = $self->runner->convert_backreference(
+          $self->set_value($k, $self->runner->convert_backreference(
             $self->runner->backref_name($self, $k),
             ${$v},
-          );
+          ));
         }
       }
     }
@@ -476,6 +481,11 @@ sub create {
   $self->attempt_to_find;
 
   unless ($self->row) {
+    # XXX Need a $self->column($name)->set_value($value)
+    $self->runner->call_hook(before_create =>
+      $self->source, $self,
+    );
+
     warn "Creating @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
     my $row = eval {
       $self->source->resultset->create($self->{create});
@@ -582,13 +592,13 @@ sub populate_columns {
         $spec = $self->spec->{$col_name};
       }
       elsif (reftype($self->spec->{$col_name}) eq 'SCALAR') {
-        $self->{create}{$col_name} = $self->runner->convert_backreference(
+        $self->set_value($col_name, $self->runner->convert_backreference(
           $self->runner->backref_name($self, $c->name),
           ${$self->spec->{$col_name}},
-        );
+        ));
       }
       else {
-        $self->{create}{$col_name} = $self->spec->{$col_name};
+        $self->set_value($col_name, $self->spec->{$col_name});
       }
     }
 
@@ -599,11 +609,11 @@ sub populate_columns {
           if ( exists $spec->{null_chance} && $c->is_nullable ) {
             # Add check for not a number
             if ( $c->random_choice($spec->{null_chance}) ) {
-              $self->{create}{$col_name} = undef;
+              $self->set_value($col_name, undef);
               next;
             }
           }
-          $self->{create}{$col_name} = $self->value_from_spec($c, $spec);
+          $self->set_value($col_name, $self->value_from_spec($c, $spec));
         }
       }
       elsif (
@@ -613,7 +623,7 @@ sub populate_columns {
         # These clauses were in the original code. Do they still need to exist?
         # && !$c->is_in_uk
       ) {
-        $self->{create}{$col_name} = $c->generate_value(die_on_unknown => 1);
+        $self->set_value($col_name, $c->generate_value(die_on_unknown => 1));
       }
     }
   } continue {
@@ -662,7 +672,7 @@ sub populate_parents {
           $self->row->update;
         }
         else {
-          $self->{create}{$col} = $proto->get_column($fkcol);
+          $self->set_value($col, $proto->get_column($fkcol));
 
           # Otherwise, the tracer will try and write out a blessed object.
           warn "Converting $col to @{[$self->{create}{$col}]}\n";
@@ -761,7 +771,7 @@ sub populate_parents {
       $self->row->update;
     }
     else {
-      $self->{create}{$col} = $fk_item->row->get_column($fkcol);
+      $self->set_value($col, $fk_item->row->get_column($fkcol));
     }
   }
 
@@ -857,9 +867,70 @@ sub oracle_ensure_populated_pk {
       unless @pk_columns;
 
     # This will work even if there are multiple columns in the PK.
-    $self->{create}{$pk_columns[0]->name} = undef;
+    $self->set_value($pk_columns[0]->name, undef);
   }
 }
 
 1;
 __END__
+
+=head1 NAME
+
+DBIx::Class::Sims::Item - An item being created by the Sims
+
+=head1 PURPOSE
+
+This object encapsulates an item being managed by the Sims. It can either be
+a specification you provided or a row that must be created due to constraints
+in your database schema.
+
+The initial spec is available as L</spec>. This is mutable, but will not be
+used to create the object. Instead, a I<create-hash> is generated by iterating
+over all the columns and relationships of the underlying ResultSource for this
+item. That I<create-hash> is used to create the object.
+
+You are likely to see an object of this class if you have a B<before_create>
+hook.
+
+=head1 METHODS
+
+=head2 spec()
+
+Returns the specification as received by this object. This is mutable.
+
+=head2 has_value($colname)
+
+This returns a boolean indicating if either the spec or the create-hash has a
+value for this column. This value could be undefined. The create-hash is checked
+first.
+
+=head2 value($colname)
+
+This returns the value for the column. It will return the value in the
+create-hash first.
+
+Note: If you receive undef, it could be either an undefined value or that there
+is no set value. Check L</has_value> to disambiguate.
+
+=head2 set_value($colname, $value)
+
+This will set the value of the column in the create-hash. C<$value> can be
+undefined.
+
+This is the only way to set a value in the create-hash.
+
+=head2 source()
+
+This returns the L<DBIx::Class::Sims::Source/> object for this item.
+
+=head1 AUTHOR
+
+Rob Kinyon <rob.kinyon@gmail.com>
+
+=head1 LICENSE
+
+Copyright (c) 2013 Rob Kinyon. All Rights Reserved.
+This is free software, you may use it and distribute it under the same terms
+as Perl itself.
+
+=cut

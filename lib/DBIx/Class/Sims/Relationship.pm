@@ -99,3 +99,42 @@ sub foreign_class {
 
 1;
 __END__
+
+=head1 NAME
+
+DBIx::Class::Sims::Relationship - The Sims wrapper of a L<DBIx::Class::Relationship/>
+
+=head1 PURPOSE
+
+This object wraps a L<DBIx::Class::Relationship/> and provides a set of useful
+methods around it.
+
+=head1 METHODS
+
+=head2 name()
+
+Returns the name of this relationship.
+
+=head2 source()
+
+Returns the L<DBIx::Class::Sims::Source/> this relationships is defined in.
+
+=head2 target()
+
+Returns the L<DBIx::Class::Sims::Source/> this relationships connects to.
+
+=head2 is_fk()
+
+Returns a boolean indicating if this is a parent relationship or not.
+
+=head1 AUTHOR
+
+Rob Kinyon <rob.kinyon@gmail.com>
+
+=head1 LICENSE
+
+Copyright (c) 2013 Rob Kinyon. All Rights Reserved.
+This is free software, you may use it and distribute it under the same terms
+as Perl itself.
+
+=cut
