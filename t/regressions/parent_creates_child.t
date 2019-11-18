@@ -88,4 +88,29 @@ sims_test "child refers to parent by backref" => {
   },
 };
 
+sims_test "child inserts parent in preprocess" => {
+  spec => [
+    {
+      Album => { name => 'bar' },
+    },
+    {
+      hooks => {
+        preprocess => sub {
+          my ($source, $spec) = @_;
+          if ($source->name eq 'Album') {
+            $spec->{artist} = { name => 'foo' };
+          }
+        },
+      },
+    },
+  ],
+  expect => {
+    Artist => { id => 1, name => 'foo' },
+    Album  => { artist_id => 1, name => 'bar' },
+  },
+  rv => {
+    Album  => { artist_id => 1, name => 'bar' },
+  },
+};
+
 done_testing;
