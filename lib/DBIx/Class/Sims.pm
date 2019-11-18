@@ -1020,12 +1020,7 @@ was found to see if there's a mismatch (in which case an exception is thrown).
 
 If a row is found, then some other actions will be skipped.
 
-=item 4. Quarantine child relationships
-
-All child relationships are removed from the specification and saved for after
-the row is created.
-
-=item 5. Populate all non-NULL parent columns
+=item 4. Populate all non-NULL parent columns
 
 Resolve all parent relationships. This will involve creating an
 L<DBIx::Class::Sims::Item> object for each one. Parent rows will be created, if
@@ -1033,14 +1028,14 @@ necessary.
 
 If a row has already been found, this step is skipped.
 
-=item 6. Attempt to find a unique match (#2)
+=item 5. Attempt to find a unique match (#2)
 
 This is the second of N attempts to find a unique match with what's been set so
 far. This time, we include all parent information.
 
 If a row has already been found, this step is skipped.
 
-=item 7. The columns are fixed up.
+=item 6. The columns are fixed up.
 
 If a row has not been found, then ensure all columns which should have a value
 have a value set. After this is done, all the values that will be inserted into
@@ -1048,32 +1043,32 @@ the database are now available.
 
 q.v. L</SIM ENTRY> for more information.
 
-=item 8. Attempt to find a unique match (#3)
+=item 7. Attempt to find a unique match (#3)
 
 This is the third of N attempts to find a unique match with what's been set so
 far. This time, we include all columns.
 
 If a row has already been found, this step is skipped.
 
-=item 9. Attempt to find any match
+=item 8. Attempt to find any match
 
 Given all values that have been set, attempt to see if this row already exists
 in the database. This is regardless of unique constraints.
 
 If a row has already been found, this step is skipped.
 
-=item 10. The before_create hook fires.
+=item 9. The before_create hook fires.
 
 You can modify the L<DBIx::Class::Sims::Item> object as necessary, potentially
 changing what the column values are.
 
 If a row has already been found, this step is skipped.
 
-=item 11. The row is created.
+=item 10. The row is created.
 
 If a row has already been found, this step is skipped.
 
-=item 12. Populate all NULL-able parent columns
+=item 11. Populate all NULL-able parent columns
 
 Resolve all nullable parent relationships. This will involve creating an
 L<DBIx::Class::Sims::Item> object for each one. Parent rows will be created, if
@@ -1081,13 +1076,13 @@ necessary.
 
 If a row has already been found, this step is skipped.
 
-=item 13. All child relationships are handled
+=item 12. All child relationships are handled
 
 Because they're a child relationship, they are deferred until the time that
 model is handled in the toposorted graph. They are not created now because they
 might associate with a different parent that has not been created yet.
 
-=item 14. The postprocess hook fires.
+=item 13. The postprocess hook fires.
 
 You can modify the created/found row as necessary.
 

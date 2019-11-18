@@ -446,9 +446,6 @@ sub create {
 
   $self->attempt_to_find({ any => 0 });
 
-  $self->quarantine_children;
-  warn "After quarantine_children @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
-
   unless ($self->row) {
     $self->populate_parents(nullable => 0);
     warn "After populate_parents @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
@@ -769,21 +766,6 @@ sub populate_parents {
   return;
 }
 
-sub quarantine_children {
-  my $self = shift;
-
-  $self->{children} = {};
-  foreach my $r ( $self->source->child_relationships ) {
-    if ($self->spec->{$r->name}) {
-      $self->{children}{$r->name} = $self->spec->{$r->name};
-    }
-  } continue {
-    delete $self->{still_to_use}{$r->name};
-  }
-
-  return;
-}
-
 sub build_children {
   my $self = shift;
 
@@ -795,11 +777,11 @@ sub build_children {
   # In all cases, make sure to add { $fkcol => $row->get_column($col) } to the
   # child's $item
   foreach my $r ( $self->source->child_relationships ) {
-    next unless $self->{children}{$r->name} // $r->constraints;
+    next unless $self->has_value($r->name) || $r->constraints;
 
     my @children;
-    if ($self->{children}{$r->name}) {
-      my $n = normalize_aoh($self->{children}{$r->name})
+    if ($self->has_value($r->name)) {
+      my $n = normalize_aoh($self->value($r->name))
         or die "Don't know what to do with @{[$r->full_name]}\n\t".np($self->{original_spec});
 
       @children = @{$n};
@@ -840,6 +822,8 @@ sub build_children {
         },
       });
     }
+  } continue {
+    delete $self->{still_to_use}{$r->name};
   }
 }
 
