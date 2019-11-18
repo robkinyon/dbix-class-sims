@@ -34,9 +34,8 @@ sub initialize {
   # TODO: Should we check for _META__ or __META_ or __MTA__ etc?
   $self->{meta} = $self->spec->{__META__} // {};
 
-  # XXX Is this attribute used anywhere?
-  $self->{created} = 0;
   $self->{create} = {};
+  $self->{parents} = {};
 
   $self->{still_to_use} = { map { $_ => 1 } keys %{$self->spec} };
   delete $self->{still_to_use}{__META__};
@@ -476,8 +475,6 @@ sub create {
     }
     $self->row($row);
 
-    $self->{created} = 1;
-
     # This tracks everything that was created, not just what was requested.
     $self->runner->{created}{$self->source_name}++;
 
@@ -621,6 +618,13 @@ sub populate_columns {
   return;
 }
 
+sub parent {
+  my $self = shift;
+  my ($relname) = @_;
+
+  return $self->{parents}{$relname};
+}
+
 sub populate_parents {
   my $self = shift;
   my %opts = @_;
@@ -753,6 +757,8 @@ sub populate_parents {
     );
     $fk_item->set_allow_pk_to($self);
     $fk_item->create;
+
+    $self->{parents}{$r->name} = $fk_item;
 
     if ($opts{nullable}) {
       $self->row->set_column($col => $fk_item->row->get_column($fkcol));
@@ -898,6 +904,10 @@ This is the only way to set a value in the create-hash.
 
 This takes a L<DBIx::Class::Sims::Column> object and does all the appropriate
 work necessary to populate that column in the create-hash.
+
+=head2 parent($relname)
+
+This returns the L<DBIx::Class::Sims::Item/> object for the relationship.
 
 =head2 source()
 

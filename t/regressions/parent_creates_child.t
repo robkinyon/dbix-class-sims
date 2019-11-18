@@ -113,4 +113,35 @@ sims_test "child inserts parent in preprocess" => {
   },
 };
 
+sims_test "child inserts parent in preprocess and uses parent's name" => {
+  spec => [
+    {
+      Album => 1,
+    },
+    {
+      hooks => {
+        preprocess => sub {
+          my ($source, $spec) = @_;
+          if ($source->name eq 'Album') {
+            $spec->{artist} = { name => 'foo' };
+          }
+        },
+        before_create => sub {
+          my ($source, $item) = @_;
+          if ($source->name eq 'Album') {
+            $item->set_value(name => $item->parent('artist')->row->name);
+          }
+        },
+      },
+    },
+  ],
+  expect => {
+    Artist => { id => 1, name => 'foo' },
+    Album  => { artist_id => 1, name => 'foo' },
+  },
+  rv => {
+    Album  => { artist_id => 1, name => 'foo' },
+  },
+};
+
 done_testing;
