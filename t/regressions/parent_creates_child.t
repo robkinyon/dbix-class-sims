@@ -58,7 +58,7 @@ sims_test "parent builds a child, but we're creating a child" => {
     {
       hooks => {
         preprocess => sub {
-          my ($source, $spec) = @_;
+          my ($source, $item) = @_;
           if ($source->name eq 'Artist') {
             $spec->{album} //= [ {} ];
           }

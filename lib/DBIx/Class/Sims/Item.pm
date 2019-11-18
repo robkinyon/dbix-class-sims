@@ -413,22 +413,6 @@ sub resolve_direct_values {
 #
 ################################################################################
 
-# Sequence:
-# has_item/add_item
-# resolve_direct_values
-# X finders(parent_values => 0) <---- return immediately if find_any
-# populate_columns <---- add comment for why it is before preprocess
-# preprocess       <---- add comment for why it is before quarantine_children
-# quarantine_children
-# X finders(parent_values => 0)
-# fix_parents(null => 0)
-# X finders(parent_values => 1)
-# create
-# fix_parents(null => 1)
-# fix_children
-# postprocess
-# remove_item
-
 sub create {
   my $self = shift;
 
@@ -550,81 +534,89 @@ sub value_from_spec {
   }
 }
 
+sub populate_column {
+  my $self = shift;
+  my ($c) = @_;
+
+  my $col_name = $c->name;
+  return if exists $self->{create}->{$col_name};
+
+  my $spec;
+  if ( exists $self->spec->{$col_name} ) {
+    if (
+      $c->is_in_pk && $c->is_auto_increment &&
+      !$self->allow_pk_set_value
+    ) {
+      warn sprintf(
+        "Primary-key autoincrement columns should not be hardcoded in tests (%s.%s = %s)",
+        $self->source_name, $col_name, $self->spec->{$col_name},
+      );
+    }
+
+    # This is the original way of specifying an override with a HASHREFREF.
+    # Reflection has realized it was an unnecessary distinction to a parent
+    # specification. Either it's a relationship hashref or a simspec hashref.
+    # We can never have both. It will be deprecated.
+    if (
+      reftype($self->spec->{$col_name}) eq 'REF' &&
+      reftype(${$self->spec->{$col_name}}) eq 'HASH'
+    ) {
+      warn "DEPRECATED: Use a regular HASHREF for overriding simspec. HASHREFREF will be removed in a future release.";
+      $spec = ${ $self->spec->{$col_name} };
+    }
+    elsif (
+      reftype($self->spec->{$col_name}) eq 'HASH' &&
+      # Assume a blessed hash is a DBIC object
+      !blessed($self->spec->{$col_name}) &&
+      # Do not assume we understand something to be inflated/deflated
+      !$c->is_inflated
+    ) {
+      $spec = $self->spec->{$col_name};
+    }
+    elsif (reftype($self->spec->{$col_name}) eq 'SCALAR') {
+      $self->set_value($col_name, $self->runner->convert_backreference(
+        $self->runner->backref_name($self, $c->name),
+        ${$self->spec->{$col_name}},
+      ));
+      return;
+    }
+    else {
+      $self->set_value($col_name, $self->spec->{$col_name});
+      return;
+    }
+  }
+
+  $spec //= $c->sim_spec;
+  if ($spec) {
+    if (ref($spec // '') eq 'HASH') {
+      if ( exists $spec->{null_chance} && $c->is_nullable ) {
+        # Add check for not a number
+        if ( $c->random_choice($spec->{null_chance}) ) {
+          $self->set_value($col_name, undef);
+          return;
+        }
+      }
+      $self->set_value($col_name, $self->value_from_spec($c, $spec));
+    }
+  }
+  elsif (
+    !$c->is_nullable &&
+    !$c->is_in_pk &&
+    !$c->has_default_value
+    # These clauses were in the original code. Do they still need to exist?
+    # && !$c->is_in_uk
+  ) {
+    $self->set_value($col_name, $c->generate_value(die_on_unknown => 1));
+  }
+
+  return;
+}
+
 sub populate_columns {
   my $self = shift;
 
   foreach my $c ( $self->source->columns_not_in_parent_relationships ) {
-    my $col_name = $c->name;
-    # XXX Should this be exists or direct check?
-    next if $self->{create}->{$col_name};
-
-    my $spec;
-    if ( exists $self->spec->{$col_name} ) {
-      if (
-        $c->is_in_pk && $c->is_auto_increment &&
-        !$self->allow_pk_set_value
-      ) {
-        warn sprintf(
-          "Primary-key autoincrement columns should not be hardcoded in tests (%s.%s = %s)",
-          $self->source_name, $col_name, $self->spec->{$col_name},
-        );
-      }
-
-      # This is the original way of specifying an override with a HASHREFREF.
-      # Reflection has realized it was an unnecessary distinction to a parent
-      # specification. Either it's a relationship hashref or a simspec hashref.
-      # We can never have both. It will be deprecated.
-      if (
-        reftype($self->spec->{$col_name}) eq 'REF' &&
-        reftype(${$self->spec->{$col_name}}) eq 'HASH'
-      ) {
-        warn "DEPRECATED: Use a regular HASHREF for overriding simspec. HASHREFREF will be removed in a future release.";
-        $spec = ${ $self->spec->{$col_name} };
-      }
-      elsif (
-        reftype($self->spec->{$col_name}) eq 'HASH' &&
-        # Assume a blessed hash is a DBIC object
-        !blessed($self->spec->{$col_name}) &&
-        # Do not assume we understand something to be inflated/deflated
-        !$c->is_inflated
-      ) {
-        $spec = $self->spec->{$col_name};
-      }
-      elsif (reftype($self->spec->{$col_name}) eq 'SCALAR') {
-        $self->set_value($col_name, $self->runner->convert_backreference(
-          $self->runner->backref_name($self, $c->name),
-          ${$self->spec->{$col_name}},
-        ));
-      }
-      else {
-        $self->set_value($col_name, $self->spec->{$col_name});
-      }
-    }
-
-    $spec //= $c->sim_spec;
-    if ( ! exists $self->{create}{$col_name} ) {
-      if ($spec) {
-        if (ref($spec // '') eq 'HASH') {
-          if ( exists $spec->{null_chance} && $c->is_nullable ) {
-            # Add check for not a number
-            if ( $c->random_choice($spec->{null_chance}) ) {
-              $self->set_value($col_name, undef);
-              next;
-            }
-          }
-          $self->set_value($col_name, $self->value_from_spec($c, $spec));
-        }
-      }
-      elsif (
-        !$c->is_nullable &&
-        !$c->is_in_pk &&
-        !$c->has_default_value
-        # These clauses were in the original code. Do they still need to exist?
-        # && !$c->is_in_uk
-      ) {
-        $self->set_value($col_name, $c->generate_value(die_on_unknown => 1));
-      }
-    }
+    $self->populate_column($c);
   } continue {
     delete $self->{still_to_use}{$c->name};
   }
@@ -917,6 +909,11 @@ This will set the value of the column in the create-hash. C<$value> can be
 undefined.
 
 This is the only way to set a value in the create-hash.
+
+=head2 populate_column($column)
+
+This takes a L<DBIx::Class::Sims::Column> object and does all the appropriate
+work necessary to populate that column in the create-hash.
 
 =head2 source()
 
