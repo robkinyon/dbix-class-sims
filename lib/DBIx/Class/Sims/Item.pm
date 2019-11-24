@@ -783,8 +783,6 @@ sub build_children {
   # In all cases, make sure to add { $fkcol => $row->get_column($col) } to the
   # child's $item
   foreach my $r ( $self->source->child_relationships ) {
-    next unless $self->has_value($r->name) || $r->constraints;
-
     my @children;
     if ($self->has_value($r->name)) {
       my $n = normalize_aoh($self->value($r->name))
@@ -792,28 +790,46 @@ sub build_children {
 
       @children = @{$n};
     }
-    else {
-      # ASSUMPTION: The constraint provided in the relationship is a number.
+    elsif ($r->constraints) {
       # Don't do "( ({}) x $r->constraints );" because that doesn't create
       # independent hashrefs.
+      # FIXME: Add a test to confirm the constraint provided is a number.
       push @children, {} for 1 .. $r->constraints;
     }
+    else {
+      next;
+    }
 
-    # TODO: Add a test for $self->{children} >= $r->constraints. For example,
+    # TODO: Add a test for $self->{children} < $r->constraints. For example,
     # $r->constraints == 2, but only one child was added by hand.
 
     my $fkcol = $r->foreign_fk_col;
     my $fk_source = $r->target;
+
+    my @inverse = $self->source->find_inverse_relationships(
+      $fk_source, $fkcol,
+    );
+
     foreach my $child (@children) {
       # FIXME $child is a hashref, not a ::Item. add_child() needs to be able to
       # handle ::Item's, which requires ::Item's to be Comparable. It also means
       # the ::Runner's spec has been converted to ::Item before iteration.
       ($child->{__META__} //= {})->{allow_pk_set_value} = 1;
 
-      # Do not do $self->row->get_column($col). This causes an infinite loop
+      # If there isn't an inverse relationship from the child back to here, then
+      # we need to specifically set the column. This could happen when you have
+      # a "types" or "preferences" table that's used for many tables.
+      if ( @inverse == 0 ) {
+        $child->{$fkcol} = $self->row->get_column($r->self_fk_col);
+      }
+      # But, if there *is* any inverse relationship (even if there's several),
+      # do not do $self->row->get_column($col). This causes an infinite loop
       # because the child then needs a parent ::Item that tries to create a
       # child, and so forth.
-      $child->{$fkcol} = $self->row;
+      else {
+        $child->{$fkcol} = $self->row;
+      }
+
       $self->runner->add_child({
         adder  => $self->source_name,
         source => $fk_source,
