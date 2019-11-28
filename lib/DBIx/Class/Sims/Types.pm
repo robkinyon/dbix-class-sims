@@ -14,6 +14,13 @@ DBIx::Class::Sims->set_sim_types({
   )
 });
 
+# This is to allow Sims types to be usable outside the context of a Sims run.
+sub default_column {
+  return bless {
+    predictable_values => 0
+  }, 'DBIx::Class::Sims::Column';
+}
+
 {
   my @tlds = qw(
     com net org gov mil co.uk co.es
@@ -21,6 +28,8 @@ DBIx::Class::Sims->set_sim_types({
 
   sub email_address {
     my ($info, undef, $column) = @_;
+    $info //= {};
+    $column //= default_column();
 
     my $size = $info->{data_length} // $info->{size} // 7;
     if ( $size < 7 ) {
@@ -63,6 +72,7 @@ DBIx::Class::Sims->set_sim_types({
 
 sub ip_address {
   my (undef, undef, $column) = @_;
+  $column //= default_column();
   return join '.', map { $column->random_integer(0, 256) } 1 .. 4;
 }
 
@@ -81,6 +91,7 @@ sub ip_address {
 
   sub us_address {
     my (undef, undef, $column) = @_;
+    $column //= default_column();
     # Assume a varchar-like column type with enough space.
 
     if ( $column->random_choice(.7) ) {
@@ -110,6 +121,7 @@ sub ip_address {
 
   sub us_city {
     my (undef, undef, $column) = @_;
+    $column //= default_column();
     # Assume a varchar-like column type with enough space.
     return $column->random_item(\@city_names);
   }
@@ -122,6 +134,7 @@ sub ip_address {
 
   sub us_county {
     my (undef, undef, $column) = @_;
+    $column //= default_column();
     # Assume a varchar-like column type with enough space.
     return $column->random_item(\@county_names);
   }
@@ -138,6 +151,7 @@ sub ip_address {
 
   sub us_firstname {
     my (undef, undef, $column) = @_;
+    $column //= default_column();
     # Assume a varchar-like column type with enough space.
     return $column->random_item(\@first_names);
   }
@@ -154,6 +168,7 @@ sub ip_address {
 
   sub us_lastname {
     my (undef, undef, $column) = @_;
+    $column //= default_column();
     # Assume a varchar-like column type with enough space.
     return $column->random_item(\@last_names);
   }
@@ -168,6 +183,7 @@ sub ip_address {
 
   sub us_name {
     my (undef, undef, $column) = @_;
+    $column //= default_column();
     # Assume a varchar-like column type with enough space.
 
     my @name = us_firstname(@_);
@@ -190,6 +206,8 @@ sub ip_address {
 
 sub us_phone {
   my ($info, undef, $column) = @_;
+  $info //= {};
+  $column //= default_column();
 
   # Assume a varchar-like column type.
   my $length = $info->{data_length} // $info->{size} // 8;
@@ -220,6 +238,7 @@ sub us_phone {
 
 sub us_ssntin {
   my (undef, undef, $column) = @_;
+  $column //= default_column();
 
   # Give strong preference to a SSN
   if ( $column->random_choice(.8) ) {
@@ -294,6 +313,8 @@ sub us_ssntin {
   );
   sub us_state {
     my ($info, undef, $column) = @_;
+    $info //= {};
+    $column //= default_column();
 
     # Assume a varchar-like column type.
     my $length = $info->{data_length} // $info->{size} // 2;
@@ -306,6 +327,8 @@ sub us_ssntin {
 
 sub us_zipcode {
   my ($info, undef, $column) = @_;
+  $info //= {};
+  $column //= default_column();
 
   my $datatype = $info->{data_type};
   if ( $datatype eq 'varchar' || $datatype eq 'char' ) {
