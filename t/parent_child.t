@@ -520,6 +520,21 @@ sims_test "Use a parent's column by reference" => {
   },
 };
 
+sims_test "Backreference as object" => {
+  spec => {
+    Album  => [
+      { name => 'foo' },
+      { name => 'bar', artist => \'Album[0].artist' },
+    ],
+  },
+  expect => {
+    Album => [
+      { id => 1, name => 'foo', artist_id => 1 },
+      { id => 2, name => 'bar', artist_id => 1 },
+    ],
+  },
+};
+
 # These tests verify the allow_relationship_column_name parameter
 sims_test "Can use column name" => {
   spec => {

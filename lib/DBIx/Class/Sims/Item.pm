@@ -658,6 +658,13 @@ sub populate_parents {
 
     my $spec;
     if ($proto) {
+      # Convert backreferences first.
+      if (ref($proto) eq 'SCALAR') {
+        $proto = $self->runner->convert_backreference(
+          $self->runner->backref_name($self, $r->name), $$proto, $fkcol,
+        );
+      }
+
       if (blessed($proto)) {
         if ($opts{nullable}) {
           $self->row->set_column($col => $proto->get_column($fkcol));
@@ -676,14 +683,6 @@ sub populate_parents {
       # Assume any hashref is a Sims specification
       if (ref($proto) eq 'HASH') {
         $spec = $proto;
-      }
-      # Use a referenced row
-      elsif (ref($proto) eq 'SCALAR') {
-        $spec = {
-          $fkcol => $self->runner->convert_backreference(
-            $self->runner->backref_name($self, $r->name), $$proto, $fkcol,
-          ),
-        };
       }
       # Assume any unblessed scalar is a column value.
       elsif (!ref($proto)) {
