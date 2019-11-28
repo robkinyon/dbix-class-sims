@@ -11,7 +11,6 @@ use Try::Tiny;
 
 use DBIx::Class::Sims::Item;
 use DBIx::Class::Sims::Source;
-use DBIx::Class::Sims::Util qw( reftype );
 
 sub new {
   my $class = shift;

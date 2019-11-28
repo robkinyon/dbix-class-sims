@@ -34,14 +34,14 @@ sub types_test ($$) {
     foreach my $test ( @{$opts->{tests}} ) {
       # q.v. the comment in DBIx::Class::Sims::Column where ::Random is imported
       # for why this test helper creates a fake $column object.
-      my $runner = bless {
+      my $column = bless {
         predictable_values => 0
       }, 'DBIx::Class::Sims::Column';
 
       $test->[0]{sim} = { type => $opts->{type} };
 
       for (1 .. $iters) {
-        my $v = $sub->($test->[0], $spec, $runner);
+        my $v = $sub->($test->[0], $spec, $column);
         next unless like( $v, $test->[1] );
         $spec->{addl_check}->($v) if exists $spec->{addl_check};
       }
@@ -50,15 +50,15 @@ sub types_test ($$) {
 
       my $successes = 0;
       for ( 1.. $tries ) {
-        my $v = $sub->($test->[0], $spec, $runner);
+        my $v = $sub->($test->[0], $spec, $column);
         $successes += 1 if $v eq $test->[2];
       }
       cmp_ok( $successes, '<', $tries, "if predictable_values is not set, don't get the same value" );
 
-      $runner->{predictable_values} = 1;
+      $column->{predictable_values} = 1;
       for ( 1 .. $tries ) {
         cmp_ok(
-          $sub->($test->[0], $spec, $runner), 'eq', $test->[2],
+          $sub->($test->[0], $spec, $column), 'eq', $test->[2],
           "Test $_ for predictable_values",
         );
       }
