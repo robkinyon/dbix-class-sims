@@ -641,21 +641,32 @@ sub populate_parents {
       next RELATIONSHIP;
     }
 
+    delete $self->{still_to_use}{$r->name};
+    delete $self->{still_to_use}{$col};
+
     if (!$self->runner->{allow_relationship_column_names}) {
       if ($col ne $r->name && exists $self->spec->{$col}) {
         die "Cannot use column $col - use relationship @{[$r->name]}";
       }
     }
 
-    my $fkcol = $r->foreign_fk_col;
-    my $proto = delete($self->spec->{$r->name}) // delete($self->spec->{$col});
-    # TODO: Write a test if both the rel and the FK col are specified
-    delete $self->{still_to_use}{$r->name};
-    delete $self->{still_to_use}{$col};
-
     if ($self->{skip_relationship}{$r->name}) {
       next RELATIONSHIP;
     }
+
+    # Assumptions:
+    #   * If someone sets $col, then they intend to use that.
+    #   * If someone sets $col and $col is for multiple relationships, use it.
+    #   * If someone sets $col *and* $r->name, then we're confused. Raise error.
+    #     - What happens if there are two parents for $col?
+    #     - What happens if one of them is nullable?
+
+    # TODO: Write a test if both the rel and the FK col are specified
+    my $proto = $self->has_value($col)
+      ? $self->value($col)
+      : $self->value($r->name);
+
+    my $fkcol = $r->foreign_fk_col;
 
     my $spec;
     if ($proto) {

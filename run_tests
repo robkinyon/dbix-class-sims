@@ -44,6 +44,18 @@ elif [[ "$1" == "build" ]]; then
     )&>build_log/${version}.log
     set -e
   done
+elif [[ "$1" == "shell" ]]; then
+  shift
+  versions=${@:-"${all_versions}"}
+  for version in ${versions}; do
+    echo "Launch shell in perl-${version}"
+    MSYS_NO_PATHCONV=1 \
+    docker run \
+      -it --rm \
+      -e SIMS_DEBUG \
+      "${volumes[@]}" \
+      ${container}:${version} bash
+  done
 elif [[ "$1" == "test" ]]; then
   shift
   versions=${@:-"${all_versions}"}
