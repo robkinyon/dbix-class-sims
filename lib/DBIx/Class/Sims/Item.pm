@@ -467,6 +467,7 @@ sub create {
 
     warn "Creating @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
     my $row = eval {
+      #use Carp; local $SIG{__DIE__} = \&Carp::confess;
       $self->source->resultset->create($self->{create});
     }; if ($@) {
       my $e = $@;

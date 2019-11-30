@@ -854,7 +854,7 @@ If you have explicitly set one of these options, it will override strict_mode.
 
 This is passed directly to the call to C<< DBIx::Class::TopoSort->toposort >>.
 
-See L< DBIx::Class::TopoSort/toposort > for more information.
+See L<DBIx::Class::TopoSort/toposort> for more information.
 
 =head2 topograph_trace
 
