@@ -1,7 +1,7 @@
 # vi:sw=2
 use strictures 2;
 
-use Test2::V0 qw( done_testing subtest E );
+use Test2::V0 qw( done_testing subtest E match );
 
 use lib 't/lib';
 
@@ -153,6 +153,15 @@ subtest "Fail because a spec matches different rows in each UK" => sub {
     ],
     dies => qr/Rows found by multiple unique constraints/,
   };
+};
+
+sims_test "Set sims value in unique column" => {
+  spec => {
+    Artist => { name => { type => 'us_firstname' } },
+  },
+  expect => {
+    Artist => { id => 1, name => match(qr/./), hat_color => undef },
+  },
 };
 
 done_testing;

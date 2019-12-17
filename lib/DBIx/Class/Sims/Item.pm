@@ -125,6 +125,16 @@ sub make_jsonable {
 #
 ################################################################################
 
+sub is_real_value {
+  my $self = shift;
+  my ($col) = @_;
+  return unless $self->has_value($col);
+  my $v = $self->value($col);
+  return 1 unless defined $v;
+  return if ref($v);
+  return 1;
+}
+
 sub build_searcher_for_constraints {
   my $self = shift;
   my (@constraints) = @_;
@@ -132,7 +142,7 @@ sub build_searcher_for_constraints {
   my $to_find = {};
   my $matched_all_columns = 1;
   foreach my $c ( map { @$_ } @constraints ) {
-    unless ($self->has_value($c->name)) {
+    unless ($self->is_real_value($c->name)) {
       $matched_all_columns = 0;
       last;
     }
@@ -427,6 +437,7 @@ sub create {
   # Try to find a match with what was given if this is a parent request. But,
   # we cannot do that if we have parent values because we haven't resolved FKs
   # yet.
+  warn "Trying to find a parent match @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
   if ( $self->attempt_to_find({ unique => 0, no_parent_values => 1 }) ) {
     $self->runner->remove_item($self);
     return $self->row;
