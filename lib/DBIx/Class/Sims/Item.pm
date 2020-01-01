@@ -641,12 +641,153 @@ sub parent {
   return $self->{parents}{$relname};
 }
 
+sub populate_parent {
+  my $self = shift;
+  my ($r, %opts) = @_;
+
+  my $col = $r->self_fk_col;
+
+  # Assumptions:
+  #   * If someone sets $col, then they intend to use that.
+  #   * If someone sets $col and $col is for multiple relationships, use it.
+  #   * If someone sets $col *and* $r->name, then we're confused. Raise error.
+  #     - What happens if there are two parents for $col?
+  #     - What happens if one of them is nullable?
+
+  # TODO: Write a test if both the rel and the FK col are specified
+  my $proto = $self->has_value($col)
+    ? $self->value($col)
+    : $self->value($r->name);
+
+  my $fkcol = $r->foreign_fk_col;
+
+  my $spec;
+  if ($proto) {
+    # Convert backreferences first.
+    if (ref($proto) eq 'SCALAR') {
+      $proto = $self->runner->convert_backreference(
+        $self->runner->backref_name($self, $r->name), $$proto, $fkcol,
+      );
+    }
+
+    if (blessed($proto)) {
+      if ($opts{nullable}) {
+        $self->row->set_column($col => $proto->get_column($fkcol));
+        $self->row->update;
+      }
+      else {
+        $self->set_value($col, $proto->get_column($fkcol));
+
+        # Otherwise, the tracer will try and write out a blessed object.
+        warn "Converting $col to @{[$self->{create}{$col}]}\n";
+        $self->{trace}{spec}{$col} = $self->{create}{$col};
+      }
+      return;
+    }
+
+    # Assume any hashref is a Sims specification
+    if (ref($proto) eq 'HASH') {
+      $spec = $proto;
+    }
+    # Assume any unblessed scalar is a column value.
+    elsif (!ref($proto)) {
+      $spec = { $fkcol => $proto };
+    }
+    else {
+      die "Unsure what to do about @{[$r->full_name]}():" . np($proto);
+    }
+  }
+  elsif ($self->source->column($col)->sim_spec) {
+    my $c = $self->source->column($col);
+    my $sp = $c->sim_spec;
+    if ( exists $sp->{null_chance} && $c->is_nullable ) {
+      # Add check for not a number
+      if ( $c->random_choice($sp->{null_chance}) ) {
+        return;
+      }
+    }
+    $spec = {
+      $fkcol => $self->value_from_spec($c, $sp),
+    };
+  }
+
+  unless ( $spec ) {
+    if ( $self->source->column($col)->is_nullable ) {
+      return;
+    }
+
+    $spec = {};
+  }
+
+  my $fk_source = $r->target;
+  # If the child's column is within a UK, add a check to the $rs that ensures
+  # we cannot pick a parent that's already being used.
+  my @constraints = $self->source->unique_constraints_containing($col);
+  if (@constraints) {
+    # First, find the inverse relationship. If it doesn't exist or if there
+    # is more than one, then die.
+    my @inverse = $self->source->find_inverse_relationships(
+      $fk_source, $fkcol,
+    );
+    if (@inverse == 0) {
+      die "Cannot find an inverse relationship for @{[$r->full_name]}\n";
+    }
+    elsif (@inverse > 1) {
+      die "Too many inverse relationships for @{[$r->full_name]} (@{[$fk_source->name]} / $fkcol)\n" . np(@inverse);
+    }
+
+    # We cannot add this relationship to the $spec because that would result
+    # in an infinite loop. So, add a restriction to the parent's __META__
+    $spec->{__META__} //= {};
+    $spec->{__META__}{restriction} = {
+      cond  => { join('.', $inverse[0]{rel}, $inverse[0]{col}) => undef },
+      extra => { join => $inverse[0]{rel} },
+    };
+  }
+
+  warn "Parent (@{[$fk_source->name]}): " . np($spec) .$/ if $ENV{SIMS_DEBUG};
+  push @{$self->{runner}{traces}}, {
+    table  => $fk_source->name,
+    spec   => MyCloner::clone($spec // {}),
+    seen   => $self->{runner}{ids}{seen}++,
+    parent => $self->{trace}{seen},
+    via    => "populate_parents/@{[$r->name]}",
+  };
+  my $fk_item = DBIx::Class::Sims::Item->new(
+    runner => $self->runner,
+    source => $fk_source,
+    spec   => MyCloner::clone($spec // {}),
+    trace  => $self->{runner}{traces}[-1],
+  );
+  $fk_item->set_allow_pk_to($self);
+  $fk_item->create;
+
+  $self->{parents}{$r->name} = $fk_item;
+
+  if ($opts{nullable}) {
+    $self->row->set_column($col => $fk_item->row->get_column($fkcol));
+    $self->row->update;
+  }
+  else {
+    $self->set_value($col, $fk_item->row->get_column($fkcol));
+  }
+}
+
 sub populate_parents {
   my $self = shift;
   my %opts = @_;
 
+  my $has_value = sub {
+    my $r = shift;
+    return $self->has_value($r->self_fk_col) || $self->has_value($r->name);
+  };
+
   RELATIONSHIP:
-  foreach my $r ( $self->source->parent_relationships ) {
+  foreach my $r (
+    sort {
+      $has_value->($b) <=> $has_value->($a)
+    } $self->source->parent_relationships
+  ) {
     my $col = $r->self_fk_col;
 
     if ( $opts{nullable} xor $self->source->column($col)->is_nullable ) {
@@ -665,130 +806,7 @@ sub populate_parents {
       next RELATIONSHIP;
     }
 
-    # Assumptions:
-    #   * If someone sets $col, then they intend to use that.
-    #   * If someone sets $col and $col is for multiple relationships, use it.
-    #   * If someone sets $col *and* $r->name, then we're confused. Raise error.
-    #     - What happens if there are two parents for $col?
-    #     - What happens if one of them is nullable?
-
-    # TODO: Write a test if both the rel and the FK col are specified
-    my $proto = $self->has_value($col)
-      ? $self->value($col)
-      : $self->value($r->name);
-
-    my $fkcol = $r->foreign_fk_col;
-
-    my $spec;
-    if ($proto) {
-      # Convert backreferences first.
-      if (ref($proto) eq 'SCALAR') {
-        $proto = $self->runner->convert_backreference(
-          $self->runner->backref_name($self, $r->name), $$proto, $fkcol,
-        );
-      }
-
-      if (blessed($proto)) {
-        if ($opts{nullable}) {
-          $self->row->set_column($col => $proto->get_column($fkcol));
-          $self->row->update;
-        }
-        else {
-          $self->set_value($col, $proto->get_column($fkcol));
-
-          # Otherwise, the tracer will try and write out a blessed object.
-          warn "Converting $col to @{[$self->{create}{$col}]}\n";
-          $self->{trace}{spec}{$col} = $self->{create}{$col};
-        }
-        next RELATIONSHIP;
-      }
-
-      # Assume any hashref is a Sims specification
-      if (ref($proto) eq 'HASH') {
-        $spec = $proto;
-      }
-      # Assume any unblessed scalar is a column value.
-      elsif (!ref($proto)) {
-        $spec = { $fkcol => $proto };
-      }
-      else {
-        die "Unsure what to do about @{[$r->full_name]}():" . np($proto);
-      }
-    }
-    elsif ($self->source->column($col)->sim_spec) {
-      my $c = $self->source->column($col);
-      my $sp = $c->sim_spec;
-      if ( exists $sp->{null_chance} && $c->is_nullable ) {
-        # Add check for not a number
-        if ( $c->random_choice($sp->{null_chance}) ) {
-          next RELATIONSHIP;
-        }
-      }
-      $spec = {
-        $fkcol => $self->value_from_spec($c, $sp),
-      };
-    }
-
-    unless ( $spec ) {
-      if ( $self->source->column($col)->is_nullable ) {
-        next RELATIONSHIP;
-      }
-
-      $spec = {};
-    }
-
-    my $fk_source = $r->target;
-    # If the child's column is within a UK, add a check to the $rs that ensures
-    # we cannot pick a parent that's already being used.
-    my @constraints = $self->source->unique_constraints_containing($col);
-    if (@constraints) {
-      # First, find the inverse relationship. If it doesn't exist or if there
-      # is more than one, then die.
-      my @inverse = $self->source->find_inverse_relationships(
-        $fk_source, $fkcol,
-      );
-      if (@inverse == 0) {
-        die "Cannot find an inverse relationship for @{[$r->full_name]}\n";
-      }
-      elsif (@inverse > 1) {
-        die "Too many inverse relationships for @{[$r->full_name]} (@{[$fk_source->name]} / $fkcol)\n" . np(@inverse);
-      }
-
-      # We cannot add this relationship to the $spec because that would result
-      # in an infinite loop. So, add a restriction to the parent's __META__
-      $spec->{__META__} //= {};
-      $spec->{__META__}{restriction} = {
-        cond  => { join('.', $inverse[0]{rel}, $inverse[0]{col}) => undef },
-        extra => { join => $inverse[0]{rel} },
-      };
-    }
-
-    warn "Parent (@{[$fk_source->name]}): " . np($spec) .$/ if $ENV{SIMS_DEBUG};
-    push @{$self->{runner}{traces}}, {
-      table  => $fk_source->name,
-      spec   => MyCloner::clone($spec // {}),
-      seen   => $self->{runner}{ids}{seen}++,
-      parent => $self->{trace}{seen},
-      via    => "populate_parents/@{[$r->name]}",
-    };
-    my $fk_item = DBIx::Class::Sims::Item->new(
-      runner => $self->runner,
-      source => $fk_source,
-      spec   => MyCloner::clone($spec // {}),
-      trace  => $self->{runner}{traces}[-1],
-    );
-    $fk_item->set_allow_pk_to($self);
-    $fk_item->create;
-
-    $self->{parents}{$r->name} = $fk_item;
-
-    if ($opts{nullable}) {
-      $self->row->set_column($col => $fk_item->row->get_column($fkcol));
-      $self->row->update;
-    }
-    else {
-      $self->set_value($col, $fk_item->row->get_column($fkcol));
-    }
+    $self->populate_parent($r, %opts);
   }
 
   return;

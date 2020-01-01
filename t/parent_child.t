@@ -481,9 +481,7 @@ sims_test "Only create one child even if under-specified two ways" => {
 
 # require 2, specify 1, create 2 (1 specified)
 # require 1, specify 2, create 2 (2 specified)
-# create parent, add child, lookup unique, add child (2 child with same parent)
 
-# 1. Create parent. 2. create child, reference row and add other child
 sims_test "Create a child of a found parent" => {
   spec => {
     Artist => { name => 'Joe' },
