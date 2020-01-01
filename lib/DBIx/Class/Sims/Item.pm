@@ -439,7 +439,11 @@ sub create {
   # yet.
   warn "Trying to find a parent match @{[$self->source_name]}($self) (".np($self->spec).") (".np($self->{create}).")\n" if $ENV{SIMS_DEBUG};
   if ( $self->attempt_to_find({ unique => 0, no_parent_values => 1 }) ) {
+    # If there are any children specified, figure them out here.
+    $self->build_children;
+
     $self->runner->remove_item($self);
+
     return $self->row;
   }
 
@@ -645,15 +649,11 @@ sub populate_parents {
   foreach my $r ( $self->source->parent_relationships ) {
     my $col = $r->self_fk_col;
 
-    if ( $opts{nullable} && !$self->source->column($col)->is_nullable ) {
-      next RELATIONSHIP;
-    }
-    if ( !$opts{nullable} && $self->source->column($col)->is_nullable ) {
+    if ( $opts{nullable} xor $self->source->column($col)->is_nullable ) {
       next RELATIONSHIP;
     }
 
-    delete $self->{still_to_use}{$r->name};
-    delete $self->{still_to_use}{$col};
+    delete $self->{still_to_use}{$_} for ($r->name, $col);
 
     if (!$self->runner->{allow_relationship_column_names}) {
       if ($col ne $r->name && exists $self->spec->{$col}) {

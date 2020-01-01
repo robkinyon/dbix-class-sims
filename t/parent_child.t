@@ -4,6 +4,7 @@ use strictures 2;
 use Test2::V0 qw(
   done_testing subtest E match is
   array hash field item end
+  ok
 );
 
 use lib 't/lib';
@@ -460,6 +461,53 @@ sims_test "Accept a hashref for children" => {
     Album => { id => 1, name => 'foobar', artist_id => 1 },
   },
   rv => sub { { Artist => shift->{expect}{Artist} } },
+};
+
+=pod
+
+# This requires the idea of a child constraint vs. a child addition
+sims_test "Only create one child even if under-specified two ways" => {
+  spec => {
+    Artist => { name => 'Joe', albums => 1 },
+    Album => { name => 'Bob', 'artist.name' => 'Joe' },
+  },
+  expect => {
+    Artist => { id => 1, name => E() },
+    Album => { id => 1, name => 'Bob', artist_id => 1 },
+  },
+};
+
+=cut
+
+# require 2, specify 1, create 2 (1 specified)
+# require 1, specify 2, create 2 (2 specified)
+# create parent, add child, lookup unique, add child (2 child with same parent)
+
+# 1. Create parent. 2. create child, reference row and add other child
+sims_test "Create a child of a found parent" => {
+  spec => {
+    Artist => { name => 'Joe' },
+    Album => {
+      name => 'Bob',
+      artist => {
+        name => 'Joe',
+        albums => [ { name => 'Charlie' } ],
+      },
+    },
+  },
+  expect => {
+    Artist => { id => 1, name => E() },
+    Album => [
+      { id => 1, name => 'Bob', artist_id => 1 },
+      { id => 2, name => 'Charlie', artist_id => 1 },
+    ],
+  },
+  rv => {
+    Artist => { id => 1, name => E() },
+    Album => [
+      { id => 1, name => 'Bob', artist_id => 1 },
+    ],
+  },
 };
 
 sims_test "Connect to the parent by reference" => {
