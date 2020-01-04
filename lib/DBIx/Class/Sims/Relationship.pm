@@ -97,6 +97,14 @@ sub foreign_class {
   return $self->{info}{class};
 }
 
+sub is_single_accessor {
+  my $self = shift;
+  return $self->{info}{attrs}{accessor} eq 'single';
+}
+sub is_multi_accessor {
+  return ! $_[0]->is_single_accessor;
+}
+
 1;
 __END__
 

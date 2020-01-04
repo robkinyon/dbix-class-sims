@@ -1,7 +1,7 @@
 # vi:sw=2
 use strictures 2;
 
-use Test2::V0 qw( done_testing );
+use Test2::V0 qw( done_testing E );
 
 use lib 't/lib';
 
@@ -128,6 +128,26 @@ sims_test "Find grandparent by DBIC row" => {
     Track => { id => 1, name => 'ijkl', album_id => 1 },
   },
   rv => sub { { Track => shift->{expect}{Track} } },
+};
+
+sims_test "Autogenerate child and grandchild by constraint" => {
+  spec => [
+    {
+      Artist => { name => 'Bob' },
+    },
+    {
+      constraints => {
+        Artist => { albums => 1 },
+        Album  => { tracks => 1 },
+      },
+    },
+  ],
+  expect => {
+    Artist => { id => 1, name => 'Bob' },
+    Album => { id => 1, name => E(), artist_id => 1 },
+    Track => { id => 1, name => E(), album_id => 1 },
+  },
+  rv => sub { { Artist => shift->{expect}{Artist} } },
 };
 
 # Create a test that specifies the value of a parent by ID in spec, then

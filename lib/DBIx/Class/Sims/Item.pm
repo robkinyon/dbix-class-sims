@@ -823,25 +823,28 @@ sub build_children {
   # In all cases, make sure to add { $fkcol => $row->get_column($col) } to the
   # child's $item
   foreach my $r ( $self->source->child_relationships ) {
-    my @children;
-    if ($self->has_value($r->name)) {
-      my $n = normalize_aoh($self->value($r->name))
-        or die "Don't know what to do with @{[$r->full_name]}\n\t".np($self->{original_spec});
-
-      @children = @{$n};
-    }
-    elsif ($r->constraints) {
-      # Don't do "( ({}) x $r->constraints );" because that doesn't create
-      # independent hashrefs.
-      # FIXME: Add a test to confirm the constraint provided is a number.
-      push @children, {} for 1 .. $r->constraints;
-    }
-    else {
-      next;
+    if ($r->constraints) {
+      $self->runner->ensure_children($self, $r, $r->constraints);
     }
 
-    # TODO: Add a test for $self->{children} < $r->constraints. For example,
-    # $r->constraints == 2, but only one child was added by hand.
+    next unless $self->has_value($r->name);
+
+    my $n = normalize_aoh($self->value($r->name))
+      or die "Don't know what to do with @{[$r->full_name]}\n\t".np($self->{original_spec});
+
+    my (@children, @unspecified);
+    foreach my $child ( @{$n} ) {
+      if (keys %$child) {
+        push @children, $child;
+      }
+      else {
+        push @unspecified, $child;
+      }
+    }
+    $self->runner->ensure_children(
+      $self, $r, @$n + 0,
+    ) if @unspecified;
+    next unless @children;
 
     my $fkcol = $r->foreign_fk_col;
     my $fk_source = $r->target;

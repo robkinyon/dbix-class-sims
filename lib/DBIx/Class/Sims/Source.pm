@@ -162,6 +162,7 @@ sub unique_constraints_containing {
   } $self->unique_columns;
 }
 
+# TODO: This should probably be cached. Maybe even pre-generated.
 sub find_inverse_relationships {
   my $self = shift;
   my ($fksource, $fkcol) = @_;

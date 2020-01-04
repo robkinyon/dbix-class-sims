@@ -379,6 +379,48 @@ sims_test "Autogenerate multiple children via constraint" => {
   rv => sub { { Artist => shift->{expect}{Artist} } },
 };
 
+sims_test "Autogenerate one child via constraint because there's another already there" => {
+  spec => [
+    {
+      Artist => { albums => [{ name => 'Bob' }] },
+    },
+    {
+      constraints => {
+        Artist => { albums => 2 },
+      },
+    },
+  ],
+  expect => {
+    Artist => { id => 1, name => E() },
+    Album => [
+      { id => 1, name => 'Bob', artist_id => 1 },
+      { id => 2, name => E(), artist_id => 1 },
+    ],
+  },
+  rv => sub { { Artist => shift->{expect}{Artist} } },
+};
+
+sims_test "Autogenerate no child via constraint because enough are there" => {
+  spec => [
+    {
+      Artist => { albums => [{ name => 'Bob' }, { name => 'Bob2' }] },
+    },
+    {
+      constraints => {
+        Artist => { albums => 2 },
+      },
+    },
+  ],
+  expect => {
+    Artist => { id => 1, name => E() },
+    Album => [
+      { id => 1, name => 'Bob', artist_id => 1 },
+      { id => 2, name => 'Bob2', artist_id => 1 },
+    ],
+  },
+  rv => sub { { Artist => shift->{expect}{Artist} } },
+};
+
 sims_test "Specify various parent IDs and connect properly" => {
   spec => [
     {
@@ -463,8 +505,6 @@ sims_test "Accept a hashref for children" => {
   rv => sub { { Artist => shift->{expect}{Artist} } },
 };
 
-=pod
-
 # This requires the idea of a child constraint vs. a child addition
 sims_test "Only create one child even if under-specified two ways" => {
   spec => {
@@ -477,10 +517,39 @@ sims_test "Only create one child even if under-specified two ways" => {
   },
 };
 
-=cut
+sims_test "Create a second child even if the first is found" => {
+  spec => {
+    Artist => { name => 'Joe', albums => 2 },
+    Album => { name => 'Bob', 'artist.name' => 'Joe' },
+  },
+  expect => {
+    Artist => { id => 1, name => E() },
+    Album => [
+      { id => 1, name => 'Bob', artist_id => 1 },
+      { id => 2, name => E(), artist_id => 1 },
+    ],
+  },
+};
 
-# require 2, specify 1, create 2 (1 specified)
-# require 1, specify 2, create 2 (2 specified)
+sims_test "Fill in the unspecified child with the created child" => {
+  spec => {
+    Artist => { name => 'Joe', albums => [ {}, { name => 'Bob2' } ] },
+    Album => { name => 'Bob', 'artist.name' => 'Joe' },
+  },
+  expect => {
+    Artist => { id => 1, name => E() },
+    Album => [
+      { id => 1, name => 'Bob', artist_id => 1 },
+      { id => 2, name => 'Bob2', artist_id => 1 },
+    ],
+  },
+  rv => {
+    Artist => { id => 1, name => 'Joe' },
+    Album => [
+      { id => 1, name => 'Bob', artist_id => 1 },
+    ],
+  },
+};
 
 sims_test "Create a child of a found parent" => {
   spec => {

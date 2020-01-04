@@ -35,6 +35,7 @@ sub initialize {
   $self->{duplicates} = {};
 
   $self->{create_stack} = [];
+  $self->{child_requested} = [];
 
   return;
 }
@@ -170,6 +171,13 @@ sub call_hook {
   return $self->{hooks}{$phase}->(@_);
 }
 
+sub ensure_children {
+  my $self = shift;
+  my ($parent, $rel, $count) = @_;
+
+  push @{$self->{child_requested}}, [ $parent, $rel, $count ];
+}
+
 sub run {
   my $self = shift;
 
@@ -233,6 +241,47 @@ sub run {
 
           $self->delete_pending($name);
         }
+
+        foreach my $item ( @{$self->{child_requested}} ) {
+          my ($parent, $rel, $count) = @{$item};
+          # Look at $parent's children via $rel and compare to $count.
+          # If we're short, then $self->add_child().
+          my $name = $rel->name;
+
+          # TODO: If the rel is a single accessor, then the constraints should
+          # be capped to 1 and an error thrown otherwise.
+          my $num_children = $rel->is_single_accessor
+            ? ($parent->row->$name ? 1 : 0)
+            : $parent->row->$name->count;
+          while ( $count > $num_children ) {
+            my $child = {};
+            ($child->{__META__} //= {})->{allow_pk_set_value} = 1;
+
+            my @inverse = $parent->source->find_inverse_relationships(
+              $rel->target, $rel->foreign_fk_col,
+            );
+            $child->{$rel->foreign_fk_col} = @inverse == 0
+              ? $parent->row->get_column($rel->self_fk_col)
+              : $parent->row;
+
+            $self->add_child({
+              adder  => $parent->source_name,
+              source => $rel->target,
+              fkcol  => $rel->foreign_fk_col,
+              child  => $child,
+              trace  => {
+                table  => $rel->target->name,
+                spec   => MyCloner::clone($child),
+                seen   => $parent->{runner}{ids}{seen}++,
+                parent => $parent->{trace}{seen},
+                via    => 'add_child',
+              },
+            });
+
+            $count--;
+          }
+        }
+        $self->{child_requested} = [];
 
         last unless $self->has_pending();
         $self->clear_pending();
