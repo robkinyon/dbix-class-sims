@@ -105,6 +105,7 @@ sub are_columns_equal {
       }
 
       next if exists $added_by{$adder} && exists $added_by{$adder}{$compare};
+      next if exists $compare->{$fkcol};
       if ($self->are_columns_equal($source, $child, $compare)) {
         $compare->{$fkcol} = $child->{$fkcol};
         return;

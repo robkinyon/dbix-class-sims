@@ -829,22 +829,21 @@ sub build_children {
 
     next unless $self->has_value($r->name);
 
-    my $n = normalize_aoh($self->value($r->name))
+    my $normalized = normalize_aoh($self->value($r->name))
       or die "Don't know what to do with @{[$r->full_name]}\n\t".np($self->{original_spec});
 
-    my (@children, @unspecified);
-    foreach my $child ( @{$n} ) {
-      if (keys %$child) {
-        push @children, $child;
-      }
-      else {
-        push @unspecified, $child;
-      }
+    my @specified = grep { keys %$_ } @$normalized;
+
+    # Only run everything through ensure_children() if all the children are
+    # unspecified. We do need to figure out how to handle specified children,
+    # but this should be "good nuff" for now.
+    # In essence, this is saying x => [ {}, {} ] is equivalent to x => 2
+    unless (@specified) {
+      $self->runner->ensure_children(
+        $self, $r, @$normalized + 0,
+      );
+      next;
     }
-    $self->runner->ensure_children(
-      $self, $r, @$n + 0,
-    ) if @unspecified;
-    next unless @children;
 
     my $fkcol = $r->foreign_fk_col;
     my $fk_source = $r->target;
@@ -853,7 +852,7 @@ sub build_children {
       $fk_source, $fkcol,
     );
 
-    foreach my $child (@children) {
+    foreach my $child (@{$normalized}) {
       # FIXME $child is a hashref, not a ::Item. add_child() needs to be able to
       # handle ::Item's, which requires ::Item's to be Comparable. It also means
       # the ::Runner's spec has been converted to ::Item before iteration.

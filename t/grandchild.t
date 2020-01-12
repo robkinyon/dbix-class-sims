@@ -150,6 +150,32 @@ sims_test "Autogenerate child and grandchild by constraint" => {
   rv => sub { { Artist => shift->{expect}{Artist} } },
 };
 
+sims_test "Regression found in grandchildren going to the wrong place" => {
+  spec => [
+    {
+      Artist => {
+        name => 'Bob',
+        albums => [
+          {},
+          {},
+          { tracks => [ { name => 'something' } ] },
+        ],
+      },
+    },
+  ],
+  expect => {
+    Artist => { id => 1, name => 'Bob' },
+    Album => [
+      { id => 1, name => E(), artist_id => 1 },
+      { id => 2, name => E(), artist_id => 1 },
+      { id => 3, name => E(), artist_id => 1 },
+    ],
+    # The test is verifying the Track is a child of Album 3, not Album 1
+    Track => { id => 1, name => 'something', album_id => 3 },
+  },
+  rv => sub { { Artist => shift->{expect}{Artist} } },
+};
+
 # Create a test that specifies the value of a parent by ID in spec, then
 # that parent has two UKs, one which is multi-key, thus the grandparents end up
 # creating a UK violation. What should've happened is the parent should have

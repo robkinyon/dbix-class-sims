@@ -40,6 +40,8 @@ sub sims_test ($$) {
       is($c, number($l), "$name has $l rows loaded at first");
     }
 
+    $ENV{TEST_VERBOSE} = 1 if $ENV{SIMS_DEBUG};
+
     my ($rv, $addl);
     eval {
       local $SIG{ALRM} = sub { die "test timeout\n" };
@@ -91,7 +93,7 @@ sub sims_test ($$) {
             warn $trap->die;
             return; # Don't continue the test if we die unexpectedly.
           }
-          warn $trap->stderr if $ENV{SIMS_DEBUG} && $trap->stderr;
+          warn $trap->stderr if $ENV{TEST_VERBOSE} && $trap->stderr;
         }
         else {
           my @args = ref($opts->{spec}//'') eq 'ARRAY'
@@ -115,7 +117,7 @@ sub sims_test ($$) {
               warn $trap->die;
               return; # Don't continue the test if we die unexpectedly.
             }
-            warn $trap->stderr if $ENV{SIMS_DEBUG} && $trap->stderr;
+            warn $trap->stderr if $ENV{TEST_VERBOSE} && $trap->stderr;
           }
         }
 

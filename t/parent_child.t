@@ -505,7 +505,6 @@ sims_test "Accept a hashref for children" => {
   rv => sub { { Artist => shift->{expect}{Artist} } },
 };
 
-# This requires the idea of a child constraint vs. a child addition
 sims_test "Only create one child even if under-specified two ways" => {
   spec => {
     Artist => { name => 'Joe', albums => 1 },
@@ -531,6 +530,8 @@ sims_test "Create a second child even if the first is found" => {
   },
 };
 
+=pod
+# It's not clear we actually want this. In fact, why would you do this?
 sims_test "Fill in the unspecified child with the created child" => {
   spec => {
     Artist => { name => 'Joe', albums => [ {}, { name => 'Bob2' } ] },
@@ -550,6 +551,7 @@ sims_test "Fill in the unspecified child with the created child" => {
     ],
   },
 };
+=cut
 
 sims_test "Create a child of a found parent" => {
   spec => {
