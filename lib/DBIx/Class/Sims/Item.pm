@@ -11,6 +11,7 @@ use strictures 2;
 use DDP;
 
 #use List::PowerSet qw(powerset);
+use Hash::Merge qw( merge );
 use Scalar::Util qw( blessed );
 
 use DBIx::Class::Sims::Util qw(
@@ -523,25 +524,36 @@ sub value_from_spec {
   my $self = shift;
   my ($c, $spec) = @_;
 
-  if ( ref($spec->{func} // '') eq 'CODE' ) {
-    return $spec->{func}->($c->info);
-  }
-  elsif ( exists $spec->{value} ) {
-    if (ref($spec->{value} // '') eq 'ARRAY') {
-      return $c->random_item( $spec->{value} );
+  # Try 10 times to find a value that's not in value_not
+
+  my $n = 0;
+  my $max = 10;
+  my $v;
+  do {
+    $n++;
+    die "Cannot find a value for @{[$c->source->name]}\.@{[$c->name]} after $max tries" if $n >= 10;
+
+    if ( ref($spec->{func} // '') eq 'CODE' ) {
+      $v = $spec->{func}->($c->info);
+    }
+    elsif ( exists $spec->{value} ) {
+      if (ref($spec->{value} // '') eq 'ARRAY') {
+        $v = $c->random_item( $spec->{value} );
+      }
+      else {
+        $v = $spec->{value};
+      }
+    }
+    elsif ( $spec->{type} ) {
+      my $meth = $self->runner->parent->sim_type($spec->{type})
+        // die "Type '$spec->{type}' is not loaded";
+      $v = $meth->($c->info, $spec, $c);
     }
     else {
-      return $spec->{value};
+      $v = $c->generate_value(die_on_unknown => 0);
     }
-  }
-  elsif ( $spec->{type} ) {
-    my $meth = $self->runner->parent->sim_type($spec->{type})
-      // die "Type '$spec->{type}' is not loaded";
-    return $meth->($c->info, $spec, $c);
-  }
-  else {
-    return $c->generate_value(die_on_unknown => 0);
-  }
+  } while ( grep { $v eq $_ } @{$spec->{value_not}} );
+  return $v;
 }
 
 sub populate_column {
@@ -596,8 +608,37 @@ sub populate_column {
     }
   }
 
-  $spec //= $c->sim_spec;
+  # If the spec is a hashref containing "value_not" and nothing else, then merge
+  # it with the spec from the column. Otherwise, it overrides the column.
+  my $merge_spec = sub {
+    my ($s) = @_;
+    return unless $s;
+
+    # At this point, we can presume that we have a HASHREF because the only way
+    # we get a per-entry spec is if it's a HASHREF.
+
+    # Handle the optional plural
+    $s->{value_not} = delete $s->{values_not} if exists $s->{values_not};
+
+    return unless keys %$s == 1;
+    return unless exists $s->{value_not};
+    return 1;
+  };
+
+  if ( $merge_spec->( $spec ) ) {
+    $spec = merge( $c->sim_spec // {}, $spec );
+  }
+  else {
+    $spec //= $c->sim_spec;
+  }
+
   if ($spec) {
+    # Default to an empty list of values to avoid
+    $spec->{value_not} //= [];
+    if ( reftype($spec->{value_not}) ne 'ARRAY' ) {
+      $spec->{value_not} = [ $spec->{value_not} ];
+    }
+
     if (ref($spec // '') eq 'HASH') {
       if ( exists $spec->{null_chance} && $c->is_nullable ) {
         # Add check for not a number

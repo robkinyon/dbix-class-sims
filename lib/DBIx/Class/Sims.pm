@@ -958,6 +958,12 @@ default value on the column.
 This can be either a string, number, or an arrayref of strings or numbers. If it
 is an arrayref, then a random choice from that array will be selected.
 
+=item * value_not / values_not
+
+This behaves just like value or values, but is a string or arrayref of strings
+to avoid matching. This can be combined with anything else to constrain in a
+specific situation.
+
 =item * type
 
 This labels the column as having a certain type. A type is registered using

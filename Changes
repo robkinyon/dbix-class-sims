@@ -15,6 +15,7 @@ Revision history for DBIx::Class::Sims (ordered by revision number).
    - Relationship constraints are now lazily checked.
      - If you say there should be 2 children, Sims will wait until all children
        are created before verifying that the constraint is met.
+   - Set `value_not` to constrain possible values for a column
 
 0.401000 Jun 09 2019 12:30:00 PDT
    - Provide a nice way to print DateTime objects in SIMS_DEBUG mode.
