@@ -60,6 +60,11 @@ sub short_fk_source {
   return $x;
 }
 
+sub is_multi_col {
+  my $self = shift;
+  keys %{$self->cond(@_)} > 1;
+}
+
 sub cond {
   my $self = shift;
   my $x = $self->{info}{cond};

@@ -340,8 +340,11 @@ sub resolve_direct_values {
 
     # If $k is a relationship, handle that.
     if ( my $r = $self->source->relationship($k) ) {
-      my $fkcol = $r->foreign_fk_col;
       if (blessed($v)) {
+        die "$k is a multi-column FK, so cannot be directly set\n"
+          if $r->is_multi_col;
+
+        my $fkcol = $r->foreign_fk_col;
         $self->set_value($r->self_fk_col, $v->get_column($fkcol));
         $self->{skip_relationship}{$r->name} = 1;
 
@@ -349,6 +352,10 @@ sub resolve_direct_values {
         $self->{trace}{spec}{$r->self_fk_col} = $self->{create}{$r->self_fk_col};
       }
       elsif (ref($v) eq 'SCALAR') {
+        die "$k is a multi-column FK, so cannot be directly set\n"
+          if $r->is_multi_col;
+
+        my $fkcol = $r->foreign_fk_col;
         $self->set_value($r->self_fk_col, $self->runner->convert_backreference(
           $self->runner->backref_name($self, $k),
           ${$v},
@@ -371,6 +378,9 @@ sub resolve_direct_values {
           }
           my $r = $rels[0];
 
+          die "$k is a multi-column FK, so cannot be directly set\n"
+            if $r->is_multi_col;
+
           $self->set_value($k, $v->get_column($r->foreign_fk_col));
           $self->{skip_relationship}{$_->name} = 1 for $c->fks;
 
@@ -388,6 +398,9 @@ sub resolve_direct_values {
             die "ERROR: @{[$self->source_name]} Cannot figure out what relationship belongs to $k (@{[np $v]})!\n@{[join ',', sort map{$_->name}@rels]}";
           }
           my $r = $rels[0];
+
+          die "$k is a multi-column FK, so cannot be directly set\n"
+            if $r->is_multi_col;
 
           $self->set_value($k, $self->runner->convert_backreference(
             $self->runner->backref_name($self, $r->name),
