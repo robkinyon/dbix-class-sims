@@ -90,7 +90,7 @@ sub columns_not_in_parent_relationships {
 
   my %c = map { $_->name => $_ } $self->columns;
   foreach my $r ( $self->parent_relationships ) {
-    delete $c{$r->self_fk_col};
+    delete $c{$_} for $r->self_fk_cols;
   }
 
   return values %c;

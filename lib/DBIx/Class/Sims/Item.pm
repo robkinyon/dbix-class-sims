@@ -95,8 +95,14 @@ sub has_parent_values {
   my $self = shift;
 
   foreach my $r ( $self->source->parent_relationships ) {
-    my $col = $r->self_fk_col;
-    return 1 if $self->spec->{$r->name} // $self->spec->{$col};
+    # FIXME: Is there a problem if there's a multi-col relationship with the
+    # same name as another unrelated column?
+    return 1 if $self->spec->{$r->name};
+
+    # We need to have an entry for all the columns in the parent relationship.
+    return 1 if ! grep {
+      ! exists $self->spec->{$_}
+    } $r->self_fk_cols;
   }
 
   return;
