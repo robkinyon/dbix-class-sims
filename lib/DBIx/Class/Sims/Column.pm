@@ -10,7 +10,6 @@ use strictures 2;
 use DDP;
 
 use DateTime::Event::Random;
-#use String::Random qw( random_regex );
 
 # The type functions are given a column object, so have all the random functions
 # be available as methods on the column object.

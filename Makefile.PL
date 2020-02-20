@@ -21,6 +21,7 @@ requires 'Data::Compare';
 requires 'Data::Printer' => '0.36'; # np() isn't exported before 0.36+
 requires 'Data::Walk';
 requires 'DateTime';
+requires 'DateTime::Event::Random';
 requires 'DBIx::Class::TopoSort' => '0.060000';
 requires 'Hash::Merge';
 requires 'JSON::MaybeXS';

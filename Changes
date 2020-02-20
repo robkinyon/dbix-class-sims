@@ -1,6 +1,6 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
-0.500000 Jul XX 2019 XX:XX:00 PDT
+0.500000 Feb XX 2020 XX:XX:00 PDT
    - THIS RELEASE CONTAINS MULTIPLE POTENTIALLY-BREAKING BEHAVIOR CHANGES.
    - Complete revamp of the internal architecture.
      - Most of the private attributes have been renamed.
@@ -14,8 +14,12 @@ Revision history for DBIx::Class::Sims (ordered by revision number).
    - Using a type that isn't loaded will raise an error vs a warning.
    - Relationship constraints are now lazily checked.
      - If you say there should be 2 children, Sims will wait until all children
-       are created before verifying that the constraint is met.
+       are created before verifying that the constraint is met
    - Set `value_not` to constrain possible values for a column
+     - This can be a scalar or an array.
+   - Trace the creation of objects by setting the `object_trace` parameter
+     - Trace the topograph as well, if needed, with `topograph_trace`
+   - Disable all randomization with the `predictable_values` parameter
 
 0.401000 Jun 09 2019 12:30:00 PDT
    - Provide a nice way to print DateTime objects in SIMS_DEBUG mode.
