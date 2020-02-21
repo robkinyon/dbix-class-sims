@@ -570,7 +570,6 @@ sub value_from_spec {
     else {
       $v = $c->generate_value(die_on_unknown => 0);
     }
-  #} while ( grep { $v eq $_ } @{$spec->{value_not}} );
   } while ( $spec->{value_not}->($v) );
   return $v;
 }
