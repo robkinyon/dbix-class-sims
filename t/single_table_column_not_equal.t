@@ -85,7 +85,7 @@ for (1..100) {
         },
       ],
     },
-    dies => qr/Cannot find a value for Artist.fruit after 10 tries/,
+    dies => qr/Cannot find a value for Artist.fruit after 25 tries/,
   };
 
   sims_test "A function to avoid" => {

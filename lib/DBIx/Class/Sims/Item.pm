@@ -542,14 +542,14 @@ sub value_from_spec {
   my $self = shift;
   my ($c, $spec) = @_;
 
-  # Try 10 times to find a value that's not in value_not
+  # Try N times to find a value that's not in value_not
 
   my $n = 0;
-  my $max = 10;
+  my $max = 25;
   my $v;
   do {
     $n++;
-    die "Cannot find a value for @{[$c->source->name]}\.@{[$c->name]} after $max tries" if $n >= 10;
+    die "Cannot find a value for @{[$c->source->name]}\.@{[$c->name]} after $max tries" if $n >= $max;
 
     if ( ref($spec->{func} // '') eq 'CODE' ) {
       $v = $spec->{func}->($c->info);
@@ -570,7 +570,7 @@ sub value_from_spec {
     else {
       $v = $c->generate_value(die_on_unknown => 0);
     }
-  } while ( $spec->{value_not}->($v) );
+  } while ( $spec->{value_not} && $spec->{value_not}->($v) );
   return $v;
 }
 
@@ -651,9 +651,7 @@ sub populate_column {
   }
 
   if ($spec) {
-    # Default to an empty list of values to avoid
-    $spec->{value_not} //= [];
-    if ( reftype($spec->{value_not}) ne 'CODE' ) {
+    if ( exists $spec->{value_not} && reftype($spec->{value_not}) ne 'CODE' ) {
       if ( reftype($spec->{value_not}) ne 'ARRAY' ) {
         $spec->{value_not} = [ $spec->{value_not} ];
       }
