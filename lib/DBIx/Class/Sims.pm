@@ -960,9 +960,9 @@ is an arrayref, then a random choice from that array will be selected.
 
 =item * value_not / values_not
 
-This behaves just like value or values, but is a string or arrayref of strings
-to avoid matching. This can be combined with anything else to constrain in a
-specific situation.
+This is the value(s) to avoid. It can be a string, arrayref of strings, or a
+function which takes a value and returns true if the value should be avoided.
+This can be combined with anything else to constrain in a specific situation.
 
 =item * type
 

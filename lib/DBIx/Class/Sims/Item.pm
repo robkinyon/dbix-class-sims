@@ -570,7 +570,8 @@ sub value_from_spec {
     else {
       $v = $c->generate_value(die_on_unknown => 0);
     }
-  } while ( grep { $v eq $_ } @{$spec->{value_not}} );
+  #} while ( grep { $v eq $_ } @{$spec->{value_not}} );
+  } while ( $spec->{value_not}->($v) );
   return $v;
 }
 
@@ -653,8 +654,16 @@ sub populate_column {
   if ($spec) {
     # Default to an empty list of values to avoid
     $spec->{value_not} //= [];
-    if ( reftype($spec->{value_not}) ne 'ARRAY' ) {
-      $spec->{value_not} = [ $spec->{value_not} ];
+    if ( reftype($spec->{value_not}) ne 'CODE' ) {
+      if ( reftype($spec->{value_not}) ne 'ARRAY' ) {
+        $spec->{value_not} = [ $spec->{value_not} ];
+      }
+
+      my $x = $spec->{value_not};
+      $spec->{value_not} = sub {
+        my ($v) = @_;
+        return grep { $v eq $_ } @{$x};
+      };
     }
 
     if (ref($spec // '') eq 'HASH') {

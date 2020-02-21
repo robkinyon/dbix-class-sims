@@ -35,55 +35,75 @@ BEGIN {
 
 use common qw(sims_test Schema);
 
-sims_test "A single item to avoid" => {
-  spec => {
-    Artist => [
-      {
-        fruit => { value_not => 'apple' },
-      },
-    ],
-  },
-  expect => {
-    Artist => { id => 1, fruit => match(qr/pear|orange|banana/) },
-  },
-};
+# These involve addressing questions of what happens randomly. So, run these
+# tests 100 times each.
+for (1..100) {
+  sims_test "A single item to avoid" => {
+    spec => {
+      Artist => [
+        {
+          fruit => { value_not => 'apple' },
+        },
+      ],
+    },
+    expect => {
+      Artist => { id => 1, fruit => match(qr/pear|orange|banana/) },
+    },
+  };
 
-sims_test "An array of things to avoid" => {
-  spec => {
-    Artist => [
-      {
-        fruit => { value_not => [qw( apple pear orange )] },
-      },
-    ],
-  },
-  expect => {
-    Artist => { id => 1, fruit => 'banana' },
-  },
-};
+  sims_test "An array of things to avoid" => {
+    spec => {
+      Artist => [
+        {
+          fruit => { value_not => [qw( apple pear orange )] },
+        },
+      ],
+    },
+    expect => {
+      Artist => { id => 1, fruit => 'banana' },
+    },
+  };
 
-sims_test "An array of things to avoid (in plural)" => {
-  spec => {
-    Artist => [
-      {
-        fruit => { values_not => [qw( apple pear orange )] },
-      },
-    ],
-  },
-  expect => {
-    Artist => { id => 1, fruit => 'banana' },
-  },
-};
+  sims_test "An array of things to avoid (in plural)" => {
+    spec => {
+      Artist => [
+        {
+          fruit => { values_not => [qw( apple pear orange )] },
+        },
+      ],
+    },
+    expect => {
+      Artist => { id => 1, fruit => 'banana' },
+    },
+  };
 
-sims_test "Die if nothing matches" => {
-  spec => {
-    Artist => [
-      {
-        fruit => { value_not => [qw( apple pear orange banana )] },
-      },
-    ],
-  },
-  dies => qr/Cannot find a value for Artist.fruit after 10 tries/,
-};
+  sims_test "Die if nothing matches" => {
+    spec => {
+      Artist => [
+        {
+          fruit => { value_not => [qw( apple pear orange banana )] },
+        },
+      ],
+    },
+    dies => qr/Cannot find a value for Artist.fruit after 10 tries/,
+  };
+
+  sims_test "A function to avoid" => {
+    spec => {
+      Artist => [
+        {
+          fruit => { value_not => sub {
+            my ($v) = @_;
+            return $v eq 'apple';
+          } },
+        },
+      ],
+    },
+    expect => {
+      Artist => { id => 1, fruit => match(qr/pear|orange|banana/) },
+    },
+  };
+}
 
 # TODO:
 # * a regex to avoid
