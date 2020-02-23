@@ -77,7 +77,7 @@ sub source { $_[0]{source} }
 
 sub columns {
   my $self = shift;
-  return values %{$self->{columns}};
+  return sort { $a->name cmp $b->name } values %{$self->{columns}};
 }
 sub column {
   my $self = shift;
@@ -93,7 +93,7 @@ sub columns_not_in_parent_relationships {
     delete $c{$_} for $r->self_fk_cols;
   }
 
-  return values %c;
+  return sort { $a->name cmp $b->name } values %c;
 }
 
 sub relationships {

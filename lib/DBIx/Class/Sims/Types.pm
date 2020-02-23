@@ -17,7 +17,11 @@ DBIx::Class::Sims->set_sim_types({
 # This is to allow Sims types to be usable outside the context of a Sims run.
 sub default_column {
   return bless {
-    predictable_values => 0
+    predictable_values => 0,
+    name => 'default',
+    source => bless {
+      name => 'default',
+    }, 'DBIx::Class::Sims::Source',
   }, 'DBIx::Class::Sims::Column';
 }
 
