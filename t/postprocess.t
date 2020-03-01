@@ -1,8 +1,7 @@
 # vi:sw=2
 use strictures 2;
 
-use Test::More;
-use Test::Deep; # Needed for re() below
+use Test2::V0 qw( done_testing );
 
 use lib 't/lib';
 
@@ -10,7 +9,6 @@ BEGIN {
   use loader qw(build_schema);
   build_schema([
     Artist => {
-      table => 'artists',
       columns => {
         id => {
           data_type => 'int',
@@ -29,7 +27,6 @@ BEGIN {
       },
     },
     Album => {
-      table => 'albums',
       columns => {
         artist_id => {
           data_type => 'int',
@@ -51,7 +48,6 @@ BEGIN {
       },
     },
     Track => {
-      table => 'tracks',
       columns => {
         artist_id => {
           data_type => 'int',
@@ -82,8 +78,9 @@ sims_test "create child in postprocess" => {
     {
       hooks => {
         postprocess => sub {
-          my ($name, $source, $row) = @_;
-          if ($name eq 'Artist') {
+          my ($source, $row) = @_;
+
+          if ($source->name eq 'Artist') {
             my $rs = $source->schema->resultset('Album');
             unless ($rs->find($row->id)) {
               $rs->create({
@@ -109,11 +106,10 @@ sims_test "create grandchild via child from postprocess" => {
   spec => [
     {
       Artist => { name => 'foo' },
-      # This retrieves the existing row, does NOT update the name, but DOES
-      # create the child rows. This way, you can operate on a thing that exists.
+      # This retrieves the existing row and creates the child rows. This way,
+      # you can operate on a thing that already exists.
       Album => {
         artist_id => \'Artist[0].id',
-        name => 'not bar',
         track => { name => 'music' },
       },
     },
@@ -121,8 +117,9 @@ sims_test "create grandchild via child from postprocess" => {
       allow_pk_set_value => 1,
       hooks => {
         postprocess => sub {
-          my ($name, $source, $row) = @_;
-          if ($name eq 'Artist') {
+          my ($source, $row) = @_;
+
+          if ($source->name eq 'Artist') {
             my $rs = $source->schema->resultset('Album');
             unless ($rs->find($row->id)) {
               $rs->create({

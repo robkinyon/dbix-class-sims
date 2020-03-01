@@ -1,8 +1,7 @@
 # vi:sw=2
 use strictures 2;
 
-use Test::More;
-use Test::Exception;
+use Test2::V0 qw( done_testing );
 
 use lib 't/lib';
 
@@ -12,7 +11,6 @@ BEGIN {
   use loader qw(build_schema);
   build_schema([
     Artist => {
-      table => 'artists',
       columns => {
         id => {
           data_type => 'int',
@@ -39,7 +37,7 @@ sims_test "Trigger the PK autoincrement warning" => {
   spec => {
     Artist => { id => 2 },
   },
-  warning => qr/Primary-key autoincrement non-null columns should not be hardcoded in tests \(Artist.id = 2\)/,
+  warning => qr/Primary-key autoincrement columns should not be hardcoded in tests \(Artist.id = 2\)/,
   expect => {
     Artist => { id => 2, name => 'abcd' },
   },
@@ -50,6 +48,16 @@ sims_test "allow_pk_set_value silences the warning" => {
   spec => [
     { Artist => { id => 2 } },
     { allow_pk_set_value => 1 },
+  ],
+  expect => {
+    Artist => { id => 2, name => 'abcd' },
+  },
+  rv => sub { { Artist => shift->{expect}{Artist} } },
+};
+
+sims_test "allow_pk_set_value in the __META__ silences the warning" => {
+  spec => [
+    { Artist => { id => 2, __META__ => { allow_pk_set_value => 1 } } },
   ],
   expect => {
     Artist => { id => 2, name => 'abcd' },

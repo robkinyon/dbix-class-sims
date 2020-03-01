@@ -12,6 +12,9 @@ ZR fixes
 [ ] Create a test that has the parent in multiple UK's
 [ ] Create a test that has multiple has_many back (dies)
 [ ] Create a test that has no has_many back (dies)
+[ ] A column is in multiple relationships and has a backreference
+
+[ ] Switch seed randomization to Math::Random instead of rand(time&$$)
 
 General fixes
 [ ] Add auto-generation of:

@@ -1,8 +1,7 @@
 # vi:sw=2
 use strictures 2;
 
-use Test::More;
-use Test::Deep;
+use Test2::V0 qw( subtest done_testing );
 
 use lib 't/lib';
 
@@ -10,7 +9,6 @@ BEGIN {
   use loader qw(build_schema);
   build_schema([
     Artist => {
-      table => 'artists',
       columns => {
         id => {
           data_type => 'int',
@@ -29,7 +27,6 @@ BEGIN {
       },
     },
     Album => {
-      table => 'albums',
       columns => {
         id => {
           data_type => 'int',
@@ -90,4 +87,4 @@ subtest "Create a unique parent" => sub {
   };
 };
 
-done_testing
+done_testing;

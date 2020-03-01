@@ -1,8 +1,7 @@
 # vi:sw=2
 use strictures 2;
 
-use Test::More;
-use Test::Deep;
+use Test2::V0 qw( done_testing );
 
 use lib 't/lib';
 
@@ -10,7 +9,6 @@ BEGIN {
   use loader qw(build_schema);
   build_schema([
     Artist => {
-      table => 'artists',
       columns => {
         id => {
           data_type => 'int',
@@ -29,7 +27,6 @@ BEGIN {
       },
     },
     Album => {
-      table => 'albums',
       columns => {
         id => {
           data_type => 'int',
@@ -55,7 +52,6 @@ BEGIN {
       },
     },
     Track => {
-      table => 'tracks',
       columns => {
         id => {
           data_type => 'int',
@@ -122,4 +118,4 @@ sims_test "Fail to reference a method of a backreference" => {
   dies => qr/No method to call at Album->name => Artist\[0\]/,
 };
 
-done_testing
+done_testing;

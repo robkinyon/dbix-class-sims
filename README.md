@@ -279,7 +279,7 @@ This is **REGARDLESS** of the values for the non-unique-constraint rows.
 
 If you do not specify values for a parent (i.e., belongs\_to), then the first row
 for that parent will be be used. If you don't care what values the parent has,
-but you care that a different parent is used, then you can set the \_\_META\_\_ key
+but you care that a different parent is used, then you can set the C<< __META__ >> key
 as follows:
 
     $schema->load_sims({
@@ -372,6 +372,22 @@ before all children, the Sims cannot back-reference into children.
 
     This does **not** apply to creating multiple rows with the same characteristics
     as children of the same parent. The assumption is that you meant to do that.
+
+## Other uses of META
+
+### Setting a condition in a spec
+
+    $schema->load_sims({
+      Album => {
+        __META__ => {
+          restriction => {
+            cond  => { 'artist.name => { '!=' => 'Bob Dillon' } },
+            extra => { join => 'artist' },
+          },
+        },
+        name => 'Some name',
+      }
+    })
 
 # OPTS
 

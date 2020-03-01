@@ -1,8 +1,7 @@
 # vi:sw=2
 use strictures 2;
 
-use Test::More;
-use Test::Deep; # Needed for re() below
+use Test2::V0 qw( done_testing E );
 
 use lib 't/lib';
 
@@ -10,7 +9,6 @@ BEGIN {
   use loader qw(build_schema);
   build_schema([
     Artist => {
-      table => 'artists',
       columns => {
         id => {
           data_type => 'int',
@@ -29,7 +27,6 @@ BEGIN {
       },
     },
     Album => {
-      table => 'albums',
       columns => {
         artist_id => {
           data_type => 'int',
@@ -61,16 +58,16 @@ sims_test "parent builds a child, but we're creating a child" => {
     {
       hooks => {
         preprocess => sub {
-          my ($name, $source, $item) = @_;
-          if ($name eq 'Artist') {
-            $item->{album} //= [ {} ];
+          my ($source, $spec) = @_;
+          if ($source->name eq 'Artist') {
+            $spec->{album} //= [ {} ];
           }
         },
       },
     },
   ],
   expect => {
-    Artist => { id => 1, name => re('.+') },
+    Artist => { id => 1, name => E() },
     Album  => { artist_id => 1, name => 'bar' },
   },
   rv => {
@@ -86,8 +83,64 @@ sims_test "child refers to parent by backref" => {
     },
   ],
   expect => {
-    Artist => { id => 1, name => re('.+') },
-    Album  => { artist_id => 1, name => re('.+') },
+    Artist => { id => 1, name => E() },
+    Album  => { artist_id => 1, name => E() },
+  },
+};
+
+sims_test "child inserts parent in preprocess" => {
+  spec => [
+    {
+      Album => { name => 'bar' },
+    },
+    {
+      hooks => {
+        preprocess => sub {
+          my ($source, $spec) = @_;
+          if ($source->name eq 'Album') {
+            $spec->{artist} = { name => 'foo' };
+          }
+        },
+      },
+    },
+  ],
+  expect => {
+    Artist => { id => 1, name => 'foo' },
+    Album  => { artist_id => 1, name => 'bar' },
+  },
+  rv => {
+    Album  => { artist_id => 1, name => 'bar' },
+  },
+};
+
+sims_test "child inserts parent in preprocess and uses parent's name" => {
+  spec => [
+    {
+      Album => 1,
+    },
+    {
+      hooks => {
+        preprocess => sub {
+          my ($source, $spec) = @_;
+          if ($source->name eq 'Album') {
+            $spec->{artist} = { name => 'foo' };
+          }
+        },
+        before_create => sub {
+          my ($source, $item) = @_;
+          if ($source->name eq 'Album') {
+            $item->set_value(name => $item->parent('artist')->row->name);
+          }
+        },
+      },
+    },
+  ],
+  expect => {
+    Artist => { id => 1, name => 'foo' },
+    Album  => { artist_id => 1, name => 'foo' },
+  },
+  rv => {
+    Album  => { artist_id => 1, name => 'foo' },
   },
 };
 
