@@ -1,5 +1,8 @@
 Revision history for DBIx::Class::Sims (ordered by revision number).
 
+0.500001 Mar 04 2020 04:00:00 PDT
+   - Ooops. I forgot to update the MANIFEST.
+
 0.500000 Feb 29 2020 17:00:00 PDT
    - THIS RELEASE CONTAINS MULTIPLE POTENTIALLY-BREAKING BEHAVIOR CHANGES.
    - Complete revamp of the internal architecture.
