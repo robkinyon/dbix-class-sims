@@ -4,6 +4,8 @@ use strictures 2;
 use Test2::V0 qw( done_testing ok ); #subtest match is bag item );
 use Test::Trap; # Needed for trap()
 
+use DBIx::Class::Sims;
+
 my $item = DBIx::Class::Sims::Item->new(
   runner => undef,
   source => undef,
