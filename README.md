@@ -1,3 +1,5 @@
+![CI](https://github.com/robkinyon/dbix-class-sims/workflows/CI/badge.svg)
+
 # NAME
 
 DBIx::Class::Sims - The addition of simulating data to DBIx::Class
