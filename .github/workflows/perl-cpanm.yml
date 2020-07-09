@@ -1,0 +1,42 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        perl-version:
+          - 'latest'
+          - '5.28'
+          - '5.26'
+          - '5.24'
+          - '5.22'
+          - '5.20'
+          - '5.18'
+          - '5.16'
+          - '5.14'
+          - '5.12'
+          - '5.10'
+
+    container:
+      image: perl:${{ matrix.perl-version }}
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Install dependencies
+      run: |
+        cpanm --installdeps --notest --quiet .
+
+    - name: Perl version
+      run: perl -V
+
+    - name: Run test suite
+      run: |
+        perl Makefile.PL
+        make
+        make test
