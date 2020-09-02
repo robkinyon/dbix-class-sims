@@ -1,5 +1,4 @@
 requires 'strictures';
-requires 'Clone::Any';
 requires 'Data::Compare';
 requires 'Data::Printer' => '0.36';
 requires 'Data::Walk';

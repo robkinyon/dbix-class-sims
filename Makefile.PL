@@ -17,7 +17,6 @@ perl_version '5.010_001';
 all_from 'lib/DBIx/Class/Sims.pm';
 
 requires 'strictures';
-requires 'Clone::Any';
 requires 'Data::Compare';
 requires 'Data::Printer' => '0.36'; # np() isn't exported before 0.36+
 requires 'Data::Walk';
