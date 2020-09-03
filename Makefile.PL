@@ -41,14 +41,6 @@ test_requires 'Test::Trap'        => '0.3.2';
 test_requires 'DBD::SQLite'       => '1.40';
 test_requires 'Test2::Suite'      => '0.000122'; # improved test tools
 
-# All of the following are needed for Devel::Cover and its optional reports.
-test_requires 'Devel::Cover';
-test_requires 'Template';
-test_requires 'PPI::HTML';
-test_requires 'Perl::Tidy';
-test_requires 'Pod::Coverage::CountParents';
-test_requires 'JSON::MaybeXS';
-
 tests_recursive;
 
 auto_install;
