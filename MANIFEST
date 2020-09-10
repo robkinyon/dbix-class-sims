@@ -24,7 +24,6 @@ Makefile.PL
 MANIFEST
 MANIFEST.SKIP
 META.yml
-META.json
 t/add_relationship.t
 t/add_sims.t
 t/before_create.t
