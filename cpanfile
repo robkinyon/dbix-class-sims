@@ -1,5 +1,4 @@
 requires 'strictures';
-requires 'Clone::Any';
 requires 'Data::Compare';
 requires 'Data::Printer' => '0.36';
 requires 'Data::Walk';
@@ -23,15 +22,5 @@ on test => sub {
   requires 'Test::Warn'        => '0.01';
   requires 'Test::Trap'        => '0.3.2';
   requires 'DBD::SQLite'       => '1.40';
-  requires 'Test2::Harness'    => '0.001079'; # yath
   requires 'Test2::Suite'      => '0.000122'; # improved test tools
-
-  # All of the following are needed for Devel::Cover and its optional reports.
-  requires 'Devel::Cover';
-  requires 'Template';
-  requires 'PPI::HTML';
-  requires 'Perl::Tidy';
-  requires 'Pod::Coverage::CountParents';
-  requires 'JSON::MaybeXS';
-  requires 'Parallel::Iterator';
 };
