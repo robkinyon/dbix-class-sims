@@ -12,7 +12,7 @@ our @EXPORT_OK = qw(
 use DDP;
 use Test2::V0 qw(
   E item object array bag hash subtest skip_all number is match call field
-  end
+  end ok
 );
 use Test::Warn;
 use Test::Trap;
