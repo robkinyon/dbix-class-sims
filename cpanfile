@@ -1,4 +1,4 @@
-requires 'strictures';
+requires 'strictures' => '2';
 requires 'Data::Compare';
 requires 'Data::Printer' => '0.36';
 requires 'Data::Walk';
